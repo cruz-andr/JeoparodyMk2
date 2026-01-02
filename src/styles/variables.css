@@ -1,0 +1,73 @@
+/* Jeopardy Theme Variables */
+:root {
+  /* Primary Colors */
+  --jeopardy-blue: #0E1467;
+  --jeopardy-blue-light: #1a2080;
+  --jeopardy-blue-dark: #0a0f4a;
+  --jeopardy-gold: #D69F4C;
+  --jeopardy-gold-light: #E8B35A;
+  --jeopardy-black: #000000;
+  --jeopardy-white: #ffffff;
+
+  /* UI Colors */
+  --color-success: #4CAF50;
+  --color-error: #FF6B6B;
+  --color-warning: #FFC107;
+  --color-info: #2196F3;
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --text-muted: #666666;
+
+  /* Fonts */
+  --font-display: Impact, "Arial Narrow", sans-serif;
+  --font-body: 'Arial', sans-serif;
+  --font-jeopardy: "Korinna", Georgia, serif;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-text: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  --shadow-gold: 3px 3px 0px rgba(0, 0, 0, 0.4), 1px 1px 0px rgba(0, 0, 0, 0.2);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+
+  /* Z-indexes */
+  --z-dropdown: 100;
+  --z-modal: 1000;
+  --z-overlay: 900;
+  --z-toast: 1100;
+
+  /* Breakpoints (for reference in JS) */
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* Game Board */
+  --board-max-width: 1400px;
+  --cell-height: 100px;
+  --cell-height-tablet: 70px;
+  --cell-height-mobile: 50px;
+  --cell-gap: 6px;
+}

@@ -1,0 +1,144 @@
+.highscores-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1a4a 0%, #0E1467 50%, #1a2a6a 100%);
+  padding: 40px 20px;
+}
+
+.highscores-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.highscores-container h1 {
+  text-align: center;
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+  margin-bottom: 30px;
+}
+
+/* Stats Overview */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background-color: rgba(14, 20, 103, 0.8);
+  border: 1px solid rgba(214, 159, 76, 0.3);
+  border-radius: var(--radius-md);
+  padding: 24px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-card .stat-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+}
+
+.stat-card .stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+/* Highscores List */
+.highscores-list {
+  background-color: rgba(14, 20, 103, 0.8);
+  border: 1px solid rgba(214, 159, 76, 0.3);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.highscores-list h2 {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.scores-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.scores-table th {
+  text-align: left;
+  padding: 12px 16px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scores-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scores-table .rank {
+  color: var(--jeopardy-gold);
+  font-weight: bold;
+}
+
+.scores-table .score {
+  font-weight: bold;
+  font-family: var(--font-display);
+}
+
+.scores-table .score.positive {
+  color: var(--color-success);
+}
+
+.scores-table .score.negative {
+  color: var(--color-error);
+}
+
+.scores-table .genre {
+  color: var(--text-primary);
+}
+
+.scores-table .date {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.no-scores {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 20px;
+}
+
+.highscores-container > .btn-primary {
+  display: block;
+  margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .scores-table th,
+  .scores-table td {
+    padding: 10px 8px;
+    font-size: 0.9rem;
+  }
+}

@@ -1,0 +1,121 @@
+.single-player-page {
+  min-height: 100vh;
+  background-color: var(--jeopardy-black);
+  padding: 20px;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: var(--board-max-width);
+  margin: 0 auto 20px;
+  padding: 0 10px;
+}
+
+.game-header h1 {
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: var(--shadow-text);
+  margin: 0;
+}
+
+.score-display {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+.score-display span {
+  color: var(--jeopardy-gold);
+}
+
+.score-display span.positive {
+  color: var(--color-success);
+}
+
+.score-display span.negative {
+  color: var(--color-error);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  z-index: 1000;
+}
+
+.loading-overlay p {
+  margin-top: 20px;
+  font-size: 1.2rem;
+}
+
+/* Round End */
+.round-end {
+  max-width: 500px;
+  margin: 100px auto;
+  text-align: center;
+  background-color: var(--jeopardy-blue);
+  padding: 40px;
+  border-radius: var(--radius-md);
+}
+
+.round-end h2 {
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+  margin-bottom: 20px;
+}
+
+.round-score {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 30px;
+}
+
+.round-score span {
+  color: var(--jeopardy-gold);
+  font-weight: bold;
+}
+
+.round-end-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fj-ineligible {
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .game-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .game-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .score-display {
+    font-size: 1.2rem;
+  }
+}

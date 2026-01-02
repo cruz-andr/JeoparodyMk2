@@ -1,0 +1,232 @@
+.quickplay-page {
+  min-height: 100vh;
+  background-color: var(--jeopardy-black);
+  padding: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qp-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.qp-header h1 {
+  color: var(--jeopardy-gold);
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.qp-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.qp-content {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+/* Info Cards */
+.qp-info {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  min-width: 100px;
+}
+
+.info-icon {
+  font-size: 1.5rem;
+}
+
+.info-item span:last-child {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Form */
+.qp-form {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-md);
+}
+
+.qp-form .form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.qp-form label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.qp-form input {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: 1.1rem;
+}
+
+.btn-large {
+  width: 100%;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  font-size: 1.2rem;
+}
+
+/* Searching Animation */
+.qp-searching {
+  min-height: 400px;
+  justify-content: center;
+}
+
+.searching-animation {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.search-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top-color: var(--jeopardy-gold);
+  border-radius: 50%;
+}
+
+.search-ring.ring-2 {
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+  border-top-color: var(--text-secondary);
+}
+
+.search-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.search-icon {
+  font-size: 3rem;
+}
+
+.qp-searching h2 {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.queue-time {
+  font-size: 2rem;
+  font-family: var(--font-display);
+  color: var(--jeopardy-gold);
+  margin: var(--spacing-sm) 0;
+}
+
+.search-hint {
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Match Found */
+.qp-found {
+  min-height: 400px;
+  justify-content: center;
+}
+
+.match-badge {
+  background: var(--color-success);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-md);
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-xl);
+}
+
+.match-players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  max-width: 300px;
+}
+
+.match-player {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.player-avatar {
+  font-size: 1.5rem;
+}
+
+.player-name {
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+.loading-game {
+  margin-top: var(--spacing-xl);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .quickplay-page {
+    padding: var(--spacing-md);
+  }
+
+  .qp-header h1 {
+    font-size: 2rem;
+  }
+
+  .qp-info {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .info-item {
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .searching-animation {
+    width: 120px;
+    height: 120px;
+  }
+
+  .search-icon {
+    font-size: 2.5rem;
+  }
+}

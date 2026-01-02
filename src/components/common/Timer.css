@@ -1,0 +1,110 @@
+.timer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sizes */
+.timer-small {
+  width: 60px;
+  height: 60px;
+}
+
+.timer-medium {
+  width: 100px;
+  height: 100px;
+}
+
+.timer-large {
+  width: 150px;
+  height: 150px;
+}
+
+/* SVG */
+.timer-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.timer-bg {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.timer-progress {
+  stroke: var(--jeopardy-gold);
+  transition: stroke 0.3s ease;
+}
+
+.timer-low .timer-progress {
+  stroke: var(--color-warning);
+}
+
+.timer-critical .timer-progress {
+  stroke: var(--color-error);
+}
+
+/* Display */
+.timer-display {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-seconds {
+  font-family: var(--font-display);
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.timer-small .timer-seconds {
+  font-size: 1.25rem;
+}
+
+.timer-medium .timer-seconds {
+  font-size: 2rem;
+}
+
+.timer-large .timer-seconds {
+  font-size: 3rem;
+}
+
+.timer-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.timer-small .timer-label {
+  display: none;
+}
+
+/* Low time states */
+.timer-low .timer-seconds {
+  color: var(--color-warning);
+}
+
+.timer-critical .timer-seconds {
+  color: var(--color-error);
+}
+
+/* Animation for critical */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.timer-critical .timer-display {
+  animation: pulse 0.5s ease-in-out infinite;
+}

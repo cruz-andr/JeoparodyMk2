@@ -1,0 +1,64 @@
+.join-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a1a4a 0%, #0E1467 50%, #1a2a6a 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.join-container {
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.join-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.join-container h1 {
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+  margin-bottom: 10px;
+}
+
+.join-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 30px;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.room-code-input {
+  text-align: center;
+  font-size: 2rem;
+  font-family: var(--font-display);
+  letter-spacing: 8px;
+  padding: 20px;
+  text-transform: uppercase;
+}
+
+.room-code-input::placeholder {
+  color: #aaa;
+  letter-spacing: 8px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+.btn-back:hover {
+  color: var(--jeopardy-gold);
+}

@@ -1,0 +1,116 @@
+.game-board {
+  width: 100%;
+  max-width: var(--board-max-width);
+  margin: 0 auto;
+  background-color: var(--jeopardy-black);
+  padding: var(--cell-gap);
+}
+
+.categories-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--cell-gap);
+  margin-bottom: var(--cell-gap);
+}
+
+.category-header {
+  background-color: var(--jeopardy-blue);
+  color: var(--text-primary);
+  padding: 20px 10px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  letter-spacing: 1px;
+}
+
+.questions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+}
+
+.question-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--cell-gap);
+}
+
+.question-cell {
+  background-color: var(--jeopardy-blue);
+  color: var(--jeopardy-gold);
+  height: var(--cell-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-display);
+  text-shadow: var(--shadow-gold);
+  letter-spacing: 1px;
+}
+
+.question-cell:not(.revealed):hover {
+  background-color: var(--jeopardy-blue-light);
+}
+
+.question-cell.revealed {
+  background-color: var(--jeopardy-blue);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.question-cell.not-my-turn {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.game-board.disabled .question-cell:not(.revealed) {
+  pointer-events: none;
+}
+
+.new-game-button {
+  margin: 30px auto 0;
+  display: block;
+  background-color: #333;
+  color: var(--text-primary);
+}
+
+.new-game-button:hover {
+  background-color: #444;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .category-header {
+    font-size: 0.8rem;
+    padding: 15px 5px;
+    min-height: 70px;
+  }
+
+  .question-cell {
+    height: var(--cell-height-tablet);
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .category-header {
+    font-size: 0.6rem;
+    padding: 10px 3px;
+    min-height: 60px;
+  }
+
+  .question-cell {
+    height: var(--cell-height-mobile);
+    font-size: 1rem;
+  }
+}

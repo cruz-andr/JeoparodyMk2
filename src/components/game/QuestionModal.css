@@ -1,0 +1,165 @@
+.question-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--jeopardy-blue);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-modal);
+  padding: 20px;
+}
+
+.question-modal {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  padding: 40px 60px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* Timer */
+.question-timer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.question-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.question-category {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--jeopardy-gold);
+}
+
+.question-points {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--jeopardy-gold);
+}
+
+.question-content {
+  margin-bottom: 40px;
+}
+
+.clue-text {
+  font-size: 2.5rem;
+  line-height: 1.4;
+  text-transform: uppercase;
+  font-family: var(--font-jeopardy);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.reveal-button {
+  padding: 20px 40px;
+  font-size: 1.3rem;
+  margin-bottom: 30px;
+}
+
+/* Answer Section */
+.answer-section {
+  margin-bottom: 30px;
+}
+
+.answer-label {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.answer-text {
+  font-size: 2rem;
+  font-style: italic;
+  color: var(--jeopardy-gold);
+  margin-bottom: 30px;
+}
+
+.scoring-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-correct {
+  background-color: var(--color-success);
+  color: var(--text-primary);
+  padding: 16px 24px;
+  font-size: 1.1rem;
+}
+
+.btn-correct:hover {
+  background-color: #5cbf60;
+}
+
+.btn-incorrect {
+  background-color: var(--color-error);
+  color: var(--text-primary);
+  padding: 16px 24px;
+  font-size: 1.1rem;
+}
+
+.btn-incorrect:hover {
+  background-color: #ff7b7b;
+}
+
+/* Close Button */
+.close-button {
+  background-color: #333;
+  color: var(--text-primary);
+  padding: 12px 24px;
+}
+
+.close-button:hover {
+  background-color: #555;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .question-modal {
+    padding: 30px 20px;
+  }
+
+  .clue-text {
+    font-size: 1.8rem;
+  }
+
+  .answer-text {
+    font-size: 1.5rem;
+  }
+
+  .scoring-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-correct,
+  .btn-incorrect {
+    width: 100%;
+    font-size: 1rem;
+    padding: 14px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clue-text {
+    font-size: 1.4rem;
+  }
+
+  .question-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

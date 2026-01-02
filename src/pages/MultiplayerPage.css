@@ -1,0 +1,237 @@
+.multiplayer-page {
+  min-height: 100vh;
+  background-color: var(--jeopardy-black);
+  padding: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mp-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.mp-header h1 {
+  color: var(--jeopardy-gold);
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.connection-status {
+  font-size: 0.85rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.connection-status.online {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--color-success);
+}
+
+.connection-status.offline {
+  background: rgba(255, 107, 107, 0.2);
+  color: var(--color-error);
+}
+
+.connection-status.connecting {
+  background: rgba(255, 193, 7, 0.2);
+  color: var(--color-warning);
+}
+
+.mp-content {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.mp-loading {
+  min-height: 300px;
+  justify-content: center;
+}
+
+/* Form */
+.mp-form {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-md);
+}
+
+.form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: 1.1rem;
+}
+
+.mp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.btn-large {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  font-size: 1.2rem;
+}
+
+/* Lobby */
+.mp-lobby {
+  width: 100%;
+}
+
+.room-code-display {
+  background: var(--jeopardy-blue);
+  border: 3px solid var(--jeopardy-gold);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  text-align: center;
+  width: 100%;
+}
+
+.room-code-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.room-code {
+  display: block;
+  font-size: 3rem;
+  font-family: var(--font-display);
+  color: var(--jeopardy-gold);
+  letter-spacing: 8px;
+  margin-bottom: var(--spacing-md);
+}
+
+.copy-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: 0.9rem;
+}
+
+.share-hint {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Players List */
+.players-list {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+
+.players-list h3 {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.players-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.player-item:last-child {
+  margin-bottom: 0;
+}
+
+.player-name {
+  color: var(--text-primary);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.host-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: var(--jeopardy-gold);
+  color: var(--jeopardy-black);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.ready-status {
+  font-size: 0.85rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.ready-status.ready {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--color-success);
+}
+
+.ready-status.not-ready {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.no-players {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: var(--spacing-lg);
+}
+
+/* Lobby Actions */
+.lobby-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .multiplayer-page {
+    padding: var(--spacing-md);
+  }
+
+  .mp-header h1 {
+    font-size: 2rem;
+  }
+
+  .room-code {
+    font-size: 2.5rem;
+    letter-spacing: 4px;
+  }
+
+  .btn-large {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 1rem;
+  }
+}
