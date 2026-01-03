@@ -6,10 +6,12 @@ import * as aiService from '../services/api/aiService';
 import GameBoard from '../components/game/GameBoard';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
+import GameSettingsPanel from '../components/setup/GameSettingsPanel';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import FinalJeopardyModal from '../components/game/FinalJeopardyModal';
 import GameResults from '../components/game/GameResults';
+import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
@@ -237,6 +239,14 @@ export default function SinglePlayerPage() {
     navigate('/menu');
   };
 
+  // Load test board without using AI credits
+  const handleUseTestBoard = () => {
+    setGenre(mockBoard.genre);
+    setCategories(mockBoard.categories);
+    setQuestions(mockBoard.questions);
+    setPhase('playing');
+  };
+
   return (
     <div className="single-player-page">
       {/* Loading Overlay */}
@@ -266,10 +276,18 @@ export default function SinglePlayerPage() {
 
       {/* Genre Selection */}
       {phase === 'setup' && (
-        <GenreSelector
-          onSubmit={handleGenerateCategories}
-          error={error}
-        />
+        <div className="setup-container">
+          <GenreSelector
+            onSubmit={handleGenerateCategories}
+            error={error}
+          />
+          <GameSettingsPanel />
+          {isTestModeEnabled() && (
+            <button className="btn-ghost test-board-btn" onClick={handleUseTestBoard}>
+              Use Test Board (No AI)
+            </button>
+          )}
+        </div>
       )}
 
       {/* Category Editor */}

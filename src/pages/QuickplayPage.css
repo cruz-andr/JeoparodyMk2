@@ -32,6 +32,67 @@
   gap: var(--spacing-lg);
 }
 
+/* Preset Selection */
+.qp-presets {
+  width: 100%;
+  text-align: center;
+}
+
+.preset-label {
+  display: block;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--jeopardy-gold);
+  margin-bottom: var(--spacing-sm);
+}
+
+.preset-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.preset-btn {
+  flex: 1;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--jeopardy-gold);
+}
+
+.preset-btn.active {
+  background: rgba(var(--jeopardy-gold-rgb, 212, 175, 55), 0.2);
+  border-color: var(--jeopardy-gold);
+}
+
+.preset-name {
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.preset-btn.active .preset-name {
+  color: var(--jeopardy-gold);
+}
+
+.preset-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 /* Info Cards */
 .qp-info {
   display: flex;

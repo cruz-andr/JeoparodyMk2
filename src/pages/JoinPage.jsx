@@ -51,6 +51,10 @@ export default function JoinPage() {
       if (result.players) {
         setPlayers(result.players);
       }
+      // Sync room settings from host
+      if (result.settings) {
+        useRoomStore.getState().updateSettings(result.settings);
+      }
 
       // Navigate to game/lobby
       navigate(`/game/${code}`);

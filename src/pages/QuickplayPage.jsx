@@ -2,16 +2,43 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useMatchmaking } from '../hooks';
-import { useUserStore } from '../stores';
+import { useUserStore, useSettingsStore } from '../stores';
 import './QuickplayPage.css';
+
+const QUICKPLAY_PRESETS = [
+  {
+    id: 'standard',
+    label: 'Standard',
+    description: '30s timer, all features',
+    settings: {
+      questionTimeLimit: 30000,
+      enableDoubleJeopardy: true,
+      enableDailyDouble: true,
+      enableFinalJeopardy: true,
+    },
+  },
+  {
+    id: 'speed',
+    label: 'Speed',
+    description: '15s timer, 1 round',
+    settings: {
+      questionTimeLimit: 15000,
+      enableDoubleJeopardy: false,
+      enableDailyDouble: true,
+      enableFinalJeopardy: false,
+    },
+  },
+];
 
 export default function QuickplayPage() {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [phase, setPhase] = useState('setup'); // 'setup' | 'searching' | 'found'
+  const [selectedPreset, setSelectedPreset] = useState('standard');
 
   const { isConnected, isInQueue, matchFound, queueTime, joinQueue, leaveQueue } = useMatchmaking();
   const { user, isGuest } = useUserStore();
+  const { loadPreset } = useSettingsStore();
 
   // Set default display name
   useEffect(() => {
@@ -74,6 +101,24 @@ export default function QuickplayPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
+            {/* Game Mode Selection */}
+            <div className="qp-presets">
+              <label className="preset-label">Game Mode</label>
+              <div className="preset-buttons">
+                {QUICKPLAY_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    className={`preset-btn ${selectedPreset === preset.id ? 'active' : ''}`}
+                    onClick={() => setSelectedPreset(preset.id)}
+                    type="button"
+                  >
+                    <span className="preset-name">{preset.label}</span>
+                    <span className="preset-desc">{preset.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="qp-info">
               <div className="info-item">
                 <span className="info-icon">👥</span>
@@ -81,11 +126,11 @@ export default function QuickplayPage() {
               </div>
               <div className="info-item">
                 <span className="info-icon">🎯</span>
-                <span>2 Rounds</span>
+                <span>{QUICKPLAY_PRESETS.find(p => p.id === selectedPreset)?.settings.enableDoubleJeopardy ? '2 Rounds' : '1 Round'}</span>
               </div>
               <div className="info-item">
                 <span className="info-icon">⏱️</span>
-                <span>30s Timer</span>
+                <span>{QUICKPLAY_PRESETS.find(p => p.id === selectedPreset)?.settings.questionTimeLimit / 1000}s Timer</span>
               </div>
             </div>
 
