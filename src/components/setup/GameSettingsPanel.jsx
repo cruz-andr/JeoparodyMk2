@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '../../stores';
+import { getAvailableVoices, previewVoice, setVoice } from '../../services/ttsService';
 import './GameSettingsPanel.css';
 
 export default function GameSettingsPanel({
@@ -10,6 +11,23 @@ export default function GameSettingsPanel({
   defaultExpanded = false
 }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [availableVoices, setAvailableVoices] = useState([]);
+
+  // Load available voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = getAvailableVoices();
+      setAvailableVoices(voices);
+    };
+
+    // Voices may load asynchronously
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   // Use provided settings or fall back to global store
   const globalSettings = useSettingsStore();
@@ -24,6 +42,22 @@ export default function GameSettingsPanel({
     toggleFinalJeopardy,
     loadPreset,
   } = settings ? { ...settings, ...createSettingsHandlers(settings, onSettingsChange) } : globalSettings;
+
+  // TTS settings are always from global store (user preference, not room setting)
+  const { textToSpeechEnabled, ttsVoice, toggleTextToSpeech, setTTSVoice } = globalSettings;
+
+  // Sync voice selection with TTS service
+  useEffect(() => {
+    setVoice(ttsVoice);
+  }, [ttsVoice]);
+
+  const handleVoiceChange = (voiceName) => {
+    setTTSVoice(voiceName);
+  };
+
+  const handlePreviewVoice = (voiceName) => {
+    previewVoice(voiceName || availableVoices[0]?.name);
+  };
 
   const timeLimitOptions = [
     { value: null, label: 'Off' },
@@ -161,6 +195,46 @@ export default function GameSettingsPanel({
                   <span className="rule-name">Final Jeopardy</span>
                 </label>
               </div>
+            </div>
+
+            {/* Audio / TTS - always editable (personal preference) */}
+            <div className="panel-section">
+              <label className="section-label">Audio</label>
+              <div className="rules-grid">
+                <label className="rule-toggle">
+                  <input
+                    type="checkbox"
+                    checked={textToSpeechEnabled}
+                    onChange={toggleTextToSpeech}
+                  />
+                  <span className="toggle-indicator" />
+                  <span className="rule-name">Read Clues Aloud</span>
+                </label>
+              </div>
+
+              {textToSpeechEnabled && availableVoices.length > 0 && (
+                <div className="voice-selector">
+                  <select
+                    value={ttsVoice || ''}
+                    onChange={(e) => handleVoiceChange(e.target.value || null)}
+                    className="voice-dropdown"
+                  >
+                    <option value="">Auto (Best Available)</option>
+                    {availableVoices.map((voice) => (
+                      <option key={voice.name} value={voice.name}>
+                        {voice.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="preview-btn"
+                    onClick={() => handlePreviewVoice(ttsVoice)}
+                  >
+                    Preview
+                  </button>
+                </div>
+              )}
             </div>
 
             {readOnly && (
