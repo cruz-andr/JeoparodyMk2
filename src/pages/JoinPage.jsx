@@ -54,6 +54,10 @@ export default function JoinPage() {
 
       // Update store with room data
       setStoreRoomCode(code);
+      // Set room type so players know if it's host mode
+      if (result.type) {
+        useRoomStore.getState().setRoomType(result.type);
+      }
       if (result.players) {
         setPlayers(result.players);
       }

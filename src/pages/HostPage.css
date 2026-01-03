@@ -1,0 +1,234 @@
+.host-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg);
+  background: var(--jeopardy-blue);
+}
+
+/* Header */
+.host-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.host-header h1 {
+  color: var(--jeopardy-gold);
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.host-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Progress Indicator */
+.progress-indicator {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-xl);
+  margin-top: var(--spacing-lg);
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+.progress-step.active {
+  opacity: 1;
+}
+
+.progress-step.completed .step-number {
+  background: var(--color-success, #22c55e);
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.progress-step.active .step-number {
+  background: var(--jeopardy-gold);
+  color: var(--jeopardy-blue);
+}
+
+.step-label {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+/* Phase Container */
+.phase-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: var(--spacing-lg);
+}
+
+/* Content Source Selection */
+.content-source-selection {
+  width: 100%;
+  max-width: 700px;
+  text-align: center;
+}
+
+.content-source-selection h2 {
+  color: var(--jeopardy-gold);
+  margin-bottom: var(--spacing-xs);
+}
+
+.source-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+}
+
+.source-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.source-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.source-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--jeopardy-gold);
+}
+
+.source-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.source-label {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.source-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Generating Container */
+.generating-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  gap: var(--spacing-md);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--jeopardy-gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.generating-container p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Back Button */
+.btn-back {
+  margin-top: var(--spacing-lg);
+}
+
+/* Error Message */
+.error-message {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  margin-top: var(--spacing-md);
+}
+
+.global-error {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+/* Connection Warning */
+.connection-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-sm);
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  text-align: center;
+  font-size: 0.9rem;
+  z-index: 1000;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .host-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .progress-indicator {
+    gap: var(--spacing-md);
+  }
+
+  .step-label {
+    display: none;
+  }
+
+  .source-options {
+    grid-template-columns: 1fr;
+  }
+
+  .source-card {
+    padding: var(--spacing-lg);
+  }
+
+  .source-icon {
+    font-size: 2rem;
+  }
+}

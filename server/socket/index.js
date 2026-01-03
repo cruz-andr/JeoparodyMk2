@@ -159,47 +159,7 @@ export function initializeSocketHandlers(io) {
       io.to(roomCode).emit('game:questions-ready', { questions, categories, firstPickerId });
     });
 
-    // Player selects a question
-    socket.on('game:select-question', ({ roomCode, categoryIndex, pointIndex }) => {
-      if (DEBUG_GAME) {
-        const room = gameManager.rooms.get(roomCode);
-        console.log(`[GAME] Question select: room=${roomCode}, player=${socket.userId || socket.id}, cat=${categoryIndex}, pt=${pointIndex}`);
-        console.log(`[GAME] Current picker: ${room?.gameState?.currentPickerId}, Questions loaded: ${!!room?.gameState?.questions}`);
-      }
-
-      const result = gameManager.selectQuestion(socket, roomCode, categoryIndex, pointIndex);
-
-      if (DEBUG_GAME) {
-        console.log(`[GAME] Question select result:`, result ? 'success' : 'FAILED (validation)');
-      }
-
-      if (result) {
-        io.to(roomCode).emit('game:question-selected', result);
-
-        // Skip buzz window for Daily Double (only picker answers)
-        if (result.isDailyDouble) {
-          return;
-        }
-
-        // Start buzz collection window
-        gameManager.startBuzzWindow(roomCode);
-
-        // Start server-side buzz timeout
-        const room = gameManager.rooms.get(roomCode);
-        const duration = room?.settings?.questionTimeLimit || 30000;
-
-        // Clear any existing timeout
-        gameManager.clearBuzzTimeout(roomCode);
-
-        room.buzzTimeout = setTimeout(() => {
-          // Server enforces timeout - emit to ALL clients simultaneously
-          const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
-          if (timeoutResult) {
-            io.to(roomCode).emit('game:buzz-timeout-result', timeoutResult);
-          }
-        }, duration);
-      }
-    });
+    // Player selects a question (handled in HOST MODE EVENTS section for host mode support)
 
     // Player buzzes in with reaction time
     socket.on('game:buzz-in', ({ roomCode, reactionTime }) => {
@@ -207,6 +167,12 @@ export function initializeSocketHandlers(io) {
       console.log(`Player ${playerId} buzzed with reaction time ${reactionTime}ms`);
 
       const room = gameManager.rooms.get(roomCode);
+
+      // Prevent host from buzzing in host mode
+      if (room?.type === 'host' && room?.hostId === playerId) {
+        console.log(`Host ${playerId} tried to buzz - ignoring`);
+        return;
+      }
 
       // Clear the server-side buzz timeout since someone buzzed
       gameManager.clearBuzzTimeout(roomCode);
@@ -420,6 +386,199 @@ export function initializeSocketHandlers(io) {
     socket.on('quickplay:leave-queue', () => {
       gameManager.leaveMatchmakingQueue(socket);
       socket.emit('quickplay:queue-left');
+    });
+
+    // =====================
+    // HOST MODE EVENTS
+    // =====================
+
+    // Host sets custom questions
+    socket.on('host:set-custom-questions', ({ roomCode, questions, categories }, callback) => {
+      const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId);
+
+      if (result?.success) {
+        io.to(roomCode).emit('host:questions-set', { questions, categories });
+        if (callback) callback({ success: true });
+      } else {
+        if (callback) callback({ success: false, error: 'Failed to set questions' });
+      }
+    });
+
+    // Host-only question selection (for host mode rooms)
+    socket.on('game:select-question', ({ roomCode, categoryIndex, pointIndex }) => {
+      const room = gameManager.rooms.get(roomCode);
+
+      // Use host mode selection if applicable
+      let result;
+      if (room?.type === 'host') {
+        result = gameManager.selectQuestionHostMode(socket, roomCode, categoryIndex, pointIndex);
+      } else {
+        result = gameManager.selectQuestion(socket, roomCode, categoryIndex, pointIndex);
+      }
+
+      if (result) {
+        io.to(roomCode).emit('game:question-selected', result);
+
+        // Skip buzz window for Daily Double (only picker answers)
+        if (result.isDailyDouble) {
+          return;
+        }
+
+        // Start buzz collection window
+        gameManager.startBuzzWindow(roomCode);
+
+        // Start server-side buzz timeout
+        const duration = room?.settings?.questionTimeLimit || 30000;
+
+        // Clear any existing timeout
+        gameManager.clearBuzzTimeout(roomCode);
+
+        room.buzzTimeout = setTimeout(() => {
+          const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
+          if (timeoutResult) {
+            io.to(roomCode).emit('game:buzz-timeout-result', timeoutResult);
+          }
+        }, duration);
+      }
+    });
+
+    // Player submits typed answer (host mode)
+    socket.on('player:submit-typed-answer', ({ roomCode, answer }) => {
+      const playerId = socket.sessionId;
+      const result = gameManager.submitTypedAnswer(roomCode, playerId, answer);
+
+      if (result?.success) {
+        const room = gameManager.rooms.get(roomCode);
+        const player = room?.players.get(playerId);
+
+        // Notify all that player submitted (without revealing answer)
+        io.to(roomCode).emit('player:answer-submitted', {
+          playerId,
+          playerName: player?.displayName || player?.name,
+        });
+
+        // If all answered, notify host
+        if (result.allAnswered) {
+          io.to(roomCode).emit('game:all-answers-in');
+
+          // Auto-grade if in auto_grade mode
+          if (room?.settings?.answerMode === 'auto_grade') {
+            const gradeResults = gameManager.autoGradeAnswers(roomCode);
+            io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
+          }
+        }
+      }
+    });
+
+    // Player selects MC option (host mode)
+    socket.on('player:select-mc-option', ({ roomCode, optionIndex }) => {
+      const playerId = socket.sessionId;
+      const result = gameManager.submitMCSelection(roomCode, playerId, optionIndex);
+
+      if (result?.success) {
+        io.to(roomCode).emit('player:mc-selected', {
+          playerId,
+          hasSelected: true,
+        });
+
+        if (result.allSelected) {
+          // Auto-score MC answers
+          const mcResults = gameManager.scoreMCAnswers(roomCode);
+          io.to(roomCode).emit('game:mc-results', { results: mcResults });
+        }
+      }
+    });
+
+    // Host judges answer
+    socket.on('host:judge-answer', ({ roomCode, playerId, correct, points }) => {
+      const result = gameManager.hostJudgeAnswer(roomCode, socket.sessionId, playerId, correct, points);
+
+      if (result) {
+        io.to(roomCode).emit('host:answer-judged', result);
+      }
+    });
+
+    // Host overrides score
+    socket.on('host:override-score', ({ roomCode, playerId, newScore, reason }) => {
+      const result = gameManager.overridePlayerScore(roomCode, socket.sessionId, playerId, newScore, reason);
+
+      if (result) {
+        io.to(roomCode).emit('host:score-overridden', result);
+      }
+    });
+
+    // Host skips question
+    socket.on('host:skip-question', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      const result = gameManager.skipQuestion(roomCode, socket.sessionId);
+
+      if (result) {
+        // Host always picks next in host mode
+        io.to(roomCode).emit('host:question-skipped', {
+          nextPickerId: room?.hostId,
+        });
+      }
+    });
+
+    // Host reveals typed answers
+    socket.on('host:reveal-answers', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (room?.hostId !== socket.sessionId) return;
+
+      const answers = gameManager.getTypedAnswers(roomCode);
+      io.to(roomCode).emit('host:answers-revealed', { answers });
+    });
+
+    // Host kicks player
+    socket.on('host:kick-player', ({ roomCode, playerId }) => {
+      const result = gameManager.kickPlayer(roomCode, socket.sessionId, playerId);
+
+      if (result) {
+        io.to(roomCode).emit('host:player-kicked', { playerId: result.playerId });
+
+        // Disconnect the kicked player's socket
+        if (result.socketId) {
+          io.to(result.socketId).emit('kicked', { reason: 'Removed by host' });
+        }
+      }
+    });
+
+    // Host opens buzzer (verbal mode)
+    socket.on('host:open-buzzer', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (room?.hostId !== socket.sessionId) return;
+
+      gameManager.startBuzzWindow(roomCode);
+      io.to(roomCode).emit('host:buzzer-opened');
+    });
+
+    // Host closes buzzer
+    socket.on('host:close-buzzer', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (room?.hostId !== socket.sessionId) return;
+
+      gameManager.clearBuzzTimeout(roomCode);
+      io.to(roomCode).emit('host:buzzer-closed');
+    });
+
+    // Host opens answer window (typed/MC mode)
+    socket.on('host:open-answer-window', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (room?.hostId !== socket.sessionId) return;
+
+      gameManager.openHostAnswerWindow(roomCode);
+      io.to(roomCode).emit('host:answer-window-opened', {
+        duration: room.settings?.questionTimeLimit || 30000,
+      });
+    });
+
+    // Host closes answer window
+    socket.on('host:close-answer-window', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (room?.hostId !== socket.sessionId) return;
+
+      gameManager.closeHostAnswerWindow(roomCode);
+      io.to(roomCode).emit('host:answer-window-closed');
     });
 
     // Disconnect handling

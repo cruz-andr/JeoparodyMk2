@@ -1,0 +1,335 @@
+.question-editor {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+.question-editor h2 {
+  text-align: center;
+  margin-bottom: var(--spacing-xs);
+  color: var(--jeopardy-gold);
+}
+
+.editor-subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Category Tabs */
+.category-tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-xs);
+}
+
+.category-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.category-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.category-tab.active {
+  background: rgba(var(--jeopardy-gold-rgb, 212, 175, 55), 0.2);
+  border-color: var(--jeopardy-gold);
+}
+
+.tab-number {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.category-tab.active .tab-number {
+  color: var(--jeopardy-gold);
+}
+
+.tab-name {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.category-tab.active .tab-name {
+  color: var(--jeopardy-gold);
+  font-weight: 600;
+}
+
+/* Category Name Section */
+.category-name-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.category-name-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.category-name-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Questions List */
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Question Card */
+.question-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(var(--jeopardy-gold-rgb, 212, 175, 55), 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.point-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--jeopardy-gold);
+}
+
+.question-fields {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Field Groups */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.field-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.question-textarea,
+.question-input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.question-textarea {
+  min-height: 60px;
+}
+
+.question-textarea:focus,
+.question-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Multiple Choice Options */
+.mc-options {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.option-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  position: relative;
+}
+
+.option-input-wrapper.correct {
+  grid-column: span 2;
+}
+
+.option-letter {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.option-input-wrapper.correct .option-letter {
+  background: rgba(var(--color-success-rgb, 34, 197, 94), 0.2);
+  color: var(--color-success, #22c55e);
+}
+
+.option-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.option-input-wrapper.correct .option-input {
+  border-color: rgba(var(--color-success-rgb, 34, 197, 94), 0.3);
+}
+
+.option-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+}
+
+.correct-badge {
+  position: absolute;
+  right: var(--spacing-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: rgba(var(--color-success-rgb, 34, 197, 94), 0.2);
+  color: var(--color-success, #22c55e);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+
+/* Validation Errors */
+.validation-errors {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.validation-errors h4 {
+  color: #ef4444;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9rem;
+}
+
+.validation-errors ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.validation-errors li {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  padding: var(--spacing-xs) 0;
+  padding-left: var(--spacing-md);
+  position: relative;
+}
+
+.validation-errors li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #ef4444;
+}
+
+.validation-errors .more-errors {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Actions */
+.editor-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.editor-actions button {
+  min-width: 150px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .category-tabs {
+    gap: var(--spacing-xs);
+  }
+
+  .category-tab {
+    min-width: 80px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .tab-name {
+    font-size: 0.75rem;
+    max-width: 70px;
+  }
+
+  .options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .option-input-wrapper.correct {
+    grid-column: span 1;
+  }
+
+  .editor-actions {
+    flex-direction: column;
+  }
+
+  .editor-actions button {
+    width: 100%;
+  }
+}

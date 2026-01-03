@@ -65,6 +65,7 @@ export class GameStateManager {
     return {
       roomId: room.id,
       roomCode: room.code,
+      type: room.type,  // Include room type so players know if it's host mode
       players: Array.from(room.players.values()),
       settings: room.settings,
       isHost: player.isHost,
@@ -846,6 +847,361 @@ export class GameStateManager {
       if (now - room.createdAt > maxAge && room.status !== 'in_progress') {
         this.rooms.delete(code);
       }
+    }
+  }
+
+  // =====================
+  // HOST MODE METHODS
+  // =====================
+
+  // Set custom questions from host
+  setHostQuestions(roomCode, questions, categories, hostId) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.hostId !== hostId) return null;
+
+    room.gameState = room.gameState || {};
+    room.gameState.questions = questions;
+    room.gameState.categories = categories;
+    room.gameState.customQuestions = true;
+
+    // Initialize host mode tracking
+    room.gameState.typedAnswers = new Map();
+    room.gameState.mcSelections = new Map();
+    room.gameState.autoGradeResults = new Map();
+    room.gameState.answerWindowOpen = false;
+
+    return { success: true };
+  }
+
+  // Host-only question selection
+  selectQuestionHostMode(socket, roomCode, categoryIndex, pointIndex) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return null;
+
+    const playerId = socket.sessionId;
+
+    // Only host can select in host mode
+    if (room.type === 'host' && playerId !== room.hostId) {
+      return null;
+    }
+
+    const question = room.gameState.questions[categoryIndex]?.[pointIndex];
+    if (!question || question.revealed) return null;
+
+    question.revealed = true;
+    room.gameState.currentQuestion = { ...question, categoryIndex, pointIndex };
+
+    // Clear previous answer tracking
+    room.gameState.typedAnswers = new Map();
+    room.gameState.mcSelections = new Map();
+    room.gameState.autoGradeResults = new Map();
+    room.gameState.buzzes = {};
+    room.gameState.playersWhoBuzzed = new Set();
+
+    // Check if this is a Daily Double
+    const isDailyDouble = room.gameState.dailyDoubles?.some(
+      dd => dd.categoryIndex === categoryIndex && dd.pointIndex === pointIndex
+    );
+
+    if (isDailyDouble) {
+      room.gameState.phase = 'dailyDouble';
+      room.gameState.isDailyDouble = true;
+    } else {
+      room.gameState.phase = 'questionActive';
+      room.gameState.isDailyDouble = false;
+    }
+
+    return {
+      categoryIndex,
+      pointIndex,
+      question: {
+        category: question.category,
+        points: question.points,
+        answer: question.answer,
+        question: question.question,
+        options: question.options,
+      },
+      isDailyDouble,
+      pickerId: playerId,
+    };
+  }
+
+  // Record typed answer from player
+  submitTypedAnswer(roomCode, playerId, answer) {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return null;
+
+    // Prevent duplicate submissions
+    if (room.gameState.typedAnswers.has(playerId)) {
+      return { success: false, error: 'Already submitted' };
+    }
+
+    room.gameState.typedAnswers.set(playerId, {
+      answer,
+      submittedAt: Date.now(),
+    });
+
+    // Check if all non-host players have answered
+    const nonHostPlayers = Array.from(room.players.values())
+      .filter(p => !p.isHost && p.isConnected);
+    const allAnswered = room.gameState.typedAnswers.size >= nonHostPlayers.length;
+
+    return { success: true, allAnswered };
+  }
+
+  // Record MC selection from player
+  submitMCSelection(roomCode, playerId, optionIndex) {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return null;
+
+    if (room.gameState.mcSelections.has(playerId)) {
+      return { success: false, error: 'Already selected' };
+    }
+
+    room.gameState.mcSelections.set(playerId, optionIndex);
+
+    // Check if all non-host players have selected
+    const nonHostPlayers = Array.from(room.players.values())
+      .filter(p => !p.isHost && p.isConnected);
+    const allSelected = room.gameState.mcSelections.size >= nonHostPlayers.length;
+
+    return { success: true, allSelected };
+  }
+
+  // Auto-score MC answers
+  scoreMCAnswers(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return [];
+
+    const question = room.gameState.currentQuestion;
+    const correctIndex = 0; // First option is always correct
+    const points = question?.points || 0;
+    const results = [];
+
+    for (const [playerId, selectedIndex] of room.gameState.mcSelections) {
+      const correct = selectedIndex === correctIndex;
+      const player = room.players.get(playerId);
+
+      if (player) {
+        player.score = (player.score || 0) + (correct ? points : 0);
+        results.push({
+          playerId,
+          playerName: player.displayName || player.name,
+          selectedIndex,
+          correct,
+          points: correct ? points : 0,
+          newScore: player.score,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // Auto-grade typed answers using fuzzy matching
+  autoGradeAnswers(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return [];
+
+    const question = room.gameState.currentQuestion;
+    const correctAnswer = question?.question || '';
+    const results = [];
+
+    for (const [playerId, { answer }] of room.gameState.typedAnswers) {
+      const gradeResult = this.fuzzyMatchAnswer(answer, correctAnswer);
+      room.gameState.autoGradeResults.set(playerId, gradeResult);
+
+      const player = room.players.get(playerId);
+      results.push({
+        playerId,
+        playerName: player?.displayName || player?.name || 'Unknown',
+        answer,
+        ...gradeResult,
+      });
+    }
+
+    return results;
+  }
+
+  // Fuzzy match answer against correct answer
+  fuzzyMatchAnswer(playerAnswer, correctAnswer) {
+    const normalize = (s) => s.toLowerCase()
+      .replace(/^(what|who|where|when|why|how)\s+(is|are|was|were)\s+/i, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .trim();
+
+    const normalizedPlayer = normalize(playerAnswer);
+    const normalizedCorrect = normalize(correctAnswer);
+
+    // Exact match
+    if (normalizedPlayer === normalizedCorrect) {
+      return { isCorrect: true, confidence: 1.0, reason: 'Exact match' };
+    }
+
+    // Contains match
+    if (normalizedPlayer.includes(normalizedCorrect) ||
+        normalizedCorrect.includes(normalizedPlayer)) {
+      return { isCorrect: true, confidence: 0.8, reason: 'Partial match' };
+    }
+
+    // Levenshtein distance for typos
+    const distance = this.levenshteinDistance(normalizedPlayer, normalizedCorrect);
+    const maxLen = Math.max(normalizedPlayer.length, normalizedCorrect.length);
+    const similarity = maxLen > 0 ? 1 - (distance / maxLen) : 0;
+
+    if (similarity >= 0.85) {
+      return { isCorrect: true, confidence: similarity, reason: 'Fuzzy match' };
+    }
+
+    return { isCorrect: false, confidence: 0, reason: 'No match found' };
+  }
+
+  // Levenshtein distance for fuzzy matching
+  levenshteinDistance(a, b) {
+    const matrix = [];
+
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+
+    return matrix[b.length][a.length];
+  }
+
+  // Host judges an answer
+  hostJudgeAnswer(roomCode, hostId, playerId, correct, points) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.hostId !== hostId) return null;
+
+    const player = room.players.get(playerId);
+    if (!player) return null;
+
+    const pointsToApply = correct ? points : -points;
+    player.score = (player.score || 0) + pointsToApply;
+
+    return {
+      playerId,
+      playerName: player.displayName || player.name,
+      correct,
+      points: pointsToApply,
+      newScore: player.score,
+      // Host always picks next in host mode
+      nextPickerId: hostId,
+    };
+  }
+
+  // Host overrides player score
+  overridePlayerScore(roomCode, hostId, playerId, newScore, reason) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.hostId !== hostId) return null;
+
+    const player = room.players.get(playerId);
+    if (!player) return null;
+
+    const oldScore = player.score || 0;
+    player.score = newScore;
+
+    // Log override
+    room.gameState = room.gameState || {};
+    room.gameState.scoreOverrides = room.gameState.scoreOverrides || [];
+    room.gameState.scoreOverrides.push({
+      playerId,
+      oldScore,
+      newScore,
+      reason,
+      timestamp: Date.now(),
+    });
+
+    return { playerId, oldScore, newScore, reason };
+  }
+
+  // Host skips current question
+  skipQuestion(roomCode, hostId) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.hostId !== hostId) return null;
+
+    // Clear current question state
+    room.gameState.currentQuestion = null;
+    room.gameState.typedAnswers = new Map();
+    room.gameState.mcSelections = new Map();
+    room.gameState.autoGradeResults = new Map();
+    room.gameState.phase = 'playing';
+    room.gameState.isDailyDouble = false;
+
+    return { success: true };
+  }
+
+  // Host kicks a player
+  kickPlayer(roomCode, hostId, playerId) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.hostId !== hostId) return null;
+    if (playerId === hostId) return null; // Can't kick self
+
+    const player = room.players.get(playerId);
+    if (!player) return null;
+
+    const socketId = player.socketId;
+    room.players.delete(playerId);
+    this.sessionRooms.delete(playerId);
+    if (socketId) {
+      this.playerRooms.delete(socketId);
+    }
+
+    return { playerId, socketId };
+  }
+
+  // Get all typed answers for host view
+  getTypedAnswers(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room?.gameState) return [];
+
+    const results = [];
+    for (const [playerId, data] of room.gameState.typedAnswers) {
+      const player = room.players.get(playerId);
+      results.push({
+        playerId,
+        playerName: player?.displayName || player?.name || 'Unknown',
+        answer: data.answer,
+        submittedAt: data.submittedAt,
+        autoGradeResult: room.gameState.autoGradeResults.get(playerId),
+      });
+    }
+
+    return results;
+  }
+
+  // Open answer window for host mode
+  openHostAnswerWindow(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room && room.gameState) {
+      room.gameState.answerWindowOpen = true;
+      room.gameState.answerWindowStartTime = Date.now();
+      room.gameState.typedAnswers = new Map();
+      room.gameState.mcSelections = new Map();
+    }
+  }
+
+  // Close answer window
+  closeHostAnswerWindow(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room && room.gameState) {
+      room.gameState.answerWindowOpen = false;
     }
   }
 }

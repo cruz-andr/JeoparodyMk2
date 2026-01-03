@@ -1,0 +1,303 @@
+.import-panel {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+.import-panel h2 {
+  text-align: center;
+  margin-bottom: var(--spacing-xs);
+  color: var(--jeopardy-gold);
+}
+
+.import-subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* Drop Zone */
+.drop-zone {
+  position: relative;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.02);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-zone:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.drop-zone.dragging {
+  border-color: var(--jeopardy-gold);
+  background: rgba(var(--jeopardy-gold-rgb, 212, 175, 55), 0.1);
+}
+
+.drop-zone.has-file {
+  cursor: default;
+  border-style: solid;
+  border-color: var(--color-success, #22c55e);
+  background: rgba(var(--color-success-rgb, 34, 197, 94), 0.05);
+}
+
+.file-input {
+  display: none;
+}
+
+.drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  opacity: 0.6;
+}
+
+.drop-text {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.drop-subtext {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Success State */
+.drop-content.success {
+  color: var(--color-success, #22c55e);
+}
+
+.success-icon {
+  font-size: 3rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-success-rgb, 34, 197, 94), 0.2);
+  border-radius: 50%;
+}
+
+.success-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-success, #22c55e);
+}
+
+.file-summary {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.btn-clear {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-clear:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+/* Loading */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--jeopardy-gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Validation Errors */
+.import-errors {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.import-errors h4 {
+  color: #ef4444;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9rem;
+}
+
+.import-errors ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.import-errors li {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  padding: var(--spacing-xs) 0;
+  padding-left: var(--spacing-md);
+  position: relative;
+}
+
+.import-errors li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #ef4444;
+}
+
+.import-errors .more-errors {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Preview */
+.import-preview {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.import-preview h3 {
+  font-size: 0.9rem;
+  color: var(--jeopardy-gold);
+  margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.categories-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.category-preview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.category-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.question-count {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.final-jeopardy-preview {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.fj-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.fj-category {
+  font-size: 0.85rem;
+  color: var(--jeopardy-gold);
+  font-weight: 600;
+}
+
+/* Template Section */
+.template-section {
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.template-section p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.btn-template {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-template:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--jeopardy-gold);
+  color: var(--jeopardy-gold);
+}
+
+/* Actions */
+.import-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.import-actions button {
+  min-width: 150px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .categories-preview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .import-actions {
+    flex-direction: column;
+  }
+
+  .import-actions button {
+    width: 100%;
+  }
+}
