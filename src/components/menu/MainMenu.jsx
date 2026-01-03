@@ -3,9 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import logo from '../../assets/images/JeoparodyTitle.png';
 import SettingsModal from '../common/SettingsModal';
+import { useDailyStore } from '../../stores/dailyStore';
 import './MainMenu.css';
 
 const menuItems = [
+  {
+    id: 'daily',
+    label: 'Daily Challenge',
+    description: 'New puzzle every day!',
+    path: '/daily',
+    icon: '📅',
+    featured: true,
+  },
   {
     id: 'quickplay',
     label: 'Quickplay',
@@ -70,6 +79,8 @@ export default function MainMenu() {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const { hasPlayedToday, stats } = useDailyStore();
+  const playedToday = hasPlayedToday();
 
   return (
     <div className="main-menu">
@@ -93,7 +104,7 @@ export default function MainMenu() {
         {menuItems.map((item) => (
           <motion.button
             key={item.id}
-            className={`menu-item ${hoveredItem === item.id ? 'hovered' : ''}`}
+            className={`menu-item ${hoveredItem === item.id ? 'hovered' : ''} ${item.featured ? 'featured' : ''}`}
             variants={itemVariants}
             onClick={() => navigate(item.path)}
             onMouseEnter={() => setHoveredItem(item.id)}
@@ -106,6 +117,16 @@ export default function MainMenu() {
               <span className="menu-label">{item.label}</span>
               <span className="menu-description">{item.description}</span>
             </div>
+            {item.id === 'daily' && (
+              <span className={`daily-badge ${playedToday ? 'completed' : 'new'}`}>
+                {playedToday ? '✓' : 'NEW'}
+              </span>
+            )}
+            {item.id === 'daily' && stats.currentStreak > 0 && (
+              <span className="streak-indicator" title={`${stats.currentStreak} day streak`}>
+                {stats.currentStreak}
+              </span>
+            )}
           </motion.button>
         ))}
       </motion.nav>

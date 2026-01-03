@@ -1,0 +1,257 @@
+.daily-results {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.daily-results h2 {
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.results-date {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-bottom: 30px;
+}
+
+/* Emoji Grid */
+.emoji-grid {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.emoji-block {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+/* Score */
+.results-score {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+}
+
+.score-number {
+  color: var(--jeopardy-gold);
+}
+
+.score-divider {
+  color: var(--text-muted);
+  margin: 0 4px;
+}
+
+.score-total {
+  color: var(--text-secondary);
+}
+
+.score-percentage {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: 24px;
+}
+
+/* Share Button */
+.btn-share {
+  padding: 14px 40px;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, var(--jeopardy-gold), #c9a227);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--jeopardy-black);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 40px;
+}
+
+.btn-share:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
+}
+
+.btn-share.copied {
+  background: var(--color-success);
+  color: white;
+}
+
+/* Stats Section */
+.stats-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.stats-section h3 {
+  color: var(--text-primary);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--jeopardy-gold);
+  font-family: var(--font-display);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Review Section */
+.review-section {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.review-section h3 {
+  color: var(--text-primary);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  border-left: 4px solid transparent;
+}
+
+.review-item.correct {
+  border-left-color: var(--color-success);
+}
+
+.review-item.incorrect {
+  border-left-color: var(--color-error);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.review-category {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--jeopardy-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.review-result {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.review-result.correct {
+  color: var(--color-success);
+}
+
+.review-result.incorrect {
+  color: var(--color-error);
+}
+
+.review-clue {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.review-answer {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.review-answer strong {
+  color: var(--color-success);
+}
+
+.review-your-answer {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.review-your-answer strong {
+  color: var(--text-muted);
+}
+
+/* Actions */
+.results-actions {
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comeback-text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 16px;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .daily-results h2 {
+    font-size: 1.5rem;
+  }
+
+  .emoji-block {
+    font-size: 2rem;
+  }
+
+  .results-score {
+    font-size: 2.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}

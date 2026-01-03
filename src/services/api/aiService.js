@@ -116,6 +116,56 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no extra
   return JSON.parse(jsonStr);
 }
 
+// Generate multiple choice options (3 incorrect + 1 correct)
+export async function generateMCOptions(correctAnswer, category, clue) {
+  const aiModel = getModel();
+
+  const prompt = `You are a Jeopardy game assistant. Generate 3 plausible but incorrect multiple choice options for a question.
+
+Category: ${category}
+Clue: ${clue}
+Correct Answer: ${correctAnswer}
+
+Requirements:
+- Generate exactly 3 INCORRECT options that are plausible distractors
+- Options should be similar in format/length to the correct answer
+- Options should be related to the category but clearly wrong
+- Make them challenging but not tricky - they should be believable
+
+Return ONLY a valid JSON object with this exact structure (no markdown, no extra text):
+{
+  "options": ["incorrect option 1", "incorrect option 2", "incorrect option 3"]
+}`;
+
+  try {
+    const result = await aiModel.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+
+    let jsonStr = text;
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (match) jsonStr = match[1].trim();
+    }
+
+    const parsed = JSON.parse(jsonStr);
+
+    // Correct answer must be first (index 0) - server expects this
+    const allOptions = [correctAnswer, ...parsed.options.slice(0, 3)];
+
+    return {
+      options: allOptions,
+    };
+  } catch (error) {
+    console.error('Error generating MC options:', error);
+    // Fallback: return correct answer with placeholder options
+    return {
+      options: [correctAnswer, 'Option B', 'Option C', 'Option D'],
+      correctIndex: 0,
+    };
+  }
+}
+
 // Validate if an answer is correct using AI
 export async function validateAnswer(playerAnswer, correctAnswer, strictness = 'moderate') {
   const aiModel = getModel();

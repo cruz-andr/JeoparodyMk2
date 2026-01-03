@@ -12,8 +12,8 @@ const answerModes = [
   },
   {
     id: 'typed',
-    label: 'Buzzer + Typed',
-    description: 'Players buzz in, then type their answer. You see it and judge.',
+    label: 'Typed Answers',
+    description: 'All players type their answers simultaneously. You see and judge each one.',
     icon: '⌨️',
   },
   {

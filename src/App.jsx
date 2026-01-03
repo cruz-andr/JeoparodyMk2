@@ -10,6 +10,7 @@ import {
   GamePage,
   HighscoresPage,
 } from './pages';
+import DailyPage from './pages/DailyPage';
 import './styles/globals.css';
 
 const router = createBrowserRouter([
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
   {
     path: '/menu',
     element: <HomePage />,
+  },
+  {
+    path: '/daily',
+    element: <DailyPage />,
   },
   {
     path: '/singleplayer',

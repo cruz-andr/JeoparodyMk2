@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHostStore } from '../../stores/hostStore';
+import { generateMCOptions } from '../../services/api/aiService';
 import './QuestionEditor.css';
 
 const POINT_VALUES = [200, 400, 600, 800, 1000];
@@ -9,8 +10,34 @@ export default function QuestionEditor({ onBack, onNext, answerMode = 'verbal' }
   const { categories, questions, updateCategory, updateQuestion, validateContent, validationErrors } = useHostStore();
   const [activeTab, setActiveTab] = useState(0);
   const [showValidation, setShowValidation] = useState(false);
+  const [generatingOptions, setGeneratingOptions] = useState({}); // Track which questions are generating
 
   const isMCMode = answerMode === 'multiple_choice';
+
+  const handleGenerateMCOptions = async (pointIndex) => {
+    const question = questions[activeTab]?.[pointIndex];
+    if (!question?.question || !question?.answer) {
+      alert('Please enter both the clue and correct answer first.');
+      return;
+    }
+
+    const key = `${activeTab}-${pointIndex}`;
+    setGeneratingOptions(prev => ({ ...prev, [key]: true }));
+
+    try {
+      const result = await generateMCOptions(
+        question.question,
+        categories[activeTab] || 'General',
+        question.answer
+      );
+      updateQuestion(activeTab, pointIndex, { options: result.options });
+    } catch (error) {
+      console.error('Failed to generate MC options:', error);
+      alert('Failed to generate options. Please try again.');
+    } finally {
+      setGeneratingOptions(prev => ({ ...prev, [key]: false }));
+    }
+  };
 
   const handleNext = () => {
     const isValid = validateContent();
@@ -118,7 +145,17 @@ export default function QuestionEditor({ onBack, onNext, answerMode = 'verbal' }
                     {/* Multiple Choice Options */}
                     {isMCMode && (
                       <div className="field-group mc-options">
-                        <label className="field-label">Answer Options (first one is correct)</label>
+                        <div className="mc-options-header">
+                          <label className="field-label">Answer Options (first one is correct)</label>
+                          <button
+                            type="button"
+                            className={`btn-generate-mc ${generatingOptions[`${activeTab}-${pointIndex}`] ? 'loading' : ''}`}
+                            onClick={() => handleGenerateMCOptions(pointIndex)}
+                            disabled={generatingOptions[`${activeTab}-${pointIndex}`]}
+                          >
+                            {generatingOptions[`${activeTab}-${pointIndex}`] ? 'Generating...' : 'AI Generate'}
+                          </button>
+                        </div>
                         <div className="options-grid">
                           {['A', 'B', 'C', 'D'].map((letter, optionIndex) => (
                             <div key={letter} className={`option-input-wrapper ${optionIndex === 0 ? 'correct' : ''}`}>

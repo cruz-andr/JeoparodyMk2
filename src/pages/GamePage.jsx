@@ -1408,6 +1408,7 @@ export default function GamePage() {
               players={players}
               answerMode={answerMode}
               buzzerOpen={hostBuzzerOpen}
+              answerWindowOpen={hostAnswerWindowOpen}
             />
           )}
 

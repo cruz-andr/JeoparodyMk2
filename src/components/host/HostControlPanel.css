@@ -196,6 +196,57 @@
   color: var(--text-primary);
 }
 
+/* Answer Window Section (Typed/MC/Auto-Grade) */
+.answer-window-section {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.answer-window-controls {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.btn-open-answers,
+.btn-close-answers {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-open-answers {
+  background: var(--color-success, #22c55e);
+  color: white;
+}
+
+.btn-open-answers.active {
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4);
+  animation: pulse-buzzer 1.5s infinite;
+}
+
+.btn-open-answers:disabled,
+.btn-close-answers:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-close-answers {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.answer-window-hint {
+  margin-top: var(--spacing-sm);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 /* Judging Section */
 .judging-section {
   padding: var(--spacing-md);
