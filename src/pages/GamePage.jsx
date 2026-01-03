@@ -151,6 +151,9 @@ export default function GamePage() {
           if (result.isHost !== undefined) {
             useRoomStore.getState().setIsHost(result.isHost);
           }
+          if (result.type) {
+            useRoomStore.getState().setRoomType(result.type);
+          }
 
           // Restore game state if game is in progress
           if (result.gameState) {
@@ -158,18 +161,52 @@ export default function GamePage() {
 
             // Restore categories and questions
             if (gs.categories) setLocalCategories(gs.categories);
-            if (gs.questions) setLocalQuestions(gs.questions);
+            if (gs.questions) {
+              setLocalQuestions(gs.questions);
+
+              // Rebuild revealedQuestions Set from questions with revealed=true
+              const revealed = new Set();
+              gs.questions.forEach((category, catIdx) => {
+                category.forEach((q, ptIdx) => {
+                  if (q.revealed) {
+                    revealed.add(`${catIdx}-${ptIdx}`);
+                  }
+                });
+              });
+              setRevealedQuestions(revealed);
+            }
             if (gs.currentPickerId) setCurrentPickerId(gs.currentPickerId);
             if (gs.currentRound) setCurrentRound(gs.currentRound);
 
+            // Restore current question state
+            if (gs.currentQuestion) {
+              setCurrentQuestion(gs.currentQuestion);
+            }
+
+            // Restore buzzer state (server uses buzzedPlayerId)
+            if (gs.buzzedPlayerId) {
+              setBuzzerWinnerId(gs.buzzedPlayerId);
+            }
+
+            // Restore host mode states
+            if (gs.buzzWindowOpen !== undefined) {
+              setHostBuzzerOpen(gs.buzzWindowOpen);
+            }
+
             // Determine phase from game state
-            if (gs.phase === 'playing') {
+            // Use questions presence as fallback - if questions exist, game has started
+            const hasQuestions = gs.questions && gs.questions.length > 0;
+
+            if (gs.phase === 'playing' || (hasQuestions && !gs.phase)) {
               setPhase('playing');
             } else if (gs.phase === 'finalJeopardy') {
               setPhase('finalJeopardy');
             } else if (gs.phase === 'dailyDouble') {
               setIsDailyDouble(true);
               setDailyDoublePhase('wager');
+              setPhase('playing');
+            } else if (hasQuestions) {
+              // Fallback: if we have questions but unknown phase, assume playing
               setPhase('playing');
             } else {
               setPhase('lobby');
@@ -1363,7 +1400,10 @@ export default function GamePage() {
             <HostControlPanel
               roomCode={roomCode}
               currentQuestion={currentQuestion}
-              buzzedPlayer={buzzerWinnerId ? players.find(p => p.id === buzzerWinnerId) : null}
+              buzzedPlayer={buzzerWinnerId ? {
+                ...players.find(p => p.id === buzzerWinnerId),
+                reactionTime: buzzerWinnerReactionTime
+              } : null}
               typedAnswers={typedAnswersForHost}
               players={players}
               answerMode={answerMode}

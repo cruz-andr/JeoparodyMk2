@@ -818,6 +818,7 @@ export class GameStateManager {
     return {
       success: true,
       roomCode,
+      type: room.type,  // Include room type for host mode detection
       players: Array.from(room.players.values()),
       settings: room.settings,
       gameState: room.gameState,
@@ -1099,6 +1100,10 @@ export class GameStateManager {
 
     const pointsToApply = correct ? points : -points;
     player.score = (player.score || 0) + pointsToApply;
+
+    // Clear current question state after judging (so reconnect returns to board)
+    room.gameState.currentQuestion = null;
+    room.gameState.buzzedPlayerId = null;
 
     return {
       playerId,
