@@ -22,13 +22,15 @@ export default function GamePage() {
   const { leaveRoom, setReady, subscribe, isConnected } = useRoom(roomCode);
   const { players, isHost, resetRoom, settings, updateSettings } = useRoomStore();
   const { setCategories, setQuestions, setPhase: setGamePhase } = useGameStore();
-  const currentPlayerId = useUserStore((s) => s.oderId) || socketClient.getSocketId();
+  const sessionId = useUserStore((s) => s.sessionId);
+  const currentPlayerId = sessionId || socketClient.getSocketId();
 
   // Game phases: 'lobby' | 'setup' | 'categoryEdit' | 'generating' | 'playing' | 'finished'
   const [phase, setPhase] = useState('lobby');
   const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   // Setup state (host only)
   const [genre, setGenre] = useState('');
@@ -71,6 +73,72 @@ export default function GamePage() {
     socketClient.emit('room:update-settings', { roomCode, settings: newSettings });
   };
 
+  // Store room code for reconnection on page reload
+  useEffect(() => {
+    if (roomCode) {
+      localStorage.setItem('jeopardy_current_room', roomCode);
+    }
+  }, [roomCode]);
+
+  // Auto-reconnect on page load if we have a stored room
+  useEffect(() => {
+    if (!isConnected || !roomCode) return;
+
+    // Check if we need to attempt reconnection (players array is empty = fresh page load)
+    const storedRoom = localStorage.getItem('jeopardy_current_room');
+    if (storedRoom === roomCode && players.length === 0) {
+      setIsReconnecting(true);
+
+      socketClient.reconnectToRoom(roomCode)
+        .then((result) => {
+          console.log('Reconnected to room:', result);
+
+          // Restore room state
+          if (result.players) {
+            useRoomStore.getState().setPlayers(result.players);
+          }
+          if (result.settings) {
+            useRoomStore.getState().updateSettings(result.settings);
+          }
+          if (result.isHost !== undefined) {
+            useRoomStore.getState().setIsHost(result.isHost);
+          }
+
+          // Restore game state if game is in progress
+          if (result.gameState) {
+            const gs = result.gameState;
+
+            // Restore categories and questions
+            if (gs.categories) setLocalCategories(gs.categories);
+            if (gs.questions) setLocalQuestions(gs.questions);
+            if (gs.currentPickerId) setCurrentPickerId(gs.currentPickerId);
+            if (gs.currentRound) setCurrentRound(gs.currentRound);
+
+            // Determine phase from game state
+            if (gs.phase === 'playing') {
+              setPhase('playing');
+            } else if (gs.phase === 'finalJeopardy') {
+              setPhase('finalJeopardy');
+            } else if (gs.phase === 'dailyDouble') {
+              setIsDailyDouble(true);
+              setDailyDoublePhase('wager');
+              setPhase('playing');
+            } else {
+              setPhase('lobby');
+            }
+          }
+
+          setIsReconnecting(false);
+        })
+        .catch((err) => {
+          console.log('Reconnection failed:', err.message);
+          // Clear stored room if reconnection failed
+          localStorage.removeItem('jeopardy_current_room');
+          setIsReconnecting(false);
+        });
+    }
+  }, [isConnected, roomCode, players.length]);
+
   // Subscribe to game events
   useEffect(() => {
     if (!isConnected || !roomCode) return;
@@ -78,6 +146,13 @@ export default function GamePage() {
     // Settings updated by host
     const unsubSettingsUpdated = subscribe('room:settings-updated', ({ settings: newSettings }) => {
       updateSettings(newSettings);
+    });
+
+    // Player reconnected after page reload
+    const unsubPlayerReconnected = subscribe('room:player-reconnected', ({ playerId, displayName }) => {
+      console.log(`Player ${displayName} reconnected`);
+      // Update player's connected status
+      useRoomStore.getState().updatePlayer(playerId, { isConnected: true });
     });
 
     // Host starts setup
@@ -259,6 +334,7 @@ export default function GamePage() {
 
     return () => {
       unsubSettingsUpdated();
+      unsubPlayerReconnected();
       unsubSetupStarted();
       unsubCategoriesSet();
       unsubQuestionsReady();
@@ -302,6 +378,8 @@ export default function GamePage() {
   }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion]);
 
   const handleLeave = () => {
+    // Clear stored room so we don't try to reconnect
+    localStorage.removeItem('jeopardy_current_room');
     leaveRoom(roomCode);
     resetRoom();
     navigate('/menu');
@@ -601,7 +679,7 @@ export default function GamePage() {
     <div className="game-page">
       {/* Loading Overlay */}
       <AnimatePresence>
-        {loading && (
+        {(loading || isReconnecting) && (
           <motion.div
             className="loading-overlay"
             initial={{ opacity: 0 }}
@@ -609,7 +687,13 @@ export default function GamePage() {
             exit={{ opacity: 0 }}
           >
             <div className="spinner" />
-            <p>{phase === 'generating' ? 'Generating questions...' : 'The AI is thinking...'}</p>
+            <p>
+              {isReconnecting
+                ? 'Reconnecting to game...'
+                : phase === 'generating'
+                  ? 'Generating questions...'
+                  : 'The AI is thinking...'}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

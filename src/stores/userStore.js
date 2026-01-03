@@ -1,7 +1,26 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
+
+// Generate or retrieve session ID from cookie
+const getSessionId = () => {
+  let sessionId = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('jeopardy_session='))
+    ?.split('=')[1];
+
+  if (!sessionId) {
+    sessionId = uuidv4();
+    // Set cookie with 7-day expiration
+    document.cookie = `jeopardy_session=${sessionId}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+  }
+
+  return sessionId;
+};
 
 const initialState = {
+  // Session ID (persisted in cookie for reconnection)
+  sessionId: getSessionId(),
   // Auth State
   isGuest: true,
   isAuthenticated: false,
