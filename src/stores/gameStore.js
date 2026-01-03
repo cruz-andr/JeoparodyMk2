@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useSettingsStore } from './settingsStore';
 
 const POINT_VALUES = {
   regular: [200, 400, 600, 800, 1000],
@@ -58,8 +59,11 @@ export const useGameStore = create((set, get) => ({
   setCategories: (categories) => set({ categories }),
 
   setQuestions: (questions) => {
-    // Place daily doubles
-    const dailyDoubles = placeDailyDoubles(questions.length, get().currentRound);
+    // Only place daily doubles if setting is enabled
+    const { enableDailyDouble } = useSettingsStore.getState();
+    const dailyDoubles = enableDailyDouble
+      ? placeDailyDoubles(questions.length, get().currentRound)
+      : [];
     set({ questions, dailyDoubles });
   },
 
@@ -169,7 +173,11 @@ export const useGameStore = create((set, get) => ({
   },
 
   startRound2: (newCategories, newQuestions) => {
-    const dailyDoubles = placeDailyDoubles(newQuestions.length, 2);
+    // Only place daily doubles if setting is enabled
+    const { enableDailyDouble } = useSettingsStore.getState();
+    const dailyDoubles = enableDailyDouble
+      ? placeDailyDoubles(newQuestions.length, 2)
+      : [];
     set({
       currentRound: 2,
       categories: newCategories,

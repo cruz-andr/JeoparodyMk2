@@ -93,6 +93,25 @@ export class GameStateManager {
     }
   }
 
+  updateRoomSettings(socket, roomCode, settings) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+
+    // Only host can update settings
+    const playerId = socket.userId || socket.id;
+    if (playerId !== room.hostId) {
+      return null;
+    }
+
+    // Only update while waiting (not during game)
+    if (room.status !== 'waiting') {
+      return null;
+    }
+
+    room.settings = { ...room.settings, ...settings };
+    return room.settings;
+  }
+
   // Game Logic - Multiplayer Setup
 
   setCategories(roomCode, categories) {
@@ -116,7 +135,53 @@ export class GameStateManager {
       room.gameState.buzzedPlayerId = null;
       room.gameState.currentQuestion = null;
       room.gameState.playersWhoBuzzed = new Set();
+      room.gameState.currentRound = 1;
+
+      // Place Daily Doubles if setting enabled
+      if (room.settings.enableDailyDouble) {
+        room.gameState.dailyDoubles = this.placeDailyDoubles(questions.length, 1);
+      } else {
+        room.gameState.dailyDoubles = [];
+      }
+
+      // Daily Double state
+      room.gameState.isDailyDouble = false;
+      room.gameState.dailyDoubleWager = 0;
     }
+  }
+
+  placeDailyDoubles(categoryCount, round) {
+    const count = round === 1 ? 1 : 2;
+    const dailyDoubles = [];
+    const weights = [0, 0.1, 0.2, 0.3, 0.4]; // Row weights - favor harder questions
+
+    while (dailyDoubles.length < count) {
+      // Weighted random row selection (skip row 0 - easiest)
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      let random = Math.random() * totalWeight;
+      let pointIndex = 0;
+
+      for (let i = 0; i < weights.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+          pointIndex = i;
+          break;
+        }
+      }
+
+      const categoryIndex = Math.floor(Math.random() * categoryCount);
+
+      // Check if this position is already taken
+      const exists = dailyDoubles.some(
+        dd => dd.categoryIndex === categoryIndex && dd.pointIndex === pointIndex
+      );
+
+      if (!exists && pointIndex > 0) {
+        dailyDoubles.push({ categoryIndex, pointIndex });
+      }
+    }
+
+    return dailyDoubles;
   }
 
   selectQuestion(socket, roomCode, categoryIndex, pointIndex) {
@@ -134,9 +199,21 @@ export class GameStateManager {
 
     question.revealed = true;
     room.gameState.currentQuestion = { ...question, categoryIndex, pointIndex };
-    room.gameState.phase = 'questionActive';
     room.gameState.buzzes = {};
     room.gameState.playersWhoBuzzed = new Set();
+
+    // Check if this is a Daily Double
+    const isDailyDouble = room.gameState.dailyDoubles?.some(
+      dd => dd.categoryIndex === categoryIndex && dd.pointIndex === pointIndex
+    );
+
+    if (isDailyDouble) {
+      room.gameState.phase = 'dailyDouble';
+      room.gameState.isDailyDouble = true;
+    } else {
+      room.gameState.phase = 'questionActive';
+      room.gameState.isDailyDouble = false;
+    }
 
     return {
       categoryIndex,
@@ -147,6 +224,8 @@ export class GameStateManager {
         answer: question.answer,
         question: question.question,
       },
+      isDailyDouble,
+      pickerId: playerId,
     };
   }
 
@@ -156,6 +235,30 @@ export class GameStateManager {
       room.gameState.buzzes = {};
       room.gameState.buzzWindowOpen = true;
       room.gameState.playersWhoBuzzed = new Set();
+      room.gameState.buzzWindowStartTime = Date.now();
+    }
+  }
+
+  clearBuzzTimeout(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room?.buzzTimeout) {
+      clearTimeout(room.buzzTimeout);
+      room.buzzTimeout = null;
+    }
+  }
+
+  clearAnswerTimeout(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room?.answerTimeout) {
+      clearTimeout(room.answerTimeout);
+      room.answerTimeout = null;
+    }
+  }
+
+  startAnswerWindow(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room && room.gameState) {
+      room.gameState.answerWindowStartTime = Date.now();
     }
   }
 
@@ -246,6 +349,255 @@ export class GameStateManager {
         canBuzzAgain,
       };
     }
+  }
+
+  handleBuzzTimeout(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return null;
+
+    // Close buzz window - but DON'T clear currentQuestion yet
+    // Keep it visible so all players can see the answer
+    room.gameState.buzzedPlayerId = null;
+    room.gameState.buzzes = {};
+    room.gameState.buzzWindowOpen = false;
+    room.gameState.playersWhoBuzzed = new Set();
+    room.gameState.continuedPlayers = new Set(); // Reset for this question
+
+    // Keep the same picker (they get to pick again since no one answered)
+    return {
+      nextPickerId: room.gameState.currentPickerId,
+      question: room.gameState.currentQuestion, // Include question so clients can show answer
+    };
+  }
+
+  // Track when a player clicks Continue after timeout
+  playerContinued(roomCode, playerId) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return false;
+
+    room.gameState.continuedPlayers = room.gameState.continuedPlayers || new Set();
+    room.gameState.continuedPlayers.add(playerId);
+
+    // Check if all players have continued
+    const allPlayers = Array.from(room.players.keys());
+    return allPlayers.every(id => room.gameState.continuedPlayers.has(id));
+  }
+
+  // Reset continue tracking (called when new question is selected)
+  resetContinuedPlayers(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room && room.gameState) {
+      room.gameState.continuedPlayers = new Set();
+    }
+  }
+
+  // Get current picker ID
+  getCurrentPicker(roomCode) {
+    const room = this.rooms.get(roomCode);
+    return room?.gameState?.currentPickerId || null;
+  }
+
+  // Clear question after all players continued
+  clearCurrentQuestion(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room && room.gameState) {
+      room.gameState.currentQuestion = null;
+    }
+  }
+
+  handleDailyDoubleWager(roomCode, playerId, wager) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return null;
+
+    // Verify this is the picker and we're in Daily Double phase
+    if (room.gameState.currentPickerId !== playerId) return null;
+    if (!room.gameState.isDailyDouble) return null;
+
+    room.gameState.dailyDoubleWager = wager;
+    room.gameState.phase = 'dailyDoubleQuestion';
+
+    return {
+      playerId,
+      wager,
+      question: room.gameState.currentQuestion,
+    };
+  }
+
+  handleDailyDoubleAnswer(roomCode, playerId, correct) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return null;
+
+    // Verify this is the picker
+    if (room.gameState.currentPickerId !== playerId) return null;
+
+    const player = room.players.get(playerId);
+    if (!player) return null;
+
+    const wager = room.gameState.dailyDoubleWager || 0;
+
+    if (correct) {
+      player.score = (player.score || 0) + wager;
+    } else {
+      player.score = (player.score || 0) - wager;
+    }
+
+    // Reset Daily Double state
+    room.gameState.isDailyDouble = false;
+    room.gameState.dailyDoubleWager = 0;
+    room.gameState.currentQuestion = null;
+    room.gameState.phase = 'playing';
+
+    // Picker keeps control regardless of answer
+    return {
+      playerId,
+      correct,
+      wager,
+      newScore: player.score,
+      nextPickerId: playerId,
+    };
+  }
+
+  startRound2(roomCode, questions, categories, firstPickerId) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return;
+
+    room.gameState = room.gameState || {};
+    room.gameState.questions = questions;
+    room.gameState.categories = categories;
+    room.gameState.currentPickerId = firstPickerId;
+    room.gameState.phase = 'playing';
+    room.gameState.buzzes = {};
+    room.gameState.buzzedPlayerId = null;
+    room.gameState.currentQuestion = null;
+    room.gameState.playersWhoBuzzed = new Set();
+    room.gameState.currentRound = 2;
+
+    // Place Daily Doubles for round 2 if setting enabled (2 for Double Jeopardy)
+    if (room.settings.enableDailyDouble) {
+      room.gameState.dailyDoubles = this.placeDailyDoubles(questions.length, 2);
+    } else {
+      room.gameState.dailyDoubles = [];
+    }
+
+    room.gameState.isDailyDouble = false;
+    room.gameState.dailyDoubleWager = 0;
+  }
+
+  // Final Jeopardy methods
+  startFinalJeopardy(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+
+    // Generate a simple Final Jeopardy question (in production, use AI)
+    // For now, use placeholder data - the frontend will generate the actual question
+    const fjCategories = [
+      { category: 'WORLD HISTORY', clue: 'This ancient wonder was completed around 280 BC on the island of Rhodes.', answer: 'The Colossus of Rhodes' },
+      { category: 'SCIENCE', clue: 'This element, with atomic number 79, has been prized by humans for millennia.', answer: 'Gold' },
+      { category: 'LITERATURE', clue: 'This 1851 novel begins with the words "Call me Ishmael."', answer: 'Moby Dick' },
+      { category: 'GEOGRAPHY', clue: 'This is the only country that borders both the Atlantic and Indian Oceans.', answer: 'South Africa' },
+      { category: 'MUSIC', clue: 'This composer wrote his Ninth Symphony while completely deaf.', answer: 'Beethoven' },
+    ];
+
+    const randomFJ = fjCategories[Math.floor(Math.random() * fjCategories.length)];
+
+    room.gameState = room.gameState || {};
+    room.gameState.phase = 'finalJeopardy';
+    room.gameState.finalJeopardy = {
+      category: randomFJ.category,
+      clue: randomFJ.clue,
+      answer: randomFJ.answer,
+      wagers: new Map(),
+      answers: new Map(),
+      eligiblePlayers: new Set(),
+    };
+
+    // Only players with score >= 0 can participate
+    for (const [playerId, player] of room.players) {
+      if ((player.score || 0) >= 0) {
+        room.gameState.finalJeopardy.eligiblePlayers.add(playerId);
+      }
+    }
+
+    return {
+      category: randomFJ.category,
+      clue: randomFJ.clue,
+      answer: randomFJ.answer,
+    };
+  }
+
+  submitFJWager(roomCode, playerId, wager) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState?.finalJeopardy) return false;
+
+    const fj = room.gameState.finalJeopardy;
+
+    // Only eligible players can wager
+    if (!fj.eligiblePlayers.has(playerId)) return false;
+
+    fj.wagers.set(playerId, wager);
+
+    // Check if all eligible players have wagered
+    return fj.wagers.size >= fj.eligiblePlayers.size;
+  }
+
+  submitFJAnswer(roomCode, playerId, answer) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState?.finalJeopardy) return false;
+
+    const fj = room.gameState.finalJeopardy;
+
+    // Only eligible players can answer
+    if (!fj.eligiblePlayers.has(playerId)) return false;
+
+    fj.answers.set(playerId, answer);
+
+    // Check if all eligible players have answered
+    return fj.answers.size >= fj.eligiblePlayers.size;
+  }
+
+  getFJResults(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState?.finalJeopardy) return [];
+
+    const fj = room.gameState.finalJeopardy;
+    const results = [];
+
+    for (const playerId of fj.eligiblePlayers) {
+      const player = room.players.get(playerId);
+      if (!player) continue;
+
+      const wager = fj.wagers.get(playerId) || 0;
+      const answer = fj.answers.get(playerId) || '';
+
+      // Simple answer validation (normalize and compare)
+      const normalize = (s) => s.toLowerCase()
+        .replace(/^(what|who|where|when|why|how)\s+(is|are|was|were)\s+/i, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+
+      const correct = normalize(answer) === normalize(fj.answer);
+
+      // Calculate final score
+      const previousScore = player.score || 0;
+      const finalScore = correct ? previousScore + wager : previousScore - wager;
+
+      // Update player score
+      player.score = finalScore;
+
+      results.push({
+        playerId,
+        playerName: player.displayName || player.name,
+        wager,
+        answer,
+        correct,
+        finalScore,
+      });
+    }
+
+    // Sort by final score (highest first)
+    results.sort((a, b) => b.finalScore - a.finalScore);
+
+    return results;
   }
 
   // Legacy Game Logic (keep for backward compatibility)

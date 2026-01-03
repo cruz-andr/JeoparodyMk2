@@ -49,6 +49,10 @@ export default function MultiplayerPage() {
       if (result.players) {
         useRoomStore.getState().setPlayers(result.players);
       }
+      // Sync room settings from server
+      if (result.settings) {
+        useRoomStore.getState().updateSettings(result.settings);
+      }
 
       // Navigate to GamePage (shared lobby for all players)
       navigate(`/game/${newRoomCode}`);
