@@ -271,9 +271,14 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return;
 
+    // Calculate reaction time server-side (more accurate, cheat-proof)
+    const serverReactionTime = room.gameState.buzzWindowStartTime
+      ? Date.now() - room.gameState.buzzWindowStartTime
+      : reactionTime;
+
     // Only record if they haven't already buzzed for this question
     if (!room.gameState.playersWhoBuzzed.has(playerId)) {
-      room.gameState.buzzes[playerId] = reactionTime;
+      room.gameState.buzzes[playerId] = serverReactionTime;
       room.gameState.playersWhoBuzzed.add(playerId);
     }
   }
