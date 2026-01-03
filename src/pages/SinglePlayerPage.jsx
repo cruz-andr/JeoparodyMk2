@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, useUserStore, useSettingsStore } from '../stores';
 import * as aiService from '../services/api/aiService';
+import { speakText, stopSpeaking } from '../services/ttsService';
 import GameBoard from '../components/game/GameBoard';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
@@ -48,7 +49,7 @@ export default function SinglePlayerPage() {
   } = useGameStore();
 
   const { updateStats, addHighscore } = useUserStore();
-  const { enableDoubleJeopardy, enableFinalJeopardy } = useSettingsStore();
+  const { enableDoubleJeopardy, enableFinalJeopardy, textToSpeechEnabled } = useSettingsStore();
 
   // Final Jeopardy state
   const [finalJeopardyData, setFinalJeopardyData] = useState(null);
@@ -58,6 +59,17 @@ export default function SinglePlayerPage() {
     setPhase('setup');
     return () => resetGame();
   }, []);
+
+  // Read Final Jeopardy clue when it's shown
+  useEffect(() => {
+    if (phase === 'finalJeopardy' && finalJeopardyData?.answer && textToSpeechEnabled) {
+      // Small delay to let the category reveal animation play first
+      const timer = setTimeout(() => {
+        speakText(finalJeopardyData.answer);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, finalJeopardyData, textToSpeechEnabled]);
 
   const handleGenerateCategories = async (selectedGenre) => {
     setLoading(true);
@@ -113,6 +125,13 @@ export default function SinglePlayerPage() {
 
   const handleQuestionSelect = (categoryIndex, pointIndex) => {
     selectQuestion(categoryIndex, pointIndex);
+    // Read the clue aloud if TTS is enabled
+    if (textToSpeechEnabled) {
+      const question = questions[categoryIndex]?.[pointIndex];
+      if (question?.answer) {
+        speakText(question.answer);
+      }
+    }
   };
 
   const handleAnswerResult = (correct) => {
@@ -124,6 +143,7 @@ export default function SinglePlayerPage() {
   };
 
   const handleCloseQuestion = () => {
+    stopSpeaking();
     closeQuestion();
   };
 
@@ -391,6 +411,10 @@ export default function SinglePlayerPage() {
             onWagerConfirm={(wager) => {
               useGameStore.getState().setDailyDoubleWager(wager);
               useGameStore.getState().confirmDailyDoubleWager();
+              // Read the clue aloud for Daily Double
+              if (textToSpeechEnabled && currentQuestion?.answer) {
+                speakText(currentQuestion.answer);
+              }
             }}
           />
         )}

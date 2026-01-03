@@ -15,6 +15,8 @@ const initialState = {
   // Audio Settings
   soundEnabled: true,
   musicEnabled: true,
+  textToSpeechEnabled: true,
+  ttsVoice: null, // null = auto-select best available
   volume: 0.7,
 
   // Display Settings
@@ -65,6 +67,12 @@ export const useSettingsStore = create(
       toggleMusic: () => set(state => ({
         musicEnabled: !state.musicEnabled
       })),
+
+      toggleTextToSpeech: () => set(state => ({
+        textToSpeechEnabled: !state.textToSpeechEnabled
+      })),
+
+      setTTSVoice: (voice) => set({ ttsVoice: voice }),
 
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
 

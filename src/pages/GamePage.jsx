@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom } from '../hooks';
-import { useRoomStore, useGameStore, useUserStore } from '../stores';
+import { useRoomStore, useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
+import { speakText, stopSpeaking } from '../services/ttsService';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameSettingsPanel from '../components/setup/GameSettingsPanel';
@@ -24,6 +25,7 @@ export default function GamePage() {
   const { setCategories, setQuestions, setPhase: setGamePhase } = useGameStore();
   const sessionId = useUserStore((s) => s.sessionId);
   const currentPlayerId = sessionId || socketClient.getSocketId();
+  const textToSpeechEnabled = useSettingsStore((s) => s.textToSpeechEnabled);
 
   // Game phases: 'lobby' | 'setup' | 'categoryEdit' | 'generating' | 'playing' | 'finished'
   const [phase, setPhase] = useState('lobby');
@@ -190,6 +192,7 @@ export default function GamePage() {
         setDailyDoublePhase('wager');
         setCanBuzz(false);
         setBuzzerWinnerId(null);
+        // TTS will be triggered when wager is confirmed
       } else {
         // Regular question - start buzz window
         setIsDailyDouble(false);
@@ -199,6 +202,10 @@ export default function GamePage() {
         setBuzzerWinnerId(null);
         // Reset timer for new question
         setBuzzTimerKey(prev => prev + 1);
+        // Read the clue aloud
+        if (textToSpeechEnabled && question?.answer) {
+          speakText(question.answer);
+        }
       }
     });
 
@@ -262,9 +269,13 @@ export default function GamePage() {
     });
 
     // Daily Double wager confirmed - show question to everyone
-    const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ playerId, wager, question }) => {
+    const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ wager, question }) => {
       setDailyDoubleWager(wager);
       setDailyDoublePhase('question');
+      // Read the Daily Double clue aloud
+      if (textToSpeechEnabled && question?.answer) {
+        speakText(question.answer);
+      }
     });
 
     // Daily Double result - update scores and reset
@@ -376,6 +387,13 @@ export default function GamePage() {
       }
     }
   }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion]);
+
+  // Read Final Jeopardy clue when it's shown
+  useEffect(() => {
+    if (fjPhase === 'clue' && finalJeopardyData?.clue && textToSpeechEnabled) {
+      speakText(finalJeopardyData.clue);
+    }
+  }, [fjPhase, finalJeopardyData, textToSpeechEnabled]);
 
   const handleLeave = () => {
     // Clear stored room so we don't try to reconnect
