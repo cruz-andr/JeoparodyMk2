@@ -271,9 +271,14 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return;
 
+    // Calculate reaction time server-side (more accurate, cheat-proof)
+    const serverReactionTime = room.gameState.buzzWindowStartTime
+      ? Date.now() - room.gameState.buzzWindowStartTime
+      : reactionTime;
+
     // Only record if they haven't already buzzed for this question
     if (!room.gameState.playersWhoBuzzed.has(playerId)) {
-      room.gameState.buzzes[playerId] = reactionTime;
+      room.gameState.buzzes[playerId] = serverReactionTime;
       room.gameState.playersWhoBuzzed.add(playerId);
     }
   }
@@ -813,6 +818,7 @@ export class GameStateManager {
     return {
       success: true,
       roomCode,
+      type: room.type,  // Include room type for host mode detection
       players: Array.from(room.players.values()),
       settings: room.settings,
       gameState: room.gameState,
@@ -1094,6 +1100,10 @@ export class GameStateManager {
 
     const pointsToApply = correct ? points : -points;
     player.score = (player.score || 0) + pointsToApply;
+
+    // Clear current question state after judging (so reconnect returns to board)
+    room.gameState.currentQuestion = null;
+    room.gameState.buzzedPlayerId = null;
 
     return {
       playerId,
