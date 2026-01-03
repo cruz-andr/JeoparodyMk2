@@ -3,6 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { socketClient } from '../../services/socket/socketClient';
 import './HostControlPanel.css';
 
+// Format reaction time: show seconds for >= 1000ms, otherwise ms
+const formatReactionTime = (ms) => {
+  if (ms >= 1000) {
+    return `${(ms / 1000).toPrecision(2)}s`;
+  }
+  return `${Math.round(ms)}ms`;
+};
+
 // Reusable component for player names with hover tooltip showing their drawing
 function PlayerNameWithDrawing({ player, className = '' }) {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -149,7 +157,7 @@ export default function HostControlPanel({
               <span className="buzzed-label">Buzzed:</span>
               <PlayerNameWithDrawing player={buzzedPlayer} className="buzzed-name" />
               <span className="reaction-time">
-                {buzzedPlayer.reactionTime}ms
+                {formatReactionTime(buzzedPlayer.reactionTime)}
               </span>
             </div>
           ) : (

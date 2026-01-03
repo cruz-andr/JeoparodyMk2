@@ -22,6 +22,14 @@ import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
 import './GamePage.css';
 import '../components/common/SignatureCanvas.css';
 
+// Format reaction time: show seconds for >= 1000ms, otherwise ms
+const formatReactionTime = (ms) => {
+  if (ms >= 1000) {
+    return `${(ms / 1000).toPrecision(2)}s`;
+  }
+  return `${Math.round(ms)}ms`;
+};
+
 export default function GamePage() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
@@ -1342,7 +1350,7 @@ export default function GamePage() {
                       ? 'You buzzed first!'
                       : `${players.find(p => p.id === buzzerWinnerId)?.displayName || players.find(p => p.id === buzzerWinnerId)?.name} buzzed first!`}
                     {buzzerWinnerReactionTime && (
-                      <span className="reaction-time-display"> ({buzzerWinnerReactionTime}ms)</span>
+                      <span className="reaction-time-display"> ({formatReactionTime(buzzerWinnerReactionTime)})</span>
                     )}
                   </p>
                 )}
