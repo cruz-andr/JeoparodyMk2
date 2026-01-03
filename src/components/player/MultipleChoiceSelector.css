@@ -1,0 +1,230 @@
+.mc-selector-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-lg);
+  gap: var(--spacing-md);
+}
+
+/* Disabled State */
+.mc-selector-disabled {
+  width: 100%;
+  max-width: 500px;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Options Grid */
+.mc-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Individual Option */
+.mc-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  min-height: 100px;
+  background: var(--option-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.mc-option:hover:not(:disabled) {
+  background: var(--option-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.mc-option:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mc-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* Option Label (A, B, C, D) */
+.option-label {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  opacity: 0.9;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Option Text */
+.option-text {
+  font-size: 0.95rem;
+  color: white;
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Selected State */
+.mc-option.selected {
+  box-shadow: 0 0 0 4px var(--jeopardy-gold), 0 6px 20px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
+}
+
+.selected-indicator {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--jeopardy-gold);
+  border-radius: 50%;
+  color: var(--jeopardy-blue);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Revealed States */
+.mc-option.revealed {
+  opacity: 0.5;
+  transform: none;
+}
+
+.mc-option.correct {
+  opacity: 1;
+  background: #16a34a !important;
+  box-shadow: 0 0 0 4px #22c55e, 0 6px 20px rgba(34, 197, 94, 0.4);
+  animation: correct-pulse 0.5s ease-out;
+}
+
+.mc-option.incorrect {
+  opacity: 1;
+  background: #dc2626 !important;
+  box-shadow: 0 0 0 4px #ef4444;
+  animation: incorrect-shake 0.4s ease-out;
+}
+
+@keyframes correct-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes incorrect-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Result Indicators */
+.result-indicator {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.correct-indicator {
+  background: white;
+  color: #16a34a;
+}
+
+.incorrect-indicator {
+  background: white;
+  color: #dc2626;
+}
+
+/* Status Messages */
+.selection-status {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+.result-status {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.result-status.correct {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.result-status.incorrect {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .mc-selector-container {
+    padding: var(--spacing-md);
+  }
+
+  .mc-selector-grid {
+    gap: var(--spacing-sm);
+  }
+
+  .mc-option {
+    padding: var(--spacing-md);
+    min-height: 80px;
+  }
+
+  .option-label {
+    font-size: 1.2rem;
+  }
+
+  .option-text {
+    font-size: 0.85rem;
+  }
+}
+
+/* Single column on very small screens */
+@media (max-width: 350px) {
+  .mc-selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mc-option {
+    min-height: 70px;
+  }
+}

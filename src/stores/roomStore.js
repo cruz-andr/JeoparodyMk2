@@ -34,6 +34,17 @@ const initialState = {
     enableDoubleJeopardy: true,
     enableDailyDouble: true,
     enableFinalJeopardy: true,
+    // Host mode specific
+    answerMode: null, // 'verbal' | 'typed' | 'multiple_choice' | 'auto_grade'
+  },
+
+  // Host Mode State
+  hostModeState: {
+    currentPhase: 'idle', // 'idle' | 'questionDisplayed' | 'buzzOpen' | 'playerAnswering' | 'hostJudging' | 'answerRevealed'
+    typedAnswers: {}, // playerId -> { answer, submittedAt }
+    mcSelections: {}, // playerId -> optionIndex
+    autoGradeResults: {}, // playerId -> { isCorrect, confidence }
+    answersRevealed: false,
   },
 };
 
@@ -49,6 +60,7 @@ export const useRoomStore = create((set, get) => ({
   // Simple setters
   setRoomCode: (roomCode) => set({ roomCode }),
   setIsHost: (isHost) => set({ isHost }),
+  setRoomType: (roomType) => set({ roomType }),
 
   // Room Actions
   createRoom: (type, settings = {}) => {
@@ -219,6 +231,79 @@ export const useRoomStore = create((set, get) => ({
         p.id === playerId ? { ...p, score: (p.score || 0) + points } : p
       )
     }));
+  },
+
+  // Host Mode Actions
+  setHostModePhase: (phase) => set(state => ({
+    hostModeState: { ...state.hostModeState, currentPhase: phase }
+  })),
+
+  addTypedAnswer: (playerId, answer) => set(state => ({
+    hostModeState: {
+      ...state.hostModeState,
+      typedAnswers: {
+        ...state.hostModeState.typedAnswers,
+        [playerId]: { answer, submittedAt: Date.now() }
+      }
+    }
+  })),
+
+  addMCSelection: (playerId, optionIndex) => set(state => ({
+    hostModeState: {
+      ...state.hostModeState,
+      mcSelections: {
+        ...state.hostModeState.mcSelections,
+        [playerId]: optionIndex
+      }
+    }
+  })),
+
+  setAutoGradeResult: (playerId, result) => set(state => ({
+    hostModeState: {
+      ...state.hostModeState,
+      autoGradeResults: {
+        ...state.hostModeState.autoGradeResults,
+        [playerId]: result
+      }
+    }
+  })),
+
+  setAnswersRevealed: (revealed) => set(state => ({
+    hostModeState: { ...state.hostModeState, answersRevealed: revealed }
+  })),
+
+  clearHostModeAnswers: () => set(state => ({
+    hostModeState: {
+      ...state.hostModeState,
+      typedAnswers: {},
+      mcSelections: {},
+      autoGradeResults: {},
+      answersRevealed: false,
+      currentPhase: 'idle',
+    }
+  })),
+
+  // Get all typed answers for host view
+  getTypedAnswers: () => {
+    const { hostModeState, players } = get();
+    return Object.entries(hostModeState.typedAnswers).map(([playerId, data]) => {
+      const player = players.find(p => p.id === playerId);
+      return {
+        playerId,
+        playerName: player?.displayName || player?.name || 'Unknown',
+        answer: data.answer,
+        submittedAt: data.submittedAt,
+        autoGradeResult: hostModeState.autoGradeResults[playerId],
+      };
+    });
+  },
+
+  // Check if all players have answered
+  allPlayersAnswered: () => {
+    const { hostModeState, players } = get();
+    const nonHostPlayers = players.filter(p => !p.isHost && p.isConnected);
+    const answeredCount = Object.keys(hostModeState.typedAnswers).length;
+    return answeredCount >= nonHostPlayers.length;
   },
 
   // Reset

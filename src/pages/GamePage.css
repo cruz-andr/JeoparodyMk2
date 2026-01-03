@@ -249,6 +249,34 @@
   color: var(--color-error);
 }
 
+/* Rank Badges for Host Mode Top 3 */
+.rank-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-right: var(--spacing-xs);
+}
+
+.scoreboard-player.rank-1 .rank-badge {
+  background: linear-gradient(135deg, #ffd700, #ffb800);
+  color: #8b6914;
+}
+
+.scoreboard-player.rank-2 .rank-badge {
+  background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
+  color: #555;
+}
+
+.scoreboard-player.rank-3 .rank-badge {
+  background: linear-gradient(135deg, #cd7f32, #b87333);
+  color: #5c3a1e;
+}
+
 /* Turn Indicator */
 .turn-indicator {
   text-align: center;
@@ -659,6 +687,18 @@
   font-weight: bold;
 }
 
+.buzzer-status-text {
+  color: var(--color-success, #22c55e);
+  font-size: 1.2rem;
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .waiting-for-answer {
   color: var(--text-muted);
   font-style: italic;
@@ -868,5 +908,35 @@
   .buzzer-button {
     font-size: 1.5rem;
     padding: var(--spacing-lg) var(--spacing-xl);
+  }
+}
+
+/* ============================================
+   HOST MODE STYLES
+   ============================================ */
+
+.host-mode-player-answer-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 20, 60, 0.98), rgba(0, 20, 60, 0.9));
+  border-top: 2px solid var(--jeopardy-gold);
+  padding: var(--spacing-md);
+  z-index: 50;
+}
+
+/* Adjust game content to account for fixed answer area */
+.multiplayer-game:has(.host-mode-player-answer-area) {
+  padding-bottom: 200px;
+}
+
+@media (max-width: 768px) {
+  .host-mode-player-answer-area {
+    padding: var(--spacing-sm);
+  }
+
+  .multiplayer-game:has(.host-mode-player-answer-area) {
+    padding-bottom: 180px;
   }
 }
