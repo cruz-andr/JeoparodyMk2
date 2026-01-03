@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../../hooks';
 import { useSettingsStore } from '../../stores';
-import logo from '../../assets/images/JeoparodyImage.png';
+import logo from '../../assets/images/JeoparodyTitle.png';
 import './SplashScreen.css';
 
 export default function SplashScreen() {
