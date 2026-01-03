@@ -558,6 +558,9 @@ export function initializeSocketHandlers(io) {
       if (room?.hostId !== socket.sessionId) return;
 
       gameManager.clearBuzzTimeout(roomCode);
+      if (room.gameState) {
+        room.gameState.buzzWindowOpen = false;
+      }
       io.to(roomCode).emit('host:buzzer-closed');
     });
 
