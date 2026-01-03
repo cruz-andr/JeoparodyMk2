@@ -140,6 +140,18 @@ export function initializeSocketHandlers(io) {
       io.to(roomCode).emit('game:categories-set', { categories });
     });
 
+    // Host selected a genre (sync to other players for viewing)
+    socket.on('game:genre-selected', ({ roomCode, genre }) => {
+      console.log(`Genre selected for room ${roomCode}: ${genre}`);
+      io.to(roomCode).emit('game:genre-selected', { genre });
+    });
+
+    // Host edits a category in real-time (sync to other players)
+    socket.on('game:category-edited', ({ roomCode, index, value }) => {
+      // Broadcast to others (not back to sender)
+      socket.to(roomCode).emit('game:category-edited', { index, value });
+    });
+
     // Host sets questions and starts game
     socket.on('game:set-questions', ({ roomCode, questions, categories, firstPickerId }) => {
       console.log(`Questions set for room ${roomCode}, first picker: ${firstPickerId}`);
