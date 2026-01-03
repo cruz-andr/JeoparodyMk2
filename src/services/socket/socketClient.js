@@ -146,9 +146,9 @@ class SocketClient {
     });
   }
 
-  joinRoom(roomCode, displayName) {
+  joinRoom(roomCode, displayName, signature = null) {
     return new Promise((resolve, reject) => {
-      this.emit('room:join', { roomCode, displayName }, (response) => {
+      this.emit('room:join', { roomCode, displayName, signature }, (response) => {
         if (response.success) {
           resolve(response);
         } else {
@@ -196,8 +196,8 @@ class SocketClient {
   }
 
   // Quickplay methods
-  joinMatchmaking(displayName) {
-    this.emit('quickplay:join-queue', { displayName });
+  joinMatchmaking(displayName, signature = null) {
+    this.emit('quickplay:join-queue', { displayName, signature });
   }
 
   leaveMatchmaking() {

@@ -1,0 +1,129 @@
+.signature-canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.signature-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Mode Toggle */
+.signature-mode-toggle {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+}
+
+.mode-btn {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  background: var(--jeopardy-blue);
+  border-color: var(--jeopardy-gold);
+  color: var(--text-primary);
+}
+
+.signature-canvas {
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.signature-canvas:hover {
+  border-color: var(--jeopardy-gold);
+}
+
+.signature-canvas.type-mode {
+  cursor: default;
+}
+
+/* Text Input for Type Mode */
+.signature-text-input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.signature-text-input:focus {
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.signature-text-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.clear-signature-btn {
+  align-self: flex-end;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-signature-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--text-primary);
+}
+
+.clear-signature-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Signature display (for showing in game) */
+.player-signature {
+  height: 35px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.scoreboard-player .player-signature {
+  height: 28px;
+  max-width: 120px;
+}
+
+.standing-row .player-signature {
+  height: 32px;
+  max-width: 140px;
+}
+
+.lobby-player .player-signature {
+  height: 30px;
+  max-width: 130px;
+}
+
+.fj-result-card .player-signature {
+  height: 40px;
+  max-width: 160px;
+}

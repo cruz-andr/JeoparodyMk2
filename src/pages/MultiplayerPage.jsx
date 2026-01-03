@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useUserStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
+import SignatureCanvas from '../components/common/SignatureCanvas';
+import '../components/common/SignatureCanvas.css';
 import './MultiplayerPage.css';
 
 export default function MultiplayerPage() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState('menu'); // 'menu' | 'creating' | 'lobby'
   const [displayName, setDisplayName] = useState('');
+  const [signature, setSignature] = useState(null);
   const [error, setError] = useState(null);
 
   const { isConnected, isConnecting, error: socketError, joinRoom, leaveRoom, setReady, startGame } = useSocket();
@@ -26,10 +29,13 @@ export default function MultiplayerPage() {
   }, [user, isGuest]);
 
   const handleCreateRoom = async () => {
-    if (!displayName.trim()) {
-      setError('Please enter a display name');
+    if (!signature) {
+      setError('Please draw your name');
       return;
     }
+
+    // Generate a display name for fallback/logging
+    const name = displayName.trim() || `Player${Math.floor(Math.random() * 1000)}`;
 
     setPhase('creating');
     setError(null);
@@ -42,8 +48,8 @@ export default function MultiplayerPage() {
       useRoomStore.getState().setRoomCode(newRoomCode);
       useRoomStore.getState().setIsHost(true);
 
-      // Then join the room via socket
-      const result = await joinRoom(newRoomCode, displayName);
+      // Then join the room via socket (with signature)
+      const result = await joinRoom(newRoomCode, name, signature);
 
       // Set players from result (includes self as host)
       if (result.players) {
@@ -53,6 +59,9 @@ export default function MultiplayerPage() {
       if (result.settings) {
         useRoomStore.getState().updateSettings(result.settings);
       }
+
+      // Mark as fresh join to prevent reconnection race condition
+      sessionStorage.setItem('jeopardy_fresh_join', 'true');
 
       // Navigate to GamePage (shared lobby for all players)
       navigate(`/game/${newRoomCode}`);
@@ -113,16 +122,11 @@ export default function MultiplayerPage() {
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="mp-form">
-              <div className="form-group">
-                <label>Your Display Name</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Enter your name"
-                  maxLength={20}
-                />
-              </div>
+              <SignatureCanvas
+                onSignatureChange={setSignature}
+                width={300}
+                height={80}
+              />
 
               {error && <p className="error-message">{error}</p>}
               {socketError && <p className="error-message">{socketError}</p>}
@@ -131,7 +135,7 @@ export default function MultiplayerPage() {
                 <button
                   className="btn-primary btn-large"
                   onClick={handleCreateRoom}
-                  disabled={!isConnected || !displayName.trim()}
+                  disabled={!isConnected || !signature}
                 >
                   Create Room
                 </button>
@@ -197,7 +201,11 @@ export default function MultiplayerPage() {
                   {players.map((player) => (
                     <li key={player.id} className="player-item">
                       <span className="player-name">
-                        {player.displayName || player.name}
+                        {player.signature ? (
+                          <img src={player.signature} alt={player.displayName || player.name} className="player-signature" />
+                        ) : (
+                          player.displayName || player.name
+                        )}
                         {player.isHost && <span className="host-badge">Host</span>}
                       </span>
                       <span className={`ready-status ${player.isReady ? 'ready' : 'not-ready'}`}>

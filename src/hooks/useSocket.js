@@ -153,6 +153,7 @@ export function useRoom(roomCode) {
         id: data.playerId,
         name: data.displayName,
         displayName: data.displayName,
+        signature: data.signature || null,
         score: 0,
         isReady: false,
         isConnected: true,
@@ -235,8 +236,8 @@ export function useMatchmaking() {
     };
   }, [socket.isConnected]);
 
-  const joinQueue = useCallback((displayName) => {
-    socket.joinMatchmaking(displayName);
+  const joinQueue = useCallback((displayName, signature) => {
+    socket.joinMatchmaking(displayName, signature);
   }, [socket]);
 
   const leaveQueue = useCallback(() => {

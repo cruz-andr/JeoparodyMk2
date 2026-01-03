@@ -31,7 +31,7 @@ export class GameStateManager {
     return room;
   }
 
-  joinRoom(socket, roomCode, displayName) {
+  joinRoom(socket, roomCode, displayName, signature = null) {
     const room = this.rooms.get(roomCode.toUpperCase());
 
     if (!room) {
@@ -51,6 +51,7 @@ export class GameStateManager {
       id: playerId,
       socketId: socket.id,
       displayName,
+      signature,
       score: 0,
       isReady: false,
       isConnected: true,
@@ -692,13 +693,14 @@ export class GameStateManager {
   }
 
   // Matchmaking
-  joinMatchmakingQueue(socket, displayName) {
+  joinMatchmakingQueue(socket, displayName, signature = null) {
     // Remove if already in queue
     this.leaveMatchmakingQueue(socket);
 
     this.matchmakingQueue.push({
       socket,
       displayName,
+      signature,
       joinedAt: Date.now(),
     });
   }
@@ -735,12 +737,13 @@ export class GameStateManager {
     };
 
     // Add players to room
-    matchedPlayers.forEach(({ socket, displayName }) => {
+    matchedPlayers.forEach(({ socket, displayName, signature }) => {
       const playerId = socket.sessionId;
       room.players.set(playerId, {
         id: playerId,
         socketId: socket.id,
         displayName,
+        signature,
         score: 0,
         isReady: false,
         isConnected: true,
@@ -757,6 +760,7 @@ export class GameStateManager {
       players: matchedPlayers.map(p => ({
         socketId: p.socket.id,
         displayName: p.displayName,
+        signature: p.signature,
       })),
     };
   }
