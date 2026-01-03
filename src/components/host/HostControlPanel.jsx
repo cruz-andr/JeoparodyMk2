@@ -40,6 +40,7 @@ export default function HostControlPanel({
   players = [],
   answerMode = 'verbal',
   buzzerOpen = false,
+  answerWindowOpen = false,
   onClose,
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -71,6 +72,14 @@ export default function HostControlPanel({
 
   const handleCloseBuzzer = () => {
     socketClient.emit('host:close-buzzer', { roomCode });
+  };
+
+  const handleOpenAnswerWindow = () => {
+    socketClient.emit('host:open-answer-window', { roomCode });
+  };
+
+  const handleCloseAnswerWindow = () => {
+    socketClient.emit('host:close-answer-window', { roomCode });
   };
 
   const handleScoreOverride = (playerId) => {
@@ -177,6 +186,31 @@ export default function HostControlPanel({
                 Close Buzzer
               </button>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Answer Window Controls (Typed/MC/Auto-Grade Modes) */}
+      {(answerMode === 'typed' || answerMode === 'multiple_choice' || answerMode === 'auto_grade') && currentQuestion && (
+        <div className="answer-window-section">
+          <div className="answer-window-controls">
+            <button
+              onClick={handleOpenAnswerWindow}
+              className={`btn-open-answers ${answerWindowOpen ? 'active' : ''}`}
+              disabled={answerWindowOpen}
+            >
+              {answerWindowOpen ? 'Answers Open' : 'Open Answers'}
+            </button>
+            <button
+              onClick={handleCloseAnswerWindow}
+              className="btn-close-answers"
+              disabled={!answerWindowOpen}
+            >
+              Close Answers
+            </button>
+          </div>
+          {answerWindowOpen && (
+            <p className="answer-window-hint">Players can now submit their answers...</p>
           )}
         </div>
       )}

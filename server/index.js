@@ -24,6 +24,9 @@ import { initializeDatabase } from './config/database.js';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 
+// Import J-Archive scraper for Daily Challenge
+import { getDailyChallenge } from './services/jarchiveScraper.js';
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -75,6 +78,17 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+
+// Daily Challenge endpoint - scrapes J-Archive
+app.get('/api/daily/challenge', async (req, res) => {
+  try {
+    const challenge = await getDailyChallenge();
+    res.json(challenge);
+  } catch (error) {
+    console.error('Daily challenge error:', error);
+    res.status(500).json({ error: 'Failed to fetch daily challenge' });
+  }
+});
 
 // Error handling middleware
 app.use(errorHandler);
