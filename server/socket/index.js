@@ -55,16 +55,17 @@ export function initializeSocketHandlers(io) {
       }
     });
 
-    socket.on('room:join', async ({ roomCode, displayName }, callback) => {
+    socket.on('room:join', async ({ roomCode, displayName, signature }, callback) => {
       try {
-        const result = await gameManager.joinRoom(socket, roomCode, displayName);
+        const result = await gameManager.joinRoom(socket, roomCode, displayName, signature);
         socket.join(roomCode);
         callback({ success: true, ...result });
 
-        // Notify others in room
+        // Notify others in room (include signature)
         socket.to(roomCode).emit('room:player-joined', {
           playerId: socket.sessionId,
           displayName,
+          signature,
         });
       } catch (error) {
         callback({ success: false, error: error.message });
@@ -388,8 +389,8 @@ export function initializeSocketHandlers(io) {
     });
 
     // Quickplay matchmaking
-    socket.on('quickplay:join-queue', ({ displayName }) => {
-      gameManager.joinMatchmakingQueue(socket, displayName);
+    socket.on('quickplay:join-queue', ({ displayName, signature }) => {
+      gameManager.joinMatchmakingQueue(socket, displayName, signature);
       socket.emit('quickplay:queue-joined');
 
       // Check if we can make a match

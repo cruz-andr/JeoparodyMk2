@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useMatchmaking } from '../hooks';
-import { useUserStore, useSettingsStore } from '../stores';
+import { useUserStore, useSettingsStore, useRoomStore } from '../stores';
+import SignatureCanvas from '../components/common/SignatureCanvas';
+import '../components/common/SignatureCanvas.css';
 import './QuickplayPage.css';
 
 const QUICKPLAY_PRESETS = [
@@ -33,6 +35,7 @@ const QUICKPLAY_PRESETS = [
 export default function QuickplayPage() {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
+  const [signature, setSignature] = useState(null);
   const [phase, setPhase] = useState('setup'); // 'setup' | 'searching' | 'found'
   const [selectedPreset, setSelectedPreset] = useState('standard');
 
@@ -61,6 +64,23 @@ export default function QuickplayPage() {
       setPhase('found');
       // Navigate to game after brief delay
       const timer = setTimeout(() => {
+        // Set players in room store before navigating
+        const players = matchFound.players.map(p => ({
+          id: p.socketId, // Use socketId as player ID for quickplay
+          socketId: p.socketId,
+          displayName: p.displayName,
+          signature: p.signature || null,
+          score: 0,
+          isReady: true,
+          isConnected: true,
+          isHost: false,
+        }));
+        useRoomStore.getState().setPlayers(players);
+        useRoomStore.getState().setRoomCode(matchFound.roomCode);
+
+        // Mark as fresh join to prevent reconnection race condition
+        sessionStorage.setItem('jeopardy_fresh_join', 'true');
+
         navigate(`/game/${matchFound.roomCode}`);
       }, 2000);
       return () => clearTimeout(timer);
@@ -68,8 +88,9 @@ export default function QuickplayPage() {
   }, [matchFound, navigate]);
 
   const handleJoinQueue = () => {
-    if (!displayName.trim()) return;
-    joinQueue(displayName);
+    if (!signature) return;
+    const name = displayName.trim() || `Player${Math.floor(Math.random() * 1000)}`;
+    joinQueue(name, signature);
     setPhase('searching');
   };
 
@@ -135,21 +156,16 @@ export default function QuickplayPage() {
             </div>
 
             <div className="qp-form">
-              <div className="form-group">
-                <label>Your Display Name</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Enter your name"
-                  maxLength={20}
-                />
-              </div>
+              <SignatureCanvas
+                onSignatureChange={setSignature}
+                width={300}
+                height={80}
+              />
 
               <button
                 className="btn-primary btn-large"
                 onClick={handleJoinQueue}
-                disabled={!isConnected || !displayName.trim()}
+                disabled={!isConnected || !signature}
               >
                 {isConnected ? 'Find Match' : 'Connecting...'}
               </button>
@@ -226,7 +242,13 @@ export default function QuickplayPage() {
                   transition={{ delay: index * 0.1 }}
                 >
                   <span className="player-avatar">👤</span>
-                  <span className="player-name">{player.displayName}</span>
+                  <span className="player-name">
+                    {player.signature ? (
+                      <img src={player.signature} alt={player.displayName} className="player-signature" />
+                    ) : (
+                      player.displayName
+                    )}
+                  </span>
                 </motion.div>
               ))}
             </div>

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useUserStore } from '../stores';
+import SignatureCanvas from '../components/common/SignatureCanvas';
+import '../components/common/SignatureCanvas.css';
 import './JoinPage.css';
 
 export default function JoinPage() {
@@ -10,6 +12,7 @@ export default function JoinPage() {
   const { roomCode: urlRoomCode } = useParams();
   const [roomCode, setRoomCode] = useState(urlRoomCode || '');
   const [displayName, setDisplayName] = useState('');
+  const [signature, setSignature] = useState(null);
   const [error, setError] = useState('');
   const [isJoining, setIsJoining] = useState(false);
 
@@ -35,16 +38,19 @@ export default function JoinPage() {
       return;
     }
 
-    if (!displayName.trim()) {
-      setError('Please enter a display name');
+    if (!signature) {
+      setError('Please draw your name');
       return;
     }
+
+    // Generate a display name for fallback/logging
+    const name = displayName.trim() || `Player${Math.floor(Math.random() * 1000)}`;
 
     setIsJoining(true);
     setError('');
 
     try {
-      const result = await joinRoom(code, displayName.trim());
+      const result = await joinRoom(code, name, signature);
 
       // Update store with room data
       setStoreRoomCode(code);
@@ -55,6 +61,9 @@ export default function JoinPage() {
       if (result.settings) {
         useRoomStore.getState().updateSettings(result.settings);
       }
+
+      // Mark as fresh join to prevent reconnection race condition
+      sessionStorage.setItem('jeopardy_fresh_join', 'true');
 
       // Navigate to game/lobby
       navigate(`/game/${code}`);
@@ -76,17 +85,11 @@ export default function JoinPage() {
         <p className="join-subtitle">Enter a 6-character room code to join a game</p>
 
         <form onSubmit={handleSubmit} className="join-form">
-          <div className="form-group">
-            <label>Your Name</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Enter your name"
-              maxLength={20}
-              disabled={isJoining}
-            />
-          </div>
+          <SignatureCanvas
+            onSignatureChange={setSignature}
+            width={300}
+            height={80}
+          />
 
           <div className="form-group">
             <label>Room Code</label>
@@ -107,7 +110,7 @@ export default function JoinPage() {
           <button
             type="submit"
             className="btn-primary"
-            disabled={roomCode.length !== 6 || !displayName.trim() || !isConnected || isJoining}
+            disabled={roomCode.length !== 6 || !signature || !isConnected || isJoining}
           >
             {isJoining ? 'Joining...' : isConnected ? 'Join Game' : 'Connecting...'}
           </button>

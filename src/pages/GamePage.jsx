@@ -16,6 +16,7 @@ import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import Timer from '../components/common/Timer';
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
 import './GamePage.css';
+import '../components/common/SignatureCanvas.css';
 
 export default function GamePage() {
   const { roomCode } = useParams();
@@ -86,7 +87,15 @@ export default function GamePage() {
   useEffect(() => {
     if (!isConnected || !roomCode) return;
 
-    // Check if we need to attempt reconnection (players array is empty = fresh page load)
+    // Skip reconnection if this is a fresh join (not a page reload)
+    // The join/create flow already set the players in the store
+    const freshJoin = sessionStorage.getItem('jeopardy_fresh_join');
+    if (freshJoin) {
+      sessionStorage.removeItem('jeopardy_fresh_join');
+      return;
+    }
+
+    // Check if we need to attempt reconnection (players array is empty = actual page reload)
     const storedRoom = localStorage.getItem('jeopardy_current_room');
     if (storedRoom === roomCode && players.length === 0) {
       setIsReconnecting(true);
@@ -693,6 +702,14 @@ export default function GamePage() {
   const currentPicker = players.find(p => p.id === currentPickerId);
   const buzzerWinner = players.find(p => p.id === buzzerWinnerId);
 
+  // Helper to render player name (signature image or text fallback)
+  const renderPlayerName = (player, className = 'player-name') => {
+    if (player?.signature) {
+      return <img src={player.signature} alt={player.displayName || player.name} className="player-signature" />;
+    }
+    return <span className={className}>{player?.displayName || player?.name}</span>;
+  };
+
   return (
     <div className="game-page">
       {/* Loading Overlay */}
@@ -737,14 +754,14 @@ export default function GamePage() {
               {players.map((player) => (
                 <motion.li
                   key={player.id}
-                  className="player-card"
+                  className="player-card lobby-player"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                 >
-                  <span className="player-name">
-                    {player.displayName || player.name}
+                  <div className="player-name-container">
+                    {renderPlayerName(player)}
                     {player.isHost && <span className="host-tag">Host</span>}
-                  </span>
+                  </div>
                   <span className={`ready-badge ${player.isReady ? 'ready' : ''}`}>
                     {player.isHost ? 'Host' : player.isReady ? 'Ready' : 'Not Ready'}
                   </span>
@@ -865,7 +882,7 @@ export default function GamePage() {
                 .map((player, index) => (
                   <div key={player.id} className={`standing-row ${index === 0 ? 'leader' : ''}`}>
                     <span className="standing-rank">#{index + 1}</span>
-                    <span className="standing-name">{player.displayName || player.name}</span>
+                    <span className="standing-name">{renderPlayerName(player)}</span>
                     <span className="standing-score">${(player.score || 0).toLocaleString()}</span>
                   </div>
                 ))}
@@ -898,7 +915,7 @@ export default function GamePage() {
                 key={player.id}
                 className={`scoreboard-player ${player.id === currentPickerId ? 'current-picker' : ''}`}
               >
-                <span className="player-name">{player.displayName || player.name}</span>
+                {renderPlayerName(player)}
                 <span className={`player-score ${(player.score || 0) >= 0 ? 'positive' : 'negative'}`}>
                   ${(player.score || 0).toLocaleString()}
                 </span>
@@ -911,14 +928,14 @@ export default function GamePage() {
             {currentQuestion && !isDailyDouble ? (
               <span className="turn-label">
                 {buzzerWinnerId
-                  ? (iAmBuzzerWinner ? 'Your turn to answer!' : `${buzzerWinner?.displayName || buzzerWinner?.name} is answering...`)
+                  ? (iAmBuzzerWinner ? 'Your turn to answer!' : <>{renderPlayerName(buzzerWinner)} is answering...</>)
                   : buzzTimedOut
                     ? "Time's up!"
                     : 'Buzz in to answer!'}
               </span>
             ) : currentPicker ? (
               <span className="turn-label">
-                {isMyTurn ? "Your turn! Pick a question." : `${currentPicker.displayName || currentPicker.name}'s turn to pick`}
+                {isMyTurn ? "Your turn! Pick a question." : <>{renderPlayerName(currentPicker)}'s turn to pick</>}
               </span>
             ) : (
               <span className="turn-label">Waiting...</span>
@@ -955,7 +972,7 @@ export default function GamePage() {
                   transition={{ type: 'spring', damping: 15 }}
                 >
                   <h2>DAILY DOUBLE!</h2>
-                  <p>{currentPicker?.displayName || currentPicker?.name} is making their wager...</p>
+                  <p>{renderPlayerName(currentPicker)} is making their wager...</p>
                 </motion.div>
               </div>
             )
@@ -993,7 +1010,7 @@ export default function GamePage() {
 
                 {!isMyTurn && (
                   <p className="waiting-for-answer">
-                    Waiting for {currentPicker?.displayName || currentPicker?.name}'s answer...
+                    Waiting for {renderPlayerName(currentPicker)}'s answer...
                   </p>
                 )}
               </div>
@@ -1039,7 +1056,7 @@ export default function GamePage() {
                 {buzzerWinnerId && (
                   <div className="buzzer-winner-display">
                     <p className="buzzer-winner-text">
-                      {iAmBuzzerWinner ? 'You buzzed first!' : `${buzzerWinner?.displayName || buzzerWinner?.name} buzzed first!`}
+                      {iAmBuzzerWinner ? 'You buzzed first!' : <>{renderPlayerName(buzzerWinner)} buzzed first!</>}
                     </p>
 
                     {/* Answer Timer - buzzer winner has limited time to answer */}
@@ -1242,27 +1259,30 @@ export default function GamePage() {
               </p>
 
               <div className="fj-results-list">
-                {fjResults.map((result, index) => (
-                  <motion.div
-                    key={result.playerId}
-                    className={`fj-result-card ${result.correct ? 'correct' : 'incorrect'}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.5 }}
-                  >
-                    <div className="fj-result-name">{result.playerName}</div>
-                    <div className="fj-result-answer">"{result.answer || '(no answer)'}"</div>
-                    <div className="fj-result-wager">
-                      Wagered: ${result.wager.toLocaleString()}
-                      <span className={result.correct ? 'gain' : 'loss'}>
-                        {result.correct ? ` +$${result.wager.toLocaleString()}` : ` -$${result.wager.toLocaleString()}`}
-                      </span>
-                    </div>
-                    <div className="fj-result-final">
-                      Final Score: ${result.finalScore.toLocaleString()}
-                    </div>
-                  </motion.div>
-                ))}
+                {fjResults.map((result, index) => {
+                  const player = players.find(p => p.id === result.playerId);
+                  return (
+                    <motion.div
+                      key={result.playerId}
+                      className={`fj-result-card ${result.correct ? 'correct' : 'incorrect'}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.5 }}
+                    >
+                      <div className="fj-result-name">{renderPlayerName(player)}</div>
+                      <div className="fj-result-answer">"{result.answer || '(no answer)'}"</div>
+                      <div className="fj-result-wager">
+                        Wagered: ${result.wager.toLocaleString()}
+                        <span className={result.correct ? 'gain' : 'loss'}>
+                          {result.correct ? ` +$${result.wager.toLocaleString()}` : ` -$${result.wager.toLocaleString()}`}
+                        </span>
+                      </div>
+                      <div className="fj-result-final">
+                        Final Score: ${result.finalScore.toLocaleString()}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               <button
@@ -1290,7 +1310,7 @@ export default function GamePage() {
               .map((player, index) => (
                 <div key={player.id} className={`standing-row ${index === 0 ? 'winner' : ''}`}>
                   <span className="standing-rank">#{index + 1}</span>
-                  <span className="standing-name">{player.displayName || player.name}</span>
+                  <span className="standing-name">{renderPlayerName(player)}</span>
                   <span className="standing-score">${(player.score || 0).toLocaleString()}</span>
                 </div>
               ))}
