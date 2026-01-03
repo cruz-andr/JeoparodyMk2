@@ -7,18 +7,25 @@ export default function CategoryEditor({
   onBack,
   onNext,
   error,
+  readOnly = false,
 }) {
   return (
     <motion.div
-      className="category-editor"
+      className={`category-editor ${readOnly ? 'read-only' : ''}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
       <h2>Edit Categories</h2>
-      <p className="editor-subtitle">
-        Review and customize the AI-generated categories
-      </p>
+      {readOnly ? (
+        <p className="editor-subtitle viewing-indicator">
+          Watching host edit categories...
+        </p>
+      ) : (
+        <p className="editor-subtitle">
+          Review and customize the AI-generated categories
+        </p>
+      )}
 
       <div className="categories-grid">
         {categories.map((category, index) => (
@@ -34,21 +41,25 @@ export default function CategoryEditor({
               id={`category-${index}`}
               type="text"
               value={category}
-              onChange={(e) => onEdit(index, e.target.value)}
+              onChange={(e) => !readOnly && onEdit(index, e.target.value)}
               className="category-input"
+              disabled={readOnly}
+              readOnly={readOnly}
             />
           </motion.div>
         ))}
       </div>
 
-      <div className="editor-actions">
-        <button onClick={onBack} className="btn-secondary">
-          Back
-        </button>
-        <button onClick={onNext} className="btn-primary">
-          Generate Questions
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="editor-actions">
+          <button onClick={onBack} className="btn-secondary">
+            Back
+          </button>
+          <button onClick={onNext} className="btn-primary">
+            Generate Questions
+          </button>
+        </div>
+      )}
 
       {error && (
         <motion.p

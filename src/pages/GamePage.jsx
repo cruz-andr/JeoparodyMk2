@@ -166,15 +166,29 @@ export default function GamePage() {
       useRoomStore.getState().updatePlayer(playerId, { isConnected: true });
     });
 
-    // Host starts setup
+    // Host starts setup - everyone sees the setup screen
     const unsubSetupStarted = subscribe('game:setup-started', () => {
-      setPhase(isHost ? 'setup' : 'waiting');
+      setPhase('setup');
     });
 
-    // Categories set by host
+    // Host selected a genre - sync to non-hosts
+    const unsubGenreSelected = subscribe('game:genre-selected', ({ genre }) => {
+      setGenre(genre);
+    });
+
+    // Categories set by host - everyone moves to category edit phase
     const unsubCategoriesSet = subscribe('game:categories-set', ({ categories }) => {
       setLocalCategories(categories);
-      if (!isHost) setPhase('waiting');
+      setPhase('categoryEdit');
+    });
+
+    // Host edits a category - sync to non-hosts in real-time
+    const unsubCategoryEdited = subscribe('game:category-edited', ({ index, value }) => {
+      setLocalCategories(prev => {
+        const updated = [...prev];
+        updated[index] = value;
+        return updated;
+      });
     });
 
     // Questions ready, game starting
@@ -242,6 +256,7 @@ export default function GamePage() {
         setBuzzerWinnerId(null);
         setSignalArrivedTime(Date.now());
         setCanBuzz(true);
+        setShowAnswer(false); // Hide answer for next buzzer
         // Reset buzz timer for remaining players
         setBuzzTimerKey(prev => prev + 1);
       } else {
@@ -356,7 +371,9 @@ export default function GamePage() {
       unsubSettingsUpdated();
       unsubPlayerReconnected();
       unsubSetupStarted();
+      unsubGenreSelected();
       unsubCategoriesSet();
+      unsubCategoryEdited();
       unsubQuestionsReady();
       unsubQuestionSelected();
       unsubBuzzerWinner();
@@ -428,10 +445,13 @@ export default function GamePage() {
   const handleGenerateCategories = async (selectedGenre) => {
     setLoading(true);
     setError(null);
+    setGenre(selectedGenre);
+
+    // Sync genre to other players immediately (they'll see it while AI generates)
+    socketClient.emit('game:genre-selected', { roomCode, genre: selectedGenre });
 
     try {
       const generatedCategories = await aiService.generateCategories(selectedGenre);
-      setGenre(selectedGenre);
       setLocalCategories(generatedCategories);
 
       // Broadcast to all players
@@ -447,6 +467,9 @@ export default function GamePage() {
 
   // Host edits a category
   const handleCategoryEdit = (index, newValue) => {
+    // Sync edit to other players in real-time
+    socketClient.emit('game:category-edited', { roomCode, index, value: newValue });
+
     const updated = [...categories];
     updated[index] = newValue;
     setLocalCategories(updated);
@@ -809,27 +832,16 @@ export default function GamePage() {
         </div>
       )}
 
-      {/* WAITING PHASE (non-hosts) */}
-      {phase === 'waiting' && (
-        <motion.div
-          className="waiting-phase"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <div className="spinner" />
-          <h2>Waiting for host...</h2>
-          <p>The host is selecting categories and generating questions.</p>
-        </motion.div>
-      )}
-
-      {/* SETUP PHASE (host only) */}
-      {phase === 'setup' && isHost && (
+      {/* SETUP PHASE (everyone sees, only host can interact) */}
+      {phase === 'setup' && (
         <div className="setup-container">
           <GenreSelector
             onSubmit={handleGenerateCategories}
             error={error}
+            readOnly={!isHost}
+            selectedGenre={genre}
           />
-          {isTestModeEnabled() && (
+          {isHost && isTestModeEnabled() && (
             <button className="btn-ghost test-board-btn" onClick={handleUseTestBoard}>
               Use Test Board (No AI)
             </button>
@@ -837,14 +849,15 @@ export default function GamePage() {
         </div>
       )}
 
-      {/* CATEGORY EDIT PHASE (host only) */}
-      {phase === 'categoryEdit' && isHost && (
+      {/* CATEGORY EDIT PHASE (everyone sees, only host can edit) */}
+      {phase === 'categoryEdit' && (
         <CategoryEditor
           categories={categories}
           onEdit={handleCategoryEdit}
           onBack={() => setPhase('setup')}
           onNext={handleGenerateQuestions}
           error={error}
+          readOnly={!isHost}
         />
       )}
 

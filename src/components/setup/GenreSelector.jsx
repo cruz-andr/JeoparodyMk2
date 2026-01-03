@@ -13,49 +13,63 @@ const popularGenres = [
   'Technology',
 ];
 
-export default function GenreSelector({ onSubmit, error }) {
+export default function GenreSelector({ onSubmit, error, readOnly = false, selectedGenre = '' }) {
   const [genre, setGenre] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (genre.trim()) {
+    if (genre.trim() && !readOnly) {
       onSubmit(genre.trim());
     }
   };
 
-  const handleQuickSelect = (selectedGenre) => {
-    setGenre(selectedGenre);
-    onSubmit(selectedGenre);
+  const handleQuickSelect = (g) => {
+    if (readOnly) return;
+    setGenre(g);
+    onSubmit(g);
   };
+
+  // In read-only mode, show the host's selected genre
+  const displayGenre = readOnly ? selectedGenre : genre;
 
   return (
     <motion.div
-      className="genre-selector"
+      className={`genre-selector ${readOnly ? 'read-only' : ''}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
       <h2>Choose a Genre</h2>
-      <p className="genre-subtitle">
-        Enter any topic and AI will generate categories and questions
-      </p>
+      {readOnly ? (
+        <p className="genre-subtitle viewing-indicator">
+          Watching host select a genre...
+        </p>
+      ) : (
+        <p className="genre-subtitle">
+          Enter any topic and AI will generate categories and questions
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="genre-form">
         <input
           type="text"
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
-          placeholder="Enter a genre (e.g., Space, 90s Pop Culture, World War II)"
+          value={displayGenre}
+          onChange={(e) => !readOnly && setGenre(e.target.value)}
+          placeholder={readOnly ? "Waiting for host..." : "Enter a genre (e.g., Space, 90s Pop Culture, World War II)"}
           className="genre-input"
-          autoFocus
+          autoFocus={!readOnly}
+          disabled={readOnly}
+          readOnly={readOnly}
         />
-        <button
-          type="submit"
-          disabled={!genre.trim()}
-          className="btn-primary"
-        >
-          Generate Categories
-        </button>
+        {!readOnly && (
+          <button
+            type="submit"
+            disabled={!genre.trim()}
+            className="btn-primary"
+          >
+            Generate Categories
+          </button>
+        )}
       </form>
 
       <div className="quick-genres">
@@ -64,10 +78,11 @@ export default function GenreSelector({ onSubmit, error }) {
           {popularGenres.map((g) => (
             <motion.button
               key={g}
-              className="genre-chip"
+              className={`genre-chip ${readOnly ? 'disabled' : ''}`}
               onClick={() => handleQuickSelect(g)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={readOnly ? {} : { scale: 1.05 }}
+              whileTap={readOnly ? {} : { scale: 0.95 }}
+              disabled={readOnly}
             >
               {g}
             </motion.button>
