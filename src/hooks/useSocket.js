@@ -6,7 +6,7 @@ export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
-  const { user, isGuest } = useUserStore();
+  const { user, isGuest, sessionId } = useUserStore();
   const mountedRef = useRef(true);
 
   // Connect on mount
@@ -20,7 +20,7 @@ export function useSocket() {
       try {
         // Get auth token if available
         const token = user?.token || null;
-        await socketClient.connect(token);
+        await socketClient.connect(token, sessionId);
 
         if (mountedRef.current) {
           setIsConnected(true);
@@ -69,7 +69,7 @@ export function useSocket() {
       socketClient.off('disconnect', handleDisconnect);
       socketClient.off('connect_error', handleError);
     };
-  }, [user?.token]);
+  }, [user?.token, sessionId]);
 
   // Disconnect helper
   const disconnect = useCallback(() => {
@@ -84,7 +84,7 @@ export function useSocket() {
 
     try {
       const token = user?.token || null;
-      await socketClient.connect(token);
+      await socketClient.connect(token, sessionId);
       setIsConnected(true);
     } catch (err) {
       setError(err.message);
@@ -92,7 +92,7 @@ export function useSocket() {
     } finally {
       setIsConnecting(false);
     }
-  }, [user?.token]);
+  }, [user?.token, sessionId]);
 
   // Subscribe to an event
   const subscribe = useCallback((event, callback) => {
@@ -122,6 +122,7 @@ export function useSocket() {
     // Room actions
     joinRoom: socketClient.joinRoom.bind(socketClient),
     leaveRoom: socketClient.leaveRoom.bind(socketClient),
+    reconnectToRoom: socketClient.reconnectToRoom.bind(socketClient),
     setReady: socketClient.setReady.bind(socketClient),
 
     // Game actions

@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 export class GameStateManager {
   constructor() {
     this.rooms = new Map(); // roomCode -> GameRoom
-    this.playerRooms = new Map(); // socketId -> roomCode
+    this.playerRooms = new Map(); // socketId -> roomCode (legacy, kept for cleanup)
+    this.sessionRooms = new Map(); // sessionId -> roomCode (for reconnection)
     this.matchmakingQueue = []; // Array of { socket, displayName, joinedAt }
   }
 
@@ -14,7 +15,7 @@ export class GameStateManager {
       id: uuidv4(),
       code: roomCode,
       type,
-      hostId: creatorSocket.userId || creatorSocket.id,
+      hostId: creatorSocket.sessionId,
       status: 'waiting',
       players: new Map(),
       settings: {
@@ -45,7 +46,7 @@ export class GameStateManager {
       throw new Error('Room is full');
     }
 
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     const player = {
       id: playerId,
       socketId: socket.id,
@@ -58,6 +59,7 @@ export class GameStateManager {
 
     room.players.set(playerId, player);
     this.playerRooms.set(socket.id, roomCode);
+    this.sessionRooms.set(socket.sessionId, roomCode);
 
     return {
       roomId: room.id,
@@ -72,9 +74,10 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room) return;
 
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     room.players.delete(playerId);
     this.playerRooms.delete(socket.id);
+    this.sessionRooms.delete(socket.sessionId);
 
     // If room is empty, delete it
     if (room.players.size === 0) {
@@ -86,7 +89,7 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room) return;
 
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     const player = room.players.get(playerId);
     if (player) {
       player.isReady = ready;
@@ -98,7 +101,7 @@ export class GameStateManager {
     if (!room) return null;
 
     // Only host can update settings
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     if (playerId !== room.hostId) {
       return null;
     }
@@ -188,7 +191,7 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     // Allow selection if they are the current picker
     if (room.gameState.currentPickerId !== playerId) {
       return null; // Not their turn
@@ -630,7 +633,7 @@ export class GameStateManager {
       return { success: false };
     }
 
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     if (room.gameState.buzzedPlayerId) {
       return { success: false }; // Someone already buzzed
     }
@@ -648,7 +651,7 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    const playerId = socket.userId || socket.id;
+    const playerId = socket.sessionId;
     if (room.gameState.buzzedPlayerId !== playerId) {
       return null; // They didn't buzz
     }
@@ -733,7 +736,7 @@ export class GameStateManager {
 
     // Add players to room
     matchedPlayers.forEach(({ socket, displayName }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       room.players.set(playerId, {
         id: playerId,
         socketId: socket.id,
@@ -744,6 +747,7 @@ export class GameStateManager {
         isHost: false,
       });
       this.playerRooms.set(socket.id, roomCode);
+      this.sessionRooms.set(socket.sessionId, roomCode);
     });
 
     this.rooms.set(roomCode, room);
@@ -762,19 +766,54 @@ export class GameStateManager {
     // Remove from matchmaking queue
     this.leaveMatchmakingQueue(socket);
 
-    // Handle room disconnection
-    const roomCode = this.playerRooms.get(socket.id);
+    // Handle room disconnection - mark as disconnected but keep in room for reconnection
+    const roomCode = this.sessionRooms.get(socket.sessionId);
     if (roomCode) {
       const room = this.rooms.get(roomCode);
       if (room) {
-        const playerId = socket.userId || socket.id;
+        const playerId = socket.sessionId;
         const player = room.players.get(playerId);
         if (player) {
           player.isConnected = false;
+          // Keep sessionRooms mapping so player can reconnect
+          // Only remove playerRooms (socket.id mapping)
         }
       }
       this.playerRooms.delete(socket.id);
     }
+  }
+
+  // Reconnect a player to their room
+  reconnectPlayer(socket, roomCode) {
+    const sessionId = socket.sessionId;
+    const room = this.rooms.get(roomCode);
+
+    if (!room) {
+      return { success: false, error: 'Room not found' };
+    }
+
+    const player = room.players.get(sessionId);
+    if (!player) {
+      return { success: false, error: 'Player not found in room' };
+    }
+
+    // Restore player connection
+    player.isConnected = true;
+    player.socketId = socket.id;
+
+    // Update mappings
+    this.playerRooms.set(socket.id, roomCode);
+    this.sessionRooms.set(sessionId, roomCode);
+
+    return {
+      success: true,
+      roomCode,
+      players: Array.from(room.players.values()),
+      settings: room.settings,
+      gameState: room.gameState,
+      isHost: player.isHost,
+      displayName: player.displayName,
+    };
   }
 
   // Utilities

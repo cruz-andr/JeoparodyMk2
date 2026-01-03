@@ -10,7 +10,7 @@ class SocketClient {
   }
 
   // Connect to the socket server
-  connect(authToken = null) {
+  connect(authToken = null, sessionId = null) {
     if (this.socket?.connected) {
       return Promise.resolve(this.socket);
     }
@@ -23,6 +23,7 @@ class SocketClient {
       this.socket = io(SOCKET_URL, {
         auth: {
           token: authToken,
+          sessionId: sessionId,
         },
         transports: ['websocket', 'polling'],
         reconnection: true,
@@ -159,6 +160,18 @@ class SocketClient {
 
   leaveRoom(roomCode) {
     this.emit('room:leave', { roomCode });
+  }
+
+  reconnectToRoom(roomCode) {
+    return new Promise((resolve, reject) => {
+      this.emit('room:reconnect', { roomCode }, (response) => {
+        if (response.success) {
+          resolve(response);
+        } else {
+          reject(new Error(response.error || 'Reconnection failed'));
+        }
+      });
+    });
   }
 
   setReady(roomCode, ready) {

@@ -10,6 +10,10 @@ export function initializeSocketHandlers(io) {
   // Authentication middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
+    const sessionId = socket.handshake.auth.sessionId;
+
+    // Session ID is the primary identifier for reconnection
+    socket.sessionId = sessionId || socket.id;
 
     if (token) {
       try {
@@ -31,7 +35,7 @@ export function initializeSocketHandlers(io) {
   });
 
   io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}, User: ${socket.userId || 'anonymous'}`);
+    console.log(`Socket connected: ${socket.id}, Session: ${socket.sessionId}, User: ${socket.userId || 'anonymous'}`);
 
     // Send connection confirmation
     socket.emit('connected', {
@@ -59,7 +63,7 @@ export function initializeSocketHandlers(io) {
 
         // Notify others in room
         socket.to(roomCode).emit('room:player-joined', {
-          playerId: socket.userId || socket.id,
+          playerId: socket.sessionId,
           displayName,
         });
       } catch (error) {
@@ -72,7 +76,7 @@ export function initializeSocketHandlers(io) {
       gameManager.leaveRoom(socket, roomCode);
 
       socket.to(roomCode).emit('room:player-left', {
-        playerId: socket.userId || socket.id,
+        playerId: socket.sessionId,
       });
     });
 
@@ -80,9 +84,34 @@ export function initializeSocketHandlers(io) {
       gameManager.setPlayerReady(socket, roomCode, ready);
 
       io.to(roomCode).emit('room:player-ready', {
-        playerId: socket.userId || socket.id,
+        playerId: socket.sessionId,
         ready,
       });
+    });
+
+    // Player reconnects to room after page reload
+    socket.on('room:reconnect', ({ roomCode }, callback) => {
+      console.log(`Reconnect attempt: session ${socket.sessionId} to room ${roomCode}`);
+
+      const result = gameManager.reconnectPlayer(socket, roomCode);
+
+      if (result.success) {
+        // Rejoin socket to room
+        socket.join(roomCode);
+
+        console.log(`Player ${result.displayName} reconnected to room ${roomCode}`);
+
+        // Notify others
+        socket.to(roomCode).emit('room:player-reconnected', {
+          playerId: socket.sessionId,
+          displayName: result.displayName,
+        });
+
+        callback(result);
+      } else {
+        console.log(`Reconnect failed: ${result.error}`);
+        callback(result);
+      }
     });
 
     // Host updates room settings
@@ -161,7 +190,7 @@ export function initializeSocketHandlers(io) {
 
     // Player buzzes in with reaction time
     socket.on('game:buzz-in', ({ roomCode, reactionTime }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       console.log(`Player ${playerId} buzzed with reaction time ${reactionTime}ms`);
 
       const room = gameManager.rooms.get(roomCode);
@@ -206,7 +235,7 @@ export function initializeSocketHandlers(io) {
 
     // Player submits answer
     socket.on('game:submit-answer', ({ roomCode, correct, points, timeout }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
 
       // Clear the server-side answer timeout since they answered
       gameManager.clearAnswerTimeout(roomCode);
@@ -219,7 +248,7 @@ export function initializeSocketHandlers(io) {
 
     // Player reveals the answer (broadcast to all)
     socket.on('game:reveal-answer', ({ roomCode }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       const room = gameManager.rooms.get(roomCode);
 
       // Verify this player is the buzzer winner (the one who should reveal)
@@ -243,7 +272,7 @@ export function initializeSocketHandlers(io) {
 
     // Player clicks Continue after timeout - wait for all players
     socket.on('game:timeout-continue', ({ roomCode }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       if (DEBUG_GAME) {
         console.log(`[GAME] Player ${playerId} clicked Continue in room ${roomCode}`);
       }
@@ -265,7 +294,7 @@ export function initializeSocketHandlers(io) {
 
     // Daily Double wager submitted
     socket.on('game:daily-double-wager', ({ roomCode, wager }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       console.log(`Daily Double wager ${wager} from ${playerId} in room ${roomCode}`);
       const result = gameManager.handleDailyDoubleWager(roomCode, playerId, wager);
       if (result) {
@@ -275,7 +304,7 @@ export function initializeSocketHandlers(io) {
 
     // Daily Double answer submitted
     socket.on('game:daily-double-answer', ({ roomCode, correct }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       console.log(`Daily Double answer (correct: ${correct}) from ${playerId} in room ${roomCode}`);
       const result = gameManager.handleDailyDoubleAnswer(roomCode, playerId, correct);
       if (result) {
@@ -307,7 +336,7 @@ export function initializeSocketHandlers(io) {
 
     // Final Jeopardy wager submitted
     socket.on('game:fj-wager', ({ roomCode, wager }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       console.log(`FJ wager ${wager} from ${playerId} in room ${roomCode}`);
       const allIn = gameManager.submitFJWager(roomCode, playerId, wager);
       if (allIn) {
@@ -318,7 +347,7 @@ export function initializeSocketHandlers(io) {
 
     // Final Jeopardy answer submitted
     socket.on('game:fj-answer', ({ roomCode, answer }) => {
-      const playerId = socket.userId || socket.id;
+      const playerId = socket.sessionId;
       console.log(`FJ answer from ${playerId} in room ${roomCode}`);
       const allIn = gameManager.submitFJAnswer(roomCode, playerId, answer);
       if (allIn) {
@@ -346,7 +375,7 @@ export function initializeSocketHandlers(io) {
       const result = gameManager.playerBuzz(socket, roomCode);
       if (result.success) {
         io.to(roomCode).emit('game:player-buzzed', {
-          playerId: socket.userId || socket.id,
+          playerId: socket.sessionId,
         });
       }
     });
