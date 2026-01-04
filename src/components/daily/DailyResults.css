@@ -85,6 +85,73 @@
   color: white;
 }
 
+/* Verify Their Answers Button */
+.btn-verify {
+  display: block;
+  margin: 12px auto 24px;
+  padding: 12px 28px;
+  font-size: 0.95rem;
+  background: transparent;
+  border: 2px solid var(--jeopardy-gold);
+  border-radius: var(--radius-md);
+  color: var(--jeopardy-gold);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-verify:hover {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+/* Their Answers Section */
+.their-answers-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.their-answers-section h3 {
+  color: var(--jeopardy-gold);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.their-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.their-answer-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+}
+
+.their-answer-num {
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 24px;
+}
+
+.their-answer-text {
+  color: var(--text-primary);
+}
+
+.their-answer-text:empty::before,
+.their-answer-item .their-answer-text:has(+ :empty) {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* Stats Section */
 .stats-section {
   background: rgba(255, 255, 255, 0.05);

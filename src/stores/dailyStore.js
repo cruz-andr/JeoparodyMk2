@@ -173,7 +173,11 @@ export const useDailyStore = create(
         const total = state.questions.length;
         const dateStr = state.todayDate || getTodayDateString();
 
-        return `Daily Jeoparody ${dateStr}\n${emoji}\n${correctCount}/${total}\nhttps://jeoparody-mk2.vercel.app/daily`;
+        // Encode answers for verification (others can reveal after playing)
+        const playerAnswers = state.answers.map((a) => a.playerAnswer || '');
+        const verifyCode = btoa(JSON.stringify(playerAnswers));
+
+        return `Daily Jeoparody ${dateStr}\n${emoji}\n${correctCount}/${total}\nhttps://jeoparody-mk2.vercel.app/daily?verify=${verifyCode}`;
       },
 
       // Copy share text to clipboard
