@@ -35,6 +35,8 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5000',
   'http://localhost:5001',
+  'https://jeoparody-mk2.vercel.app',
+  'https://jeoparody.app',
 ].filter(Boolean);
 
 // Socket.io setup
