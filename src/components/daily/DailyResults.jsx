@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
 import './DailyResults.css';
 
-export default function DailyResults({ onBackToMenu }) {
+export default function DailyResults({ onBackToMenu, verifyCode }) {
   const [copied, setCopied] = useState(false);
+  const [showTheirAnswers, setShowTheirAnswers] = useState(false);
+  const [theirAnswers, setTheirAnswers] = useState(null);
 
   const {
     todayDate,
@@ -14,6 +16,18 @@ export default function DailyResults({ onBackToMenu }) {
     shareResults,
     getShareText,
   } = useDailyStore();
+
+  // Decode verification answers when user clicks to reveal
+  const handleRevealTheirAnswers = () => {
+    if (!verifyCode) return;
+    try {
+      const decoded = JSON.parse(atob(verifyCode));
+      setTheirAnswers(decoded);
+      setShowTheirAnswers(true);
+    } catch (e) {
+      console.error('Failed to decode verification code:', e);
+    }
+  };
 
   const correctCount = answers.filter((a) => a.correct).length;
   const totalQuestions = questions.length;
@@ -88,6 +102,31 @@ export default function DailyResults({ onBackToMenu }) {
       >
         {copied ? 'Copied!' : 'Share Results'}
       </button>
+
+      {/* View Their Answers (if verification code present) */}
+      {verifyCode && !showTheirAnswers && (
+        <button
+          className="btn-verify"
+          onClick={handleRevealTheirAnswers}
+        >
+          View Their Answers
+        </button>
+      )}
+
+      {/* Their Answers Revealed */}
+      {showTheirAnswers && theirAnswers && (
+        <div className="their-answers-section">
+          <h3>Their Answers</h3>
+          <div className="their-answers-list">
+            {theirAnswers.map((answer, index) => (
+              <div key={index} className="their-answer-item">
+                <span className="their-answer-num">{index + 1}.</span>
+                <span className="their-answer-text">{answer || '(skipped)'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats Section */}
       <div className="stats-section">

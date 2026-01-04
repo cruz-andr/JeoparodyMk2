@@ -14,6 +14,14 @@ export default function DailyPage() {
   const [userInput, setUserInput] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [lastCheckResult, setLastCheckResult] = useState(null);
+  const [verifyCode, setVerifyCode] = useState(null);
+
+  // Parse verification code from URL (for viewing sharer's answers)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('verify');
+    if (code) setVerifyCode(code);
+  }, []);
 
   const {
     todayDate,
@@ -187,7 +195,7 @@ export default function DailyPage() {
   if (hasPlayedToday() || isComplete) {
     return (
       <div className="daily-page">
-        <DailyResults onBackToMenu={handleBackToMenu} />
+        <DailyResults onBackToMenu={handleBackToMenu} verifyCode={verifyCode} />
       </div>
     );
   }
