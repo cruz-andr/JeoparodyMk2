@@ -108,7 +108,7 @@ async function startServer() {
     console.log('Database initialized successfully');
 
     // Start HTTP server
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`WebSocket server ready`);
     });
