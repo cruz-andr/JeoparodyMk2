@@ -490,6 +490,28 @@ export function initializeSocketHandlers(io) {
       }
     });
 
+    // Player skips question (I don't know)
+    socket.on('game:skip-question', ({ roomCode }) => {
+      const playerId = socket.sessionId;
+      const result = gameManager.playerSkipped(roomCode, playerId);
+      if (result) {
+        io.to(roomCode).emit('game:player-skipped', {
+          playerId,
+          skippedCount: result.skippedCount,
+          totalEligible: result.totalEligible,
+        });
+
+        // If all players either buzzed or skipped, end the question
+        if (result.allSkipped) {
+          gameManager.clearBuzzTimeout(roomCode);
+          const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
+          if (timeoutResult) {
+            io.to(roomCode).emit('game:buzz-timeout-result', timeoutResult);
+          }
+        }
+      }
+    });
+
     // Player submits typed answer (host mode)
     socket.on('player:submit-typed-answer', ({ roomCode, answer }) => {
       const playerId = socket.sessionId;

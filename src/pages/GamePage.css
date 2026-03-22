@@ -690,6 +690,35 @@
 }
 
 /* Buzzer Winner Display */
+/* Buzz Actions (Buzz + Skip) */
+.buzz-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.btn-skip {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--text-secondary);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-skip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.skip-status {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 1rem;
+}
+
 .buzzer-winner-display {
   display: flex;
   flex-direction: column;

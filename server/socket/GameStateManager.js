@@ -244,6 +244,7 @@ export class GameStateManager {
       room.gameState.buzzWindowOpen = true;
       room.gameState.buzzReceived = false;
       room.gameState.playersWhoBuzzed = new Set();
+      room.gameState.skippedPlayers = new Set();
       room.gameState.buzzWindowStartTime = Date.now();
     }
   }
@@ -1256,5 +1257,29 @@ export class GameStateManager {
     if (room && room.gameState) {
       room.gameState.suggestions = {};
     }
+  }
+
+  playerSkipped(roomCode, playerId) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return null;
+
+    // Can't skip if already buzzed
+    if (room.gameState.playersWhoBuzzed?.has(playerId)) return null;
+    // Can't skip if already skipped
+    if (room.gameState.skippedPlayers?.has(playerId)) return null;
+
+    room.gameState.skippedPlayers = room.gameState.skippedPlayers || new Set();
+    room.gameState.skippedPlayers.add(playerId);
+
+    const totalPlayers = room.players.size;
+    const buzzed = room.gameState.playersWhoBuzzed?.size || 0;
+    const skipped = room.gameState.skippedPlayers.size;
+    const allSkipped = (buzzed + skipped) >= totalPlayers;
+
+    return {
+      allSkipped,
+      skippedCount: skipped,
+      totalEligible: totalPlayers - buzzed,
+    };
   }
 }
