@@ -1,9 +1,0 @@
-export { default as SplashPage } from './SplashPage';
-export { default as HomePage } from './HomePage';
-export { default as SinglePlayerPage } from './SinglePlayerPage';
-export { default as QuickplayPage } from './QuickplayPage';
-export { default as MultiplayerPage } from './MultiplayerPage';
-export { default as HostPage } from './HostPage';
-export { default as JoinPage } from './JoinPage';
-export { default as GamePage } from './GamePage';
-export { default as HighscoresPage } from './HighscoresPage';
