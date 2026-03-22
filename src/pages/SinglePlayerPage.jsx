@@ -49,7 +49,7 @@ export default function SinglePlayerPage() {
   } = useGameStore();
 
   const { updateStats, addHighscore } = useUserStore();
-  const { enableDoubleJeopardy, enableFinalJeopardy, textToSpeechEnabled } = useSettingsStore();
+  const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy, textToSpeechEnabled } = useSettingsStore();
 
   // Final Jeopardy state
   const [finalJeopardyData, setFinalJeopardyData] = useState(null);
@@ -112,7 +112,7 @@ export default function SinglePlayerPage() {
         }));
       });
 
-      setQuestions(questionGrid);
+      setQuestions(questionGrid, enableDailyDouble);
       setPhase('playing');
     } catch (err) {
       console.error('Error generating questions:', err);
@@ -194,7 +194,7 @@ export default function SinglePlayerPage() {
         }));
       });
 
-      startRound2(newCategories, questionGrid);
+      startRound2(newCategories, questionGrid, enableDailyDouble);
     } catch (err) {
       console.error('Error generating Double Jeopardy:', err);
       setError(err.message || 'Failed to generate Double Jeopardy. Please try again.');
@@ -284,7 +284,7 @@ export default function SinglePlayerPage() {
   const handleUseTestBoard = () => {
     setGenre(mockBoard.genre);
     setCategories(mockBoard.categories);
-    setQuestions(mockBoard.questions);
+    setQuestions(mockBoard.questions, enableDailyDouble);
     setPhase('playing');
   };
 
