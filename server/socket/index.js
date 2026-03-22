@@ -205,6 +205,21 @@ export function initializeSocketHandlers(io) {
                   ...timeoutResult,
                   timeout: true,
                 });
+
+                // If others can still buzz, restart buzz window with fresh timeout
+                if (timeoutResult.canBuzzAgain) {
+                  gameManager.startBuzzWindow(roomCode);
+                  const buzzDuration = room?.settings?.questionTimeLimit || 30000;
+                  gameManager.clearBuzzTimeout(roomCode);
+                  room.buzzTimeout = setTimeout(() => {
+                    const currentRoom = gameManager.rooms.get(roomCode);
+                    if (currentRoom?.gameState?.buzzReceived) return;
+                    const btResult = gameManager.handleBuzzTimeout(roomCode);
+                    if (btResult) {
+                      io.to(roomCode).emit('game:buzz-timeout-result', btResult);
+                    }
+                  }, buzzDuration);
+                }
               }
             }, answerDuration);
           }
@@ -222,6 +237,24 @@ export function initializeSocketHandlers(io) {
       const result = gameManager.handleAnswer(roomCode, playerId, correct, points);
       if (result) {
         io.to(roomCode).emit('game:answer-result', result);
+
+        // If others can still buzz, restart buzz window with fresh timeout
+        if (result.canBuzzAgain) {
+          const room = gameManager.rooms.get(roomCode);
+          if (room) {
+            gameManager.startBuzzWindow(roomCode);
+            const buzzDuration = room?.settings?.questionTimeLimit || 30000;
+            gameManager.clearBuzzTimeout(roomCode);
+            room.buzzTimeout = setTimeout(() => {
+              const currentRoom = gameManager.rooms.get(roomCode);
+              if (currentRoom?.gameState?.buzzReceived) return;
+              const btResult = gameManager.handleBuzzTimeout(roomCode);
+              if (btResult) {
+                io.to(roomCode).emit('game:buzz-timeout-result', btResult);
+              }
+            }, buzzDuration);
+          }
+        }
       }
     });
 
@@ -417,6 +450,8 @@ export function initializeSocketHandlers(io) {
       }
 
       if (result) {
+        // Clear any suggestions when a question is selected
+        gameManager.clearSuggestions(roomCode);
         io.to(roomCode).emit('game:question-selected', result);
 
         // Skip buzz window for Daily Double (only picker answers)
@@ -434,11 +469,24 @@ export function initializeSocketHandlers(io) {
         gameManager.clearBuzzTimeout(roomCode);
 
         room.buzzTimeout = setTimeout(() => {
+          // Guard: if a buzz was already received, don't emit timeout
+          const currentRoom = gameManager.rooms.get(roomCode);
+          if (currentRoom?.gameState?.buzzReceived) return;
+
           const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
           if (timeoutResult) {
             io.to(roomCode).emit('game:buzz-timeout-result', timeoutResult);
           }
         }, duration);
+      }
+    });
+
+    // Non-picker suggests a question
+    socket.on('game:suggest-question', ({ roomCode, categoryIndex, pointIndex }) => {
+      const playerId = socket.sessionId;
+      const suggestions = gameManager.handleSuggestion(roomCode, playerId, categoryIndex, pointIndex);
+      if (suggestions) {
+        io.to(roomCode).emit('game:question-suggested', { suggestions });
       }
     });
 

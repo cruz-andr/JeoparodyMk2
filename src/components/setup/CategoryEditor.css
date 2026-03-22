@@ -39,11 +39,59 @@
   font-size: 0.85rem;
 }
 
+.category-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.category-input-row .category-input {
+  flex: 1;
+}
+
 .category-input {
   padding: 14px;
   font-size: 1rem;
   text-transform: uppercase;
   font-weight: bold;
+}
+
+.btn-dice {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.3rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-dice:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-dice:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dice-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.rolls-remaining {
+  color: var(--jeopardy-gold);
+  font-size: 0.85rem;
 }
 
 .editor-actions {

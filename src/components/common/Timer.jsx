@@ -18,17 +18,6 @@ export default function Timer({
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // No timer if unlimited
-  if (effectiveDuration === null) {
-    return null;
-  }
-
-  const totalSeconds = Math.ceil(effectiveDuration / 1000);
-  const secondsLeft = Math.ceil(timeLeft / 1000);
-  const progress = timeLeft / effectiveDuration;
-  const isLow = secondsLeft <= 5;
-  const isCritical = secondsLeft <= 3;
-
   // Start timer
   const start = useCallback(() => {
     setIsRunning(true);
@@ -36,36 +25,17 @@ export default function Timer({
     setTimerActive(true);
   }, [setTimerActive]);
 
-  // Pause timer
-  const pause = useCallback(() => {
-    setIsPaused(true);
-    setTimerActive(false);
-  }, [setTimerActive]);
-
-  // Resume timer
-  const resume = useCallback(() => {
-    setIsPaused(false);
-    setTimerActive(true);
-  }, [setTimerActive]);
-
-  // Reset timer
-  const reset = useCallback(() => {
-    setTimeLeft(effectiveDuration);
-    setIsRunning(false);
-    setIsPaused(false);
-    setTimerActive(false);
-    setTimeRemaining(effectiveDuration);
-  }, [effectiveDuration, setTimerActive, setTimeRemaining]);
-
   // Auto-start if enabled
   useEffect(() => {
+    if (effectiveDuration === null) return;
     if (autoStart && !isRunning) {
       start();
     }
-  }, [autoStart, isRunning, start]);
+  }, [effectiveDuration, autoStart, isRunning, start]);
 
   // Timer countdown logic
   useEffect(() => {
+    if (effectiveDuration === null) return;
     if (!isRunning || isPaused) return;
 
     const interval = setInterval(() => {
@@ -87,9 +57,18 @@ export default function Timer({
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isRunning, isPaused, onTimeUp, setTimeRemaining, setTimerActive]);
+  }, [effectiveDuration, isRunning, isPaused, onTimeUp, setTimeRemaining, setTimerActive]);
 
-  // Format time display
+  // No timer if unlimited
+  if (effectiveDuration === null) {
+    return null;
+  }
+
+  const secondsLeft = Math.ceil(timeLeft / 1000);
+  const progress = timeLeft / effectiveDuration;
+  const isLow = secondsLeft <= 5;
+  const isCritical = secondsLeft <= 3;
+
   const formatTime = (ms) => {
     const seconds = Math.ceil(ms / 1000);
     return seconds.toString();

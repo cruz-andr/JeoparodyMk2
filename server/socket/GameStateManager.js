@@ -152,6 +152,9 @@ export class GameStateManager {
       // Daily Double state
       room.gameState.isDailyDouble = false;
       room.gameState.dailyDoubleWager = 0;
+
+      // Suggestion state
+      room.gameState.suggestions = {};
     }
   }
 
@@ -239,6 +242,7 @@ export class GameStateManager {
     if (room && room.gameState) {
       room.gameState.buzzes = {};
       room.gameState.buzzWindowOpen = true;
+      room.gameState.buzzReceived = false;
       room.gameState.playersWhoBuzzed = new Set();
       room.gameState.buzzWindowStartTime = Date.now();
     }
@@ -270,6 +274,9 @@ export class GameStateManager {
   recordBuzz(roomCode, playerId, reactionTime) {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return;
+
+    // Mark that a buzz was received (guards against stale timeout callbacks)
+    room.gameState.buzzReceived = true;
 
     // Calculate reaction time server-side (more accurate, cheat-proof)
     const serverReactionTime = room.gameState.buzzWindowStartTime
@@ -315,6 +322,9 @@ export class GameStateManager {
     const player = room.players.get(playerId);
     if (!player) return null;
 
+    // Capture correct answer before potentially clearing state
+    const correctAnswer = room.gameState.currentQuestion?.question;
+
     if (correct) {
       player.score = (player.score || 0) + points;
       // Correct answer - they get to pick next
@@ -330,6 +340,7 @@ export class GameStateManager {
         newScore: player.score,
         nextPickerId: playerId,
         canBuzzAgain: false,
+        correctAnswer,
       };
     } else {
       player.score = (player.score || 0) - points;
@@ -357,6 +368,7 @@ export class GameStateManager {
         newScore: player.score,
         nextPickerId: room.gameState.currentPickerId,
         canBuzzAgain,
+        correctAnswer: canBuzzAgain ? null : correctAnswer,
       };
     }
   }
@@ -1212,6 +1224,37 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (room && room.gameState) {
       room.gameState.answerWindowOpen = false;
+    }
+  }
+
+  // Handle question suggestion from non-picker
+  handleSuggestion(roomCode, playerId, categoryIndex, pointIndex) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !room.gameState) return null;
+
+    // Don't allow current picker to suggest
+    if (room.gameState.currentPickerId === playerId) return null;
+
+    // Don't allow suggesting revealed questions
+    const question = room.gameState.questions[categoryIndex]?.[pointIndex];
+    if (!question || question.revealed) return null;
+
+    // Toggle off if same suggestion
+    const existing = room.gameState.suggestions[playerId];
+    if (existing && existing.categoryIndex === categoryIndex && existing.pointIndex === pointIndex) {
+      delete room.gameState.suggestions[playerId];
+    } else {
+      // Set or replace suggestion (one per player)
+      room.gameState.suggestions[playerId] = { categoryIndex, pointIndex };
+    }
+
+    return { ...room.gameState.suggestions };
+  }
+
+  clearSuggestions(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (room && room.gameState) {
+      room.gameState.suggestions = {};
     }
   }
 }
