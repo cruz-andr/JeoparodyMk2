@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Timer from '../common/Timer';
 import { useSettingsStore } from '../../stores';
@@ -23,6 +24,31 @@ export default function QuestionModal({
       onRevealAnswer();
     }
   };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (!showAnswer) {
+        if (e.code === 'Space' || e.code === 'Enter') {
+          e.preventDefault();
+          onRevealAnswer();
+        }
+      } else {
+        if (e.code === 'Digit1' || e.code === 'ArrowLeft') {
+          e.preventDefault();
+          onCorrect();
+        } else if (e.code === 'Digit2' || e.code === 'ArrowRight') {
+          e.preventDefault();
+          onIncorrect();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAnswer, onRevealAnswer, onCorrect, onIncorrect]);
 
   return (
     <motion.div
@@ -86,16 +112,20 @@ export default function QuestionModal({
                 I Got It Wrong (-${question.points})
               </motion.button>
             </div>
+            <span className="keyboard-hint">Press 1 for Correct, 2 for Incorrect</span>
           </motion.div>
         ) : (
-          <motion.button
-            className="reveal-button"
-            onClick={onRevealAnswer}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Reveal Answer
-          </motion.button>
+          <div>
+            <motion.button
+              className="reveal-button"
+              onClick={onRevealAnswer}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Reveal Answer
+            </motion.button>
+            <span className="keyboard-hint">Press SPACE to reveal</span>
+          </div>
         )}
 
         <button className="close-button" onClick={onClose}>

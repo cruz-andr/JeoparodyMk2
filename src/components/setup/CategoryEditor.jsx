@@ -8,6 +8,9 @@ export default function CategoryEditor({
   onNext,
   error,
   readOnly = false,
+  onRegenerate,
+  remainingRolls = 5,
+  regeneratingIndex = null,
 }) {
   return (
     <motion.div
@@ -24,6 +27,9 @@ export default function CategoryEditor({
       ) : (
         <p className="editor-subtitle">
           Review and customize the AI-generated categories
+          {onRegenerate && (
+            <span className="rolls-remaining"> ({remainingRolls} re-rolls remaining)</span>
+          )}
         </p>
       )}
 
@@ -37,15 +43,33 @@ export default function CategoryEditor({
             transition={{ delay: index * 0.1 }}
           >
             <label htmlFor={`category-${index}`}>Category {index + 1}</label>
-            <input
-              id={`category-${index}`}
-              type="text"
-              value={category}
-              onChange={(e) => !readOnly && onEdit(index, e.target.value)}
-              className="category-input"
-              disabled={readOnly}
-              readOnly={readOnly}
-            />
+            <div className="category-input-row">
+              <input
+                id={`category-${index}`}
+                type="text"
+                value={category}
+                onChange={(e) => !readOnly && onEdit(index, e.target.value)}
+                className="category-input"
+                disabled={readOnly}
+                readOnly={readOnly}
+              />
+              {!readOnly && onRegenerate && (
+                <motion.button
+                  className="btn-dice"
+                  onClick={() => onRegenerate(index)}
+                  disabled={remainingRolls <= 0 || regeneratingIndex !== null}
+                  title={remainingRolls > 0 ? `Re-roll category (${remainingRolls} left)` : 'No re-rolls remaining'}
+                  whileHover={remainingRolls > 0 && regeneratingIndex === null ? { scale: 1.1 } : {}}
+                  whileTap={remainingRolls > 0 && regeneratingIndex === null ? { scale: 0.9 } : {}}
+                >
+                  {regeneratingIndex === index ? (
+                    <span className="dice-spinner">...</span>
+                  ) : (
+                    <span role="img" aria-label="re-roll">&#x1F3B2;</span>
+                  )}
+                </motion.button>
+              )}
+            </div>
           </motion.div>
         ))}
       </div>

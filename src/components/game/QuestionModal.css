@@ -115,6 +115,15 @@
   background-color: #ff7b7b;
 }
 
+/* Keyboard Hints */
+.keyboard-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin-top: 8px;
+}
+
 /* Close Button */
 .close-button {
   background-color: #333;

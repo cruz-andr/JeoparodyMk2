@@ -16,10 +16,18 @@ function getModel() {
   return model;
 }
 
+function generateSeed() {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+}
+
 export async function generateCategories(genre) {
   const aiModel = getModel();
+  const seed = generateSeed();
 
   const prompt = `You are a Jeopardy game assistant. Generate 6 unique, diverse, and interesting Jeopardy categories related to the genre: ${genre}.
+
+Variation seed: ${seed}
+Use this seed to ensure variety — explore unexpected, lesser-known, or creative angles within this genre. Avoid overly common or obvious categories.
 
 Return ONLY a valid JSON array of 6 strings, with no additional text, markdown, or explanation. Example format:
 ["CATEGORY 1", "CATEGORY 2", "CATEGORY 3", "CATEGORY 4", "CATEGORY 5", "CATEGORY 6"]`;
@@ -38,14 +46,47 @@ Return ONLY a valid JSON array of 6 strings, with no additional text, markdown, 
   return JSON.parse(jsonStr);
 }
 
+export async function regenerateCategory(genre, existingCategories, indexToReplace) {
+  const aiModel = getModel();
+  const seed = generateSeed();
+  const otherCategories = existingCategories
+    .filter((_, i) => i !== indexToReplace)
+    .join(', ');
+
+  const prompt = `You are a Jeopardy game assistant. Generate 1 unique and interesting Jeopardy category related to the genre: ${genre}.
+
+The category must be DIFFERENT from these existing categories: ${otherCategories}
+
+Variation seed: ${seed}
+Be creative and explore lesser-known or unexpected angles within this genre.
+
+Return ONLY a valid JSON object with no additional text:
+{"category": "CATEGORY_NAME"}`;
+
+  const result = await aiModel.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text().trim();
+
+  let jsonStr = text;
+  if (text.includes('```')) {
+    const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (match) jsonStr = match[1].trim();
+  }
+
+  return JSON.parse(jsonStr).category;
+}
+
 export async function generateQuestions(categories, pointValues, round = 1) {
   const aiModel = getModel();
+  const seed = generateSeed();
 
   const difficultyNote = round === 2
     ? 'This is Double Jeopardy - make all questions significantly harder and more detailed than a regular round.'
     : 'Scale difficulty appropriately with point values - $200 questions should be easy, $1000 questions should be challenging.';
 
   const prompt = `You are a Jeopardy game assistant. Generate Jeopardy-style questions and answers for these categories: ${categories.join(', ')}.
+
+Variation seed: ${seed}
 
 For each category, create questions for point values: ${pointValues.join(', ')}.
 
@@ -88,8 +129,11 @@ Generate for all ${categories.length} categories with progressively harder quest
 
 export async function generateFinalJeopardyQuestion(genre) {
   const aiModel = getModel();
+  const seed = generateSeed();
 
   const prompt = `You are a Jeopardy game assistant. Generate a Final Jeopardy question related to the genre: ${genre}.
+
+Variation seed: ${seed}
 
 Final Jeopardy questions should be:
 - Challenging but fair

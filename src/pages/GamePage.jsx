@@ -68,6 +68,14 @@ export default function GamePage() {
   const [buzzTimedOut, setBuzzTimedOut] = useState(false); // Show timeout view with answer
   const [hasContinued, setHasContinued] = useState(false); // Player clicked Continue
   const [waitingForOthers, setWaitingForOthers] = useState(false); // Waiting for other players to continue
+  const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
+
+  // Category re-roll state
+  const [remainingRolls, setRemainingRolls] = useState(5);
+  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
+
+  // Question suggestion state (non-pickers)
+  const [suggestions, setSuggestions] = useState({});
 
   // Daily Double state
   const [isDailyDouble, setIsDailyDouble] = useState(false);
@@ -278,6 +286,7 @@ export default function GamePage() {
       setCurrentQuestion({ ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
       setShowAnswer(false);
+      setSuggestions({});
       // Reset continue states for new question
       setHasContinued(false);
       setWaitingForOthers(false);
@@ -311,21 +320,33 @@ export default function GamePage() {
       setBuzzerWinnerId(playerId);
       setBuzzerWinnerReactionTime(reactionTime);  // Store reaction time to display
       setCanBuzz(false);
+      setBuzzTimedOut(false);  // Server is authoritative — clear any local timeout
       // Reset answer timer for buzzer winner
       setAnswerTimerKey(prev => prev + 1);
     });
 
     // Answer result
-    const unsubAnswerResult = subscribe('game:answer-result', ({ playerId, correct, newScore, nextPickerId, canBuzzAgain }) => {
+    const unsubAnswerResult = subscribe('game:answer-result', ({ playerId, correct, newScore, nextPickerId, canBuzzAgain, correctAnswer }) => {
       // Update player score in room store
       if (playerId) {
         useRoomStore.getState().updatePlayerScore(playerId, newScore);
       }
 
       if (correct) {
-        setCurrentPickerId(nextPickerId);
-        setCurrentQuestion(null);
         setBuzzerWinnerId(null);
+        setCanBuzz(false);
+        // Show correct answer to all for 3 seconds before returning to board
+        if (correctAnswer) {
+          setCorrectAnswerReveal(correctAnswer);
+          setTimeout(() => {
+            setCorrectAnswerReveal(null);
+            setCurrentPickerId(nextPickerId);
+            setCurrentQuestion(null);
+          }, 3000);
+        } else {
+          setCurrentPickerId(nextPickerId);
+          setCurrentQuestion(null);
+        }
       } else if (canBuzzAgain) {
         // Wrong answer, others can buzz
         setBuzzerWinnerId(null);
@@ -335,11 +356,25 @@ export default function GamePage() {
         // Reset buzz timer for remaining players
         setBuzzTimerKey(prev => prev + 1);
       } else {
-        // No one left to buzz, move on
-        setCurrentPickerId(nextPickerId);
-        setCurrentQuestion(null);
+        // No one left to buzz, show correct answer then move on
         setBuzzerWinnerId(null);
+        if (correctAnswer) {
+          setCorrectAnswerReveal(correctAnswer);
+          setTimeout(() => {
+            setCorrectAnswerReveal(null);
+            setCurrentPickerId(nextPickerId);
+            setCurrentQuestion(null);
+          }, 3000);
+        } else {
+          setCurrentPickerId(nextPickerId);
+          setCurrentQuestion(null);
+        }
       }
+    });
+
+    // Question suggestions from non-pickers
+    const unsubQuestionSuggested = subscribe('game:question-suggested', ({ suggestions: newSuggestions }) => {
+      setSuggestions(newSuggestions);
     });
 
     // Buzz timeout - no one buzzed in time (server-driven)
@@ -546,6 +581,7 @@ export default function GamePage() {
       unsubQuestionSelected();
       unsubBuzzerWinner();
       unsubAnswerResult();
+      unsubQuestionSuggested();
       unsubBuzzTimeout();
       unsubAllContinued();
       unsubAnswerRevealed();
@@ -600,12 +636,33 @@ export default function GamePage() {
     }
   }, [fjPhase, finalJeopardyData, textToSpeechEnabled]);
 
+  // Keyboard shortcut for buzzing in (Space/Enter)
+  useEffect(() => {
+    if (!canBuzz || buzzerWinnerId || buzzTimedOut) return;
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        handleBuzz();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canBuzz, buzzerWinnerId, buzzTimedOut, handleBuzz]);
+
   const handleLeave = () => {
     // Clear stored room so we don't try to reconnect
     localStorage.removeItem('jeopardy_current_room');
     leaveRoom(roomCode);
     resetRoom();
     navigate('/menu');
+  };
+
+  const handleKickPlayer = (playerId) => {
+    if (confirm('Are you sure you want to remove this player?')) {
+      socketClient.emit('host:kick-player', { roomCode, playerId });
+    }
   };
 
   const handleToggleReady = () => {
@@ -648,6 +705,7 @@ export default function GamePage() {
     try {
       const generatedCategories = await aiService.generateCategories(selectedGenre);
       setLocalCategories(generatedCategories);
+      setRemainingRolls(5);
 
       // Broadcast to all players
       socketClient.emit('game:set-categories', { roomCode, categories: generatedCategories });
@@ -668,6 +726,24 @@ export default function GamePage() {
     const updated = [...categories];
     updated[index] = newValue;
     setLocalCategories(updated);
+  };
+
+  // Host re-rolls a single category
+  const handleRegenerateCategory = async (index) => {
+    if (remainingRolls <= 0 || regeneratingIndex !== null) return;
+    setRegeneratingIndex(index);
+    try {
+      const newCategory = await aiService.regenerateCategory(genre, categories, index);
+      const updated = [...categories];
+      updated[index] = newCategory;
+      setLocalCategories(updated);
+      socketClient.emit('game:category-edited', { roomCode, index, value: newCategory });
+      setRemainingRolls(prev => prev - 1);
+    } catch (err) {
+      setError('Failed to regenerate category.');
+    } finally {
+      setRegeneratingIndex(null);
+    }
   };
 
   // Host uses test board (no AI credits)
@@ -812,6 +888,11 @@ export default function GamePage() {
       categoryIndex,
       pointIndex,
     });
+  };
+
+  // Non-picker suggests a question
+  const handleSuggestQuestion = (categoryIndex, pointIndex) => {
+    socketClient.emit('game:suggest-question', { roomCode, categoryIndex, pointIndex });
   };
 
   // Player buzzes in
@@ -992,6 +1073,14 @@ export default function GamePage() {
                   <span className={`ready-badge ${player.isReady ? 'ready' : ''}`}>
                     {player.isHost ? 'Host' : player.isReady ? 'Ready' : 'Not Ready'}
                   </span>
+                  {isHost && !player.isHost && (
+                    <button
+                      className="btn-kick-lobby"
+                      onClick={() => handleKickPlayer(player.id)}
+                    >
+                      Kick
+                    </button>
+                  )}
                 </motion.li>
               ))}
             </ul>
@@ -1064,6 +1153,9 @@ export default function GamePage() {
           onNext={handleGenerateQuestions}
           error={error}
           readOnly={!isHost}
+          onRegenerate={isHost ? handleRegenerateCategory : undefined}
+          remainingRolls={remainingRolls}
+          regeneratingIndex={regeneratingIndex}
         />
       )}
 
@@ -1198,6 +1290,10 @@ export default function GamePage() {
               onQuestionSelect={handleQuestionSelect}
               disabled={isHostMode ? !isHost : !isMyTurn}
               revealedQuestions={revealedQuestions}
+              onSuggest={!isMyTurn && !isHostMode ? handleSuggestQuestion : undefined}
+              suggestions={suggestions}
+              players={players}
+              suggestMode={!isMyTurn && !isHostMode}
             />
           )}
 
@@ -1345,6 +1441,23 @@ export default function GamePage() {
                       <p className="waiting-for-answer">Waiting for their answer...</p>
                     )}
                   </div>
+                )}
+
+                {/* Correct Answer Reveal - shown to all after scoring */}
+                {correctAnswerReveal && (
+                  <motion.div
+                    className="correct-answer-reveal"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => {
+                      setCorrectAnswerReveal(null);
+                      setCurrentQuestion(null);
+                    }}
+                  >
+                    <p className="answer-label">Correct Response:</p>
+                    <p className="answer-text">{correctAnswerReveal}</p>
+                    <span className="dismiss-hint">Click to dismiss</span>
+                  </motion.div>
                 )}
 
                 {/* Timeout - No One Buzzed */}

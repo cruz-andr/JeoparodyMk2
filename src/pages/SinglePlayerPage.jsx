@@ -54,6 +54,10 @@ export default function SinglePlayerPage() {
   // Final Jeopardy state
   const [finalJeopardyData, setFinalJeopardyData] = useState(null);
 
+  // Category re-roll state
+  const [remainingRolls, setRemainingRolls] = useState(5);
+  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
+
   useEffect(() => {
     setMode('single');
     setPhase('setup');
@@ -79,6 +83,7 @@ export default function SinglePlayerPage() {
       const generatedCategories = await aiService.generateCategories(selectedGenre);
       setGenre(selectedGenre);
       setCategories(generatedCategories);
+      setRemainingRolls(5);
       setPhase('categoryEdit');
     } catch (err) {
       console.error('Error generating categories:', err);
@@ -121,6 +126,22 @@ export default function SinglePlayerPage() {
     const updatedCategories = [...categories];
     updatedCategories[index] = newValue;
     setCategories(updatedCategories);
+  };
+
+  const handleRegenerateCategory = async (index) => {
+    if (remainingRolls <= 0 || regeneratingIndex !== null) return;
+    setRegeneratingIndex(index);
+    try {
+      const newCategory = await aiService.regenerateCategory(genre, categories, index);
+      const updated = [...categories];
+      updated[index] = newCategory;
+      setCategories(updated);
+      setRemainingRolls(prev => prev - 1);
+    } catch (err) {
+      setError('Failed to regenerate category. Please try again.');
+    } finally {
+      setRegeneratingIndex(null);
+    }
   };
 
   const handleQuestionSelect = (categoryIndex, pointIndex) => {
@@ -318,6 +339,9 @@ export default function SinglePlayerPage() {
           onBack={() => setPhase('setup')}
           onNext={handleGenerateQuestions}
           error={error}
+          onRegenerate={handleRegenerateCategory}
+          remainingRolls={remainingRolls}
+          regeneratingIndex={regeneratingIndex}
         />
       )}
 
