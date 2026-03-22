@@ -636,21 +636,6 @@ export default function GamePage() {
     }
   }, [fjPhase, finalJeopardyData, textToSpeechEnabled]);
 
-  // Keyboard shortcut for buzzing in (Space/Enter)
-  useEffect(() => {
-    if (!canBuzz || buzzerWinnerId || buzzTimedOut) return;
-    const handleKeyDown = (e) => {
-      const tag = document.activeElement?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.code === 'Space' || e.code === 'Enter') {
-        e.preventDefault();
-        handleBuzz();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canBuzz, buzzerWinnerId, buzzTimedOut, handleBuzz]);
-
   const handleLeave = () => {
     // Clear stored room so we don't try to reconnect
     localStorage.removeItem('jeopardy_current_room');
@@ -903,6 +888,21 @@ export default function GamePage() {
     socketClient.emit('game:buzz-in', { roomCode, reactionTime });
     setCanBuzz(false);
   }, [canBuzz, signalArrivedTime, roomCode]);
+
+  // Keyboard shortcut for buzzing in (Space/Enter)
+  useEffect(() => {
+    if (!canBuzz || buzzerWinnerId || buzzTimedOut) return;
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        handleBuzz();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canBuzz, buzzerWinnerId, buzzTimedOut, handleBuzz]);
 
   // Buzz timer expired - no one buzzed in time
   const handleBuzzTimeUp = useCallback(() => {
