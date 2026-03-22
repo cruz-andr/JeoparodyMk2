@@ -69,6 +69,7 @@ export default function GamePage() {
   const [hasContinued, setHasContinued] = useState(false); // Player clicked Continue
   const [waitingForOthers, setWaitingForOthers] = useState(false); // Waiting for other players to continue
   const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
+  const [hasSkipped, setHasSkipped] = useState(false); // Player clicked "I Don't Know"
 
   // Category re-roll state
   const [remainingRolls, setRemainingRolls] = useState(5);
@@ -291,6 +292,7 @@ export default function GamePage() {
       setHasContinued(false);
       setWaitingForOthers(false);
       setBuzzTimedOut(false);
+      setHasSkipped(false);
 
       if (isDD) {
         // Daily Double - show wager modal to picker, announcement to others
@@ -904,6 +906,12 @@ export default function GamePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canBuzz, buzzerWinnerId, buzzTimedOut, handleBuzz]);
 
+  // Player clicks "I Don't Know" to skip the question
+  const handleSkipQuestion = useCallback(() => {
+    setHasSkipped(true);
+    socketClient.emit('game:skip-question', { roomCode });
+  }, [roomCode]);
+
   // Buzz timer expired - no one buzzed in time
   const handleBuzzTimeUp = useCallback(() => {
     setCanBuzz(false);
@@ -1381,18 +1389,29 @@ export default function GamePage() {
                   </div>
                 )}
 
-                {/* Buzzer */}
+                {/* Buzzer + Skip */}
                 {canBuzz && !buzzerWinnerId && !buzzTimedOut && (
-                  <motion.button
-                    className="buzzer-button"
-                    onClick={handleBuzz}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                  >
-                    BUZZ IN!
-                  </motion.button>
+                  <div className="buzz-actions">
+                    {!hasSkipped ? (
+                      <>
+                        <motion.button
+                          className="buzzer-button"
+                          onClick={handleBuzz}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                        >
+                          BUZZ IN!
+                        </motion.button>
+                        <button className="btn-skip" onClick={handleSkipQuestion}>
+                          I Don't Know
+                        </button>
+                      </>
+                    ) : (
+                      <p className="skip-status">Skipped — waiting for others...</p>
+                    )}
+                  </div>
                 )}
 
                 {/* Buzzer Winner Display */}
