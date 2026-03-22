@@ -331,5 +331,3 @@ function generateRoomCode() {
   }
   return code;
 }
-
-export default useRoomStore;

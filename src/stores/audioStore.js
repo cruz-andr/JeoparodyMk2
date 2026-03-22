@@ -133,5 +133,3 @@ export const useAudioStore = create((set, get) => ({
     set(initialState);
   },
 }));
-
-export default useAudioStore;

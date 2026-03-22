@@ -251,5 +251,3 @@ function placeDailyDoubles(categoryCount, round) {
 
   return dailyDoubles;
 }
-
-export default useGameStore;

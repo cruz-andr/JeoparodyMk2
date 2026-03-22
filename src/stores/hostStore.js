@@ -287,5 +287,3 @@ export const useHostStore = create((set, get) => ({
       generatingStep: null,
     }),
 }));
-
-export default useHostStore;
