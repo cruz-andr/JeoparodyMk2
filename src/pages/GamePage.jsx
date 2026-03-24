@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom } from '../hooks';
@@ -71,6 +71,7 @@ export default function GamePage() {
   const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
   const [hasSkipped, setHasSkipped] = useState(false); // Player clicked "I Don't Know"
   const [hasAlreadyBuzzed, setHasAlreadyBuzzed] = useState(false); // Player already buzzed (wrong answer) this question
+  const hasAlreadyBuzzedRef = useRef(false);
 
   // Category re-roll state
   const [remainingRolls, setRemainingRolls] = useState(5);
@@ -126,6 +127,41 @@ export default function GamePage() {
       setLocalQuestions(hostQuestions);
       setQuestionsReady(true);
       // Clear the state to prevent re-triggering on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Handle late join — restore game state from navigation state
+  useEffect(() => {
+    if (location.state?.lateJoin && location.state?.gameState) {
+      const gs = location.state.gameState;
+
+      if (gs.categories) setLocalCategories(gs.categories);
+      if (gs.questions) {
+        setLocalQuestions(gs.questions);
+        const revealed = new Set();
+        gs.questions.forEach((category, catIdx) => {
+          category.forEach((q, ptIdx) => {
+            if (q.revealed) revealed.add(`${catIdx}-${ptIdx}`);
+          });
+        });
+        setRevealedQuestions(revealed);
+      }
+      if (gs.currentPickerId) setCurrentPickerId(gs.currentPickerId);
+      if (gs.currentRound) setCurrentRound(gs.currentRound);
+
+      // If a question is active, the late joiner waits
+      if (gs.currentQuestion) {
+        setCurrentQuestion(gs.currentQuestion);
+      }
+
+      // Set phase
+      if (gs.phase === 'playing' || gs.phase === 'questionActive' || gs.phase === 'dailyDouble') {
+        setPhase('playing');
+      } else {
+        setPhase('playing');
+      }
+
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -295,6 +331,7 @@ export default function GamePage() {
       setBuzzTimedOut(false);
       setHasSkipped(false);
       setHasAlreadyBuzzed(false);
+      hasAlreadyBuzzedRef.current = false;
 
       if (isDD) {
         // Daily Double - show wager modal to picker, announcement to others
@@ -355,7 +392,7 @@ export default function GamePage() {
         // Wrong answer, others can buzz (but not the player who already buzzed)
         setBuzzerWinnerId(null);
         setSignalArrivedTime(Date.now());
-        setCanBuzz(!hasAlreadyBuzzed); // Don't re-enable for players who already buzzed
+        setCanBuzz(!hasAlreadyBuzzedRef.current); // Use ref for current value (closure would be stale)
         setShowAnswer(false);
         setHasSkipped(false); // Reset skip for remaining eligible players
         setBuzzTimerKey(prev => prev + 1);
@@ -892,6 +929,7 @@ export default function GamePage() {
     socketClient.emit('game:buzz-in', { roomCode, reactionTime });
     setCanBuzz(false);
     setHasAlreadyBuzzed(true);
+    hasAlreadyBuzzedRef.current = true;
   }, [canBuzz, signalArrivedTime, roomCode]);
 
   // Keyboard shortcut for buzzing in (Space/Enter)
@@ -1404,10 +1442,8 @@ export default function GamePage() {
                           >
                             BUZZ IN!
                           </motion.button>
-                          <button className="btn-skip" onClick={handleSkipQuestion}>
-                            I Don't Know
-                          </button>
                           <span className="keyboard-hint">Press SPACE to buzz</span>
+                          <span className="skip-link" onClick={handleSkipQuestion}>Skip</span>
                         </>
                       ) : (
                         <p className="skip-status">Skipped — waiting for others...</p>

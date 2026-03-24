@@ -219,6 +219,11 @@ export function initializeSocketHandlers(io) {
                       io.to(roomCode).emit('game:buzz-timeout-result', btResult);
                     }
                   }, buzzDuration);
+                } else {
+                  const activated = gameManager.activateWaitingPlayers(roomCode);
+                  if (activated.length > 0) {
+                    io.to(roomCode).emit('game:late-joiners-ready', { playerIds: activated });
+                  }
                 }
               }
             }, answerDuration);
@@ -237,6 +242,14 @@ export function initializeSocketHandlers(io) {
       const result = gameManager.handleAnswer(roomCode, playerId, correct, points);
       if (result) {
         io.to(roomCode).emit('game:answer-result', result);
+
+        // Activate late joiners when question fully resolves
+        if (!result.canBuzzAgain) {
+          const activated = gameManager.activateWaitingPlayers(roomCode);
+          if (activated.length > 0) {
+            io.to(roomCode).emit('game:late-joiners-ready', { playerIds: activated });
+          }
+        }
 
         // If others can still buzz, restart buzz window with fresh timeout
         if (result.canBuzzAgain) {
@@ -301,6 +314,12 @@ export function initializeSocketHandlers(io) {
         }
 
         io.to(roomCode).emit('game:all-continued', { nextPickerId });
+
+        // Activate late joiners
+        const activated = gameManager.activateWaitingPlayers(roomCode);
+        if (activated.length > 0) {
+          io.to(roomCode).emit('game:late-joiners-ready', { playerIds: activated });
+        }
       }
     });
 

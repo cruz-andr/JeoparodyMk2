@@ -757,19 +757,17 @@
   gap: var(--spacing-md);
 }
 
-.btn-skip {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+.skip-link {
   color: var(--text-secondary);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
+  opacity: 0.5;
+  font-size: 0.85rem;
   cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.btn-skip:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+.skip-link:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .skip-status {
