@@ -243,7 +243,9 @@ export class GameStateManager {
       room.gameState.buzzes = {};
       room.gameState.buzzWindowOpen = true;
       room.gameState.buzzReceived = false;
-      room.gameState.playersWhoBuzzed = new Set();
+      // Preserve playersWhoBuzzed across re-buzz windows so wrong-answer
+      // players can't buzz again. Only initialize if not already set.
+      room.gameState.playersWhoBuzzed = room.gameState.playersWhoBuzzed || new Set();
       room.gameState.skippedPlayers = new Set();
       room.gameState.buzzWindowStartTime = Date.now();
     }
@@ -1263,7 +1265,7 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    // Can't skip if already buzzed
+    // Can't skip if already buzzed (they had their chance)
     if (room.gameState.playersWhoBuzzed?.has(playerId)) return null;
     // Can't skip if already skipped
     if (room.gameState.skippedPlayers?.has(playerId)) return null;
@@ -1271,15 +1273,17 @@ export class GameStateManager {
     room.gameState.skippedPlayers = room.gameState.skippedPlayers || new Set();
     room.gameState.skippedPlayers.add(playerId);
 
+    // Players who already buzzed are excluded from skip eligibility
     const totalPlayers = room.players.size;
-    const buzzed = room.gameState.playersWhoBuzzed?.size || 0;
+    const alreadyBuzzed = room.gameState.playersWhoBuzzed?.size || 0;
+    const eligible = totalPlayers - alreadyBuzzed;
     const skipped = room.gameState.skippedPlayers.size;
-    const allSkipped = (buzzed + skipped) >= totalPlayers;
+    const allSkipped = skipped >= eligible;
 
     return {
       allSkipped,
       skippedCount: skipped,
-      totalEligible: totalPlayers - buzzed,
+      totalEligible: eligible,
     };
   }
 }

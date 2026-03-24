@@ -70,6 +70,7 @@ export default function GamePage() {
   const [waitingForOthers, setWaitingForOthers] = useState(false); // Waiting for other players to continue
   const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
   const [hasSkipped, setHasSkipped] = useState(false); // Player clicked "I Don't Know"
+  const [hasAlreadyBuzzed, setHasAlreadyBuzzed] = useState(false); // Player already buzzed (wrong answer) this question
 
   // Category re-roll state
   const [remainingRolls, setRemainingRolls] = useState(5);
@@ -293,6 +294,7 @@ export default function GamePage() {
       setWaitingForOthers(false);
       setBuzzTimedOut(false);
       setHasSkipped(false);
+      setHasAlreadyBuzzed(false);
 
       if (isDD) {
         // Daily Double - show wager modal to picker, announcement to others
@@ -350,12 +352,12 @@ export default function GamePage() {
           setCurrentQuestion(null);
         }
       } else if (canBuzzAgain) {
-        // Wrong answer, others can buzz
+        // Wrong answer, others can buzz (but not the player who already buzzed)
         setBuzzerWinnerId(null);
         setSignalArrivedTime(Date.now());
-        setCanBuzz(true);
-        setShowAnswer(false); // Hide answer for next buzzer
-        // Reset buzz timer for remaining players
+        setCanBuzz(!hasAlreadyBuzzed); // Don't re-enable for players who already buzzed
+        setShowAnswer(false);
+        setHasSkipped(false); // Reset skip for remaining eligible players
         setBuzzTimerKey(prev => prev + 1);
       } else {
         // No one left to buzz, show correct answer then move on
@@ -889,6 +891,7 @@ export default function GamePage() {
     const reactionTime = Date.now() - signalArrivedTime;
     socketClient.emit('game:buzz-in', { roomCode, reactionTime });
     setCanBuzz(false);
+    setHasAlreadyBuzzed(true);
   }, [canBuzz, signalArrivedTime, roomCode]);
 
   // Keyboard shortcut for buzzing in (Space/Enter)
@@ -1389,7 +1392,7 @@ export default function GamePage() {
                   </div>
                 )}
 
-                {/* Buzzer + Skip */}
+                {/* Buzzer + Skip (only for players who haven't buzzed yet) */}
                 {canBuzz && !buzzerWinnerId && !buzzTimedOut && (
                   <div className="buzz-actions">
                     {!hasSkipped ? (
@@ -1412,6 +1415,11 @@ export default function GamePage() {
                       <p className="skip-status">Skipped — waiting for others...</p>
                     )}
                   </div>
+                )}
+
+                {/* Already buzzed and got wrong — just wait */}
+                {hasAlreadyBuzzed && !buzzerWinnerId && !buzzTimedOut && !canBuzz && !correctAnswerReveal && (
+                  <p className="waiting-for-answer">Waiting for other players...</p>
                 )}
 
                 {/* Buzzer Winner Display */}
