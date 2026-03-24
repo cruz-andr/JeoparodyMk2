@@ -19,17 +19,9 @@ const DailyPage = lazy(() => import('./pages/DailyPage'));
 function PageLoader() {
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
       height: '100vh',
-      background: '#060CE9',
-      color: '#FFCC00',
-      fontFamily: 'serif',
-      fontSize: '1.5rem',
-    }}>
-      Loading...
-    </div>
+      background: '#020820',
+    }} />
   );
 }
 
