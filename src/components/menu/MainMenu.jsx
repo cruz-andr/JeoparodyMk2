@@ -30,6 +30,7 @@ const gameModes = [
     label: 'Host a Game',
     description: 'Educator & custom games',
     path: '/host',
+    
   },
 ];
 
@@ -109,6 +110,18 @@ export default function MainMenu() {
           </motion.button>
         ))}
       </div>
+
+      {/* Join Room */}
+      <motion.button
+        className="join-link"
+        onClick={() => navigate('/join')}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        whileHover={{ color: '#D69F4C' }}
+      >
+        Join a Room
+      </motion.button>
 
       {/* Footer */}
       <motion.div

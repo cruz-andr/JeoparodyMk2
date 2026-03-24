@@ -139,12 +139,6 @@ export default function MultiplayerPage() {
                 >
                   Create Room
                 </button>
-                <button
-                  className="btn-secondary btn-large"
-                  onClick={() => navigate('/join')}
-                >
-                  Join Room
-                </button>
               </div>
             </div>
 
