@@ -6,78 +6,35 @@ import SettingsModal from '../common/SettingsModal';
 import { useDailyStore } from '../../stores/dailyStore';
 import './MainMenu.css';
 
-const menuItems = [
-  {
-    id: 'daily',
-    label: 'Daily Challenge',
-    description: 'New puzzle every day!',
-    path: '/daily',
-    icon: '📅',
-    featured: true,
-  },
-  {
-    id: 'quickplay',
-    label: 'Quickplay',
-    description: 'Match with 2 random players',
-    path: '/quickplay',
-    icon: '🎲',
-  },
+const gameModes = [
   {
     id: 'singleplayer',
     label: 'Single Player',
-    description: 'Play solo with highscores',
+    description: 'Play solo against the board',
     path: '/singleplayer',
-    icon: '🎯',
   },
   {
     id: 'multiplayer',
     label: 'Multiplayer',
     description: 'Create a private room',
     path: '/multiplayer',
-    icon: '👥',
+  },
+  {
+    id: 'quickplay',
+    label: 'Quickplay',
+    description: 'Match with random players',
+    path: '/quickplay',
   },
   {
     id: 'host',
-    label: 'Host',
-    description: 'Educator mode - custom games',
+    label: 'Host a Game',
+    description: 'Educator & custom games',
     path: '/host',
-    icon: '🎓',
-  },
-  {
-    id: 'join',
-    label: 'Join Room',
-    description: 'Enter a room code',
-    path: '/join',
-    icon: '🚪',
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.3,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: 'easeOut',
-    },
-  },
-};
-
 export default function MainMenu() {
   const navigate = useNavigate();
-  const [hoveredItem, setHoveredItem] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const { hasPlayedToday, stats } = useDailyStore();
   const playedToday = hasPlayedToday();
@@ -85,79 +42,102 @@ export default function MainMenu() {
   return (
     <div className="main-menu">
       {/* Logo */}
-      <motion.div
-        className="menu-logo-container"
-        initial={{ opacity: 0, y: -30 }}
+      <motion.img
+        src={logo}
+        alt="Jeoparody!"
+        className="menu-logo"
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <img src={logo} alt="Jeoparody!" className="menu-logo" />
-      </motion.div>
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      />
 
-      {/* Menu Items */}
-      <motion.nav
-        className="menu-nav"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+      {/* Featured: Daily Challenge */}
+      <motion.button
+        className="daily-card"
+        onClick={() => navigate('/daily')}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15 }}
+        whileHover="hover"
+        whileTap={{ scale: 0.98 }}
       >
-        {menuItems.map((item) => (
+        <div className="daily-card-content">
+          <motion.span
+            className="star-icon gold"
+            variants={{
+              hover: { scale: 1.3, rotate: 25 },
+            }}
+            transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+          />
+          <div>
+            <span className="daily-card-label">Daily Challenge</span>
+            <span className="daily-card-desc">New puzzle every day</span>
+          </div>
+        </div>
+        <div className="daily-card-meta">
+          {stats.currentStreak > 0 && (
+            <span className="streak-pill">{stats.currentStreak} day streak</span>
+          )}
+          <span className={`daily-status ${playedToday ? 'done' : 'new'}`}>
+            {playedToday ? 'Completed' : 'Play Now'}
+          </span>
+        </div>
+      </motion.button>
+
+      {/* Game Mode Grid */}
+      <div className="mode-grid">
+        {gameModes.map((mode, i) => (
           <motion.button
-            key={item.id}
-            className={`menu-item ${hoveredItem === item.id ? 'hovered' : ''} ${item.featured ? 'featured' : ''}`}
-            variants={itemVariants}
-            onClick={() => navigate(item.path)}
-            onMouseEnter={() => setHoveredItem(item.id)}
-            onMouseLeave={() => setHoveredItem(null)}
-            whileHover={{ scale: 1.02 }}
+            key={mode.id}
+            className="mode-card"
+            onClick={() => navigate(mode.path)}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.25 + i * 0.06 }}
+            whileHover="hover"
             whileTap={{ scale: 0.98 }}
           >
-            <span className="menu-icon">{item.icon}</span>
-            <div className="menu-text">
-              <span className="menu-label">{item.label}</span>
-              <span className="menu-description">{item.description}</span>
-            </div>
-            {item.id === 'daily' && (
-              <span className={`daily-badge ${playedToday ? 'completed' : 'new'}`}>
-                {playedToday ? '✓' : 'NEW'}
-              </span>
-            )}
-            {item.id === 'daily' && stats.currentStreak > 0 && (
-              <span className="streak-indicator" title={`${stats.currentStreak} day streak`}>
-                {stats.currentStreak}
-              </span>
-            )}
+            <motion.span
+              className="star-icon"
+              variants={{
+                hover: { scale: 1.25, rotate: 20 },
+              }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+            />
+            <span className="mode-label">{mode.label}</span>
+            <span className="mode-desc">{mode.description}</span>
           </motion.button>
         ))}
-      </motion.nav>
+      </div>
 
-      {/* Footer Links */}
+      {/* Join Room */}
+      <motion.button
+        className="join-link"
+        onClick={() => navigate('/join')}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        whileHover={{ color: '#D69F4C' }}
+      >
+        Join a Room
+      </motion.button>
+
+      {/* Footer */}
       <motion.div
         className="menu-footer"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1 }}
+        transition={{ delay: 0.7 }}
       >
-        <button
-          className="footer-link"
-          onClick={() => navigate('/highscores')}
-        >
+        <button className="footer-link" onClick={() => navigate('/highscores')}>
           Highscores
         </button>
-        <span className="footer-divider">|</span>
-        <button
-          className="footer-link"
-          onClick={() => setShowSettings(true)}
-        >
+        <button className="footer-link" onClick={() => setShowSettings(true)}>
           Settings
         </button>
       </motion.div>
 
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom } from '../hooks';
@@ -71,6 +71,7 @@ export default function GamePage() {
   const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
   const [hasSkipped, setHasSkipped] = useState(false); // Player clicked "I Don't Know"
   const [hasAlreadyBuzzed, setHasAlreadyBuzzed] = useState(false); // Player already buzzed (wrong answer) this question
+  const hasAlreadyBuzzedRef = useRef(false);
 
   // Category re-roll state
   const [remainingRolls, setRemainingRolls] = useState(5);
@@ -126,6 +127,41 @@ export default function GamePage() {
       setLocalQuestions(hostQuestions);
       setQuestionsReady(true);
       // Clear the state to prevent re-triggering on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Handle late join — restore game state from navigation state
+  useEffect(() => {
+    if (location.state?.lateJoin && location.state?.gameState) {
+      const gs = location.state.gameState;
+
+      if (gs.categories) setLocalCategories(gs.categories);
+      if (gs.questions) {
+        setLocalQuestions(gs.questions);
+        const revealed = new Set();
+        gs.questions.forEach((category, catIdx) => {
+          category.forEach((q, ptIdx) => {
+            if (q.revealed) revealed.add(`${catIdx}-${ptIdx}`);
+          });
+        });
+        setRevealedQuestions(revealed);
+      }
+      if (gs.currentPickerId) setCurrentPickerId(gs.currentPickerId);
+      if (gs.currentRound) setCurrentRound(gs.currentRound);
+
+      // If a question is active, the late joiner waits
+      if (gs.currentQuestion) {
+        setCurrentQuestion(gs.currentQuestion);
+      }
+
+      // Set phase
+      if (gs.phase === 'playing' || gs.phase === 'questionActive' || gs.phase === 'dailyDouble') {
+        setPhase('playing');
+      } else {
+        setPhase('playing');
+      }
+
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -295,6 +331,7 @@ export default function GamePage() {
       setBuzzTimedOut(false);
       setHasSkipped(false);
       setHasAlreadyBuzzed(false);
+      hasAlreadyBuzzedRef.current = false;
 
       if (isDD) {
         // Daily Double - show wager modal to picker, announcement to others
@@ -355,7 +392,7 @@ export default function GamePage() {
         // Wrong answer, others can buzz (but not the player who already buzzed)
         setBuzzerWinnerId(null);
         setSignalArrivedTime(Date.now());
-        setCanBuzz(!hasAlreadyBuzzed); // Don't re-enable for players who already buzzed
+        setCanBuzz(!hasAlreadyBuzzedRef.current); // Use ref for current value (closure would be stale)
         setShowAnswer(false);
         setHasSkipped(false); // Reset skip for remaining eligible players
         setBuzzTimerKey(prev => prev + 1);
@@ -892,6 +929,7 @@ export default function GamePage() {
     socketClient.emit('game:buzz-in', { roomCode, reactionTime });
     setCanBuzz(false);
     setHasAlreadyBuzzed(true);
+    hasAlreadyBuzzedRef.current = true;
   }, [canBuzz, signalArrivedTime, roomCode]);
 
   // Keyboard shortcut for buzzing in (Space/Enter)
@@ -1230,85 +1268,49 @@ export default function GamePage() {
       {/* PLAYING PHASE */}
       {phase === 'playing' && (
         <div className="multiplayer-game">
-          {/* Scoreboard - In host mode, show top 3 non-host players sorted by score */}
-          <div className="scoreboard">
-            {(isHostMode
-              ? [...players]
-                  .filter(p => !p.isHost)
-                  .sort((a, b) => (b.score || 0) - (a.score || 0))
-                  .slice(0, 3)
-              : players
-            ).map((player, index) => (
-              <div
-                key={player.id}
-                className={`scoreboard-player ${player.id === currentPickerId ? 'current-picker' : ''} ${isHostMode ? `rank-${index + 1}` : ''}`}
-              >
-                {isHostMode && <span className="rank-badge">{index + 1}</span>}
-                {renderPlayerName(player)}
-                <span className={`player-score ${(player.score || 0) >= 0 ? 'positive' : 'negative'}`}>
-                  ${(player.score || 0).toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
+          {/* Header with scores */}
+          <header className="game-header">
+            <div className="header-scoreboard">
+              {(isHostMode
+                ? [...players].filter(p => !p.isHost).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
+                : players
+              ).map((player) => (
+                <div key={player.id} className={`player-chip ${player.id === currentPickerId ? 'current-picker' : ''}`}>
+                  {renderPlayerName(player, 'chip-name')}
+                  <span className={`chip-score ${(player.score || 0) >= 0 ? 'positive' : 'negative'}`}>
+                    ${(player.score || 0).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </header>
 
-          {/* Turn Indicator */}
-          <div className="turn-indicator">
-            {isHostMode ? (
-              // Host mode turn indicator
-              <span className="turn-label">
-                {currentQuestion ? (
-                  answerMode === 'verbal' ? (
-                    buzzerWinnerId
-                      ? <>{renderPlayerName(buzzerWinner)} buzzed first!</>
-                      : hostBuzzerOpen
-                        ? 'Buzzer is open!'
-                        : 'Waiting for host to open buzzer...'
-                  ) : hostAnswerWindowOpen
-                    ? 'Answer window is open!'
-                    : 'Waiting for host...'
-                ) : isHost
-                  ? 'Select a question from the board'
-                  : 'Waiting for host to select a question...'
-                }
-              </span>
-            ) : (
-              // Regular multiplayer turn indicator
-              currentQuestion && !isDailyDouble ? (
-                <span className="turn-label">
-                  {buzzerWinnerId
-                    ? (iAmBuzzerWinner ? 'Your turn to answer!' : <>{renderPlayerName(buzzerWinner)} is answering...</>)
-                    : buzzTimedOut
-                      ? "Time's up!"
-                      : 'Buzz in to answer!'}
-                </span>
-              ) : currentPicker ? (
-                <span className="turn-label">
-                  {isMyTurn ? "Your turn! Pick a question." : <>{renderPlayerName(currentPicker)}'s turn to pick</>}
-                </span>
-              ) : (
-                <span className="turn-label">Waiting...</span>
-              )
-            )}
-          </div>
-
-          {/* Game Board */}
+          {/* Turn Indicator - subtle text above board */}
           {!currentQuestion && (
-            <GameBoard
-              categories={categories}
-              questions={questions}
-              pointValues={currentRound === 1 ? [200, 400, 600, 800, 1000] : [400, 800, 1200, 1600, 2000]}
-              onQuestionSelect={handleQuestionSelect}
-              disabled={isHostMode ? !isHost : !isMyTurn}
-              revealedQuestions={revealedQuestions}
-              onSuggest={!isMyTurn && !isHostMode ? handleSuggestQuestion : undefined}
-              suggestions={suggestions}
-              players={players}
-              suggestMode={!isMyTurn && !isHostMode}
-            />
+            <div className="turn-indicator-subtle">
+              {isHostMode ? (
+                isHost ? 'Select a question' : 'Waiting for host...'
+              ) : currentPicker ? (
+                isMyTurn ? "Your turn! Pick a question." : <>{renderPlayerName(currentPicker)}'s turn to pick</>
+              ) : 'Waiting...'}
+            </div>
           )}
 
-          {/* Daily Double - Wager Phase */}
+          {/* Game Board - always visible, question overlays on top */}
+          <GameBoard
+            categories={categories}
+            questions={questions}
+            pointValues={currentRound === 1 ? [200, 400, 600, 800, 1000] : [400, 800, 1200, 1600, 2000]}
+            onQuestionSelect={handleQuestionSelect}
+            disabled={isHostMode ? !isHost : !isMyTurn}
+            revealedQuestions={revealedQuestions}
+            onSuggest={!isMyTurn && !isHostMode ? handleSuggestQuestion : undefined}
+            suggestions={suggestions}
+            players={players}
+            suggestMode={!isMyTurn && !isHostMode}
+          />
+
+          {/* Daily Double - Wager Phase (overlay) */}
           {isDailyDouble && dailyDoublePhase === 'wager' && currentQuestion && (
             isMyTurn ? (
               <DailyDoubleModal
@@ -1318,40 +1320,45 @@ export default function GamePage() {
                 onWagerConfirm={handleDailyDoubleWager}
               />
             ) : (
-              <div className="daily-double-waiting">
+              <div className="mp-question-overlay">
                 <motion.div
-                  className="daily-double-announcement"
+                  className="mp-question-content"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', damping: 15 }}
                 >
-                  <h2>DAILY DOUBLE!</h2>
-                  <p>{renderPlayerName(currentPicker)} is making their wager...</p>
+                  <h2 className="daily-double-badge">DAILY DOUBLE!</h2>
+                  <p className="waiting-for-answer">{renderPlayerName(currentPicker)} is making their wager...</p>
                 </motion.div>
               </div>
             )
           )}
 
-          {/* Daily Double - Question Phase */}
+          {/* Daily Double - Question Phase (overlay) */}
           {isDailyDouble && dailyDoublePhase === 'question' && currentQuestion && (
-            <div className="question-view">
-              <div className="question-card daily-double-card">
+            <motion.div
+              className="mp-question-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="mp-question-content">
                 <div className="daily-double-badge">DAILY DOUBLE - ${dailyDoubleWager.toLocaleString()}</div>
-                <div className="question-category">{currentQuestion.category}</div>
-                <div className="question-answer">{currentQuestion.answer}</div>
+                <div className="question-header">
+                  <span className="question-category">{currentQuestion.category}</span>
+                </div>
+                <p className="clue-text">{currentQuestion.answer}</p>
 
                 {isMyTurn && !showAnswer && (
-                  <button className="btn-primary" onClick={() => setShowAnswer(true)}>
+                  <button className="btn-primary reveal-button" onClick={() => setShowAnswer(true)}>
                     Reveal Answer
                   </button>
                 )}
 
                 {isMyTurn && showAnswer && (
                   <div className="answer-section">
-                    <p className="correct-answer">
-                      <span className="answer-label">Answer:</span> {currentQuestion.question}
-                    </p>
-                    <div className="answer-buttons">
+                    <p className="answer-label">Correct Response:</p>
+                    <p className="answer-text">{currentQuestion.question}</p>
+                    <div className="scoring-buttons">
                       <button className="btn-correct" onClick={() => handleDailyDoubleAnswer(true)}>
                         I Got It Right (+${dailyDoubleWager.toLocaleString()})
                       </button>
@@ -1363,151 +1370,171 @@ export default function GamePage() {
                 )}
 
                 {!isMyTurn && (
-                  <p className="waiting-for-answer">
-                    Waiting for {renderPlayerName(currentPicker)}'s answer...
-                  </p>
+                  <p className="waiting-for-answer">Waiting for {renderPlayerName(currentPicker)}'s answer...</p>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {/* Regular Question Display with Buzzer (not for host mode - host uses control panel) */}
-          {currentQuestion && !isDailyDouble && !isHostMode && (
-            <div className="question-view">
-              <div className="question-card">
-                <div className="question-category">{currentQuestion.category}</div>
-                <div className="question-points">${currentQuestion.points}</div>
-                <div className="question-answer">{currentQuestion.answer}</div>
-
-                {/* Buzz Timer - shown during buzz phase */}
-                {canBuzz && !buzzerWinnerId && !buzzTimedOut && settings?.questionTimeLimit && (
-                  <div className="buzz-timer-container">
-                    <Timer
-                      key={`buzz-${buzzTimerKey}`}
-                      duration={settings.questionTimeLimit}
-                      onTimeUp={handleBuzzTimeUp}
-                      autoStart={true}
-                      size="medium"
-                    />
-                  </div>
-                )}
-
-                {/* Buzzer + Skip (only for players who haven't buzzed yet) */}
-                {canBuzz && !buzzerWinnerId && !buzzTimedOut && (
-                  <div className="buzz-actions">
-                    {!hasSkipped ? (
-                      <>
-                        <motion.button
-                          className="buzzer-button"
-                          onClick={handleBuzz}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                        >
-                          BUZZ IN!
-                        </motion.button>
-                        <button className="btn-skip" onClick={handleSkipQuestion}>
-                          I Don't Know
-                        </button>
-                      </>
-                    ) : (
-                      <p className="skip-status">Skipped — waiting for others...</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Already buzzed and got wrong — just wait */}
-                {hasAlreadyBuzzed && !buzzerWinnerId && !buzzTimedOut && !canBuzz && !correctAnswerReveal && (
-                  <p className="waiting-for-answer">Waiting for other players...</p>
-                )}
-
-                {/* Buzzer Winner Display */}
-                {buzzerWinnerId && (
-                  <div className="buzzer-winner-display">
-                    <p className="buzzer-winner-text">
-                      {iAmBuzzerWinner ? 'You buzzed first!' : <>{renderPlayerName(buzzerWinner)} buzzed first!</>}
-                    </p>
-
-                    {/* Answer Timer - buzzer winner has limited time to answer */}
-                    {iAmBuzzerWinner && !showAnswer && settings?.questionTimeLimit && (
-                      <div className="answer-timer-container">
-                        <Timer
-                          key={`answer-${answerTimerKey}`}
-                          duration={settings.questionTimeLimit}
-                          onTimeUp={handleAnswerTimeUp}
-                          autoStart={true}
-                          size="small"
-                        />
-                      </div>
-                    )}
-
-                    {iAmBuzzerWinner && !showAnswer && (
-                      <button className="btn-primary" onClick={handleRevealAnswer}>
-                        Reveal Answer
-                      </button>
-                    )}
-
-                    {iAmBuzzerWinner && showAnswer && (
-                      <div className="answer-section">
-                        <p className="correct-answer">
-                          <span className="answer-label">Answer:</span> {currentQuestion.question}
-                        </p>
-                        <div className="answer-buttons">
-                          <button className="btn-correct" onClick={() => handleAnswerResult(true)}>
-                            I Got It Right
-                          </button>
-                          <button className="btn-incorrect" onClick={() => handleAnswerResult(false)}>
-                            I Got It Wrong
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {!iAmBuzzerWinner && (
-                      <p className="waiting-for-answer">Waiting for their answer...</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Correct Answer Reveal - shown to all after scoring */}
-                {correctAnswerReveal && (
-                  <motion.div
-                    className="correct-answer-reveal"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => {
-                      setCorrectAnswerReveal(null);
-                      setCurrentQuestion(null);
-                    }}
-                  >
-                    <p className="answer-label">Correct Response:</p>
-                    <p className="answer-text">{correctAnswerReveal}</p>
-                    <span className="dismiss-hint">Click to dismiss</span>
-                  </motion.div>
-                )}
-
-                {/* Timeout - No One Buzzed */}
-                {buzzTimedOut && (
-                  <div className="timeout-display">
-                    <p className="timeout-message">Time's Up! No one buzzed in.</p>
-                    <div className="answer-section">
-                      <p className="correct-answer">
-                        <span className="answer-label">Answer:</span> {currentQuestion.question}
-                      </p>
+          {/* Regular Question - Full Screen Overlay (matches single player style) */}
+          <AnimatePresence>
+            {currentQuestion && !isDailyDouble && !isHostMode && (
+              <motion.div
+                className="mp-question-overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="mp-question-content"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                >
+                  {/* Timer */}
+                  {canBuzz && !buzzerWinnerId && !buzzTimedOut && settings?.questionTimeLimit && (
+                    <div className="question-timer">
+                      <Timer
+                        key={`buzz-${buzzTimerKey}`}
+                        duration={settings.questionTimeLimit}
+                        onTimeUp={handleBuzzTimeUp}
+                        autoStart={true}
+                        size="small"
+                      />
                     </div>
-                    {!hasContinued ? (
-                      <button className="btn-primary" onClick={handleTimeoutContinue}>
-                        Continue
-                      </button>
-                    ) : (
-                      <p className="waiting-text">Waiting for other players...</p>
-                    )}
+                  )}
+
+                  {/* Answer Timer for buzzer winner */}
+                  {buzzerWinnerId && iAmBuzzerWinner && !showAnswer && settings?.questionTimeLimit && (
+                    <div className="question-timer">
+                      <Timer
+                        key={`answer-${answerTimerKey}`}
+                        duration={settings.questionTimeLimit}
+                        onTimeUp={handleAnswerTimeUp}
+                        autoStart={true}
+                        size="small"
+                      />
+                    </div>
+                  )}
+
+                  <div className="question-header">
+                    <span className="question-category">{currentQuestion.category}</span>
+                    <span className="question-points">${currentQuestion.points}</span>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+
+                  <div className="question-content">
+                    <p className="clue-text">{currentQuestion.answer}</p>
+                  </div>
+
+                  {/* Buzzer + Skip */}
+                  {canBuzz && !buzzerWinnerId && !buzzTimedOut && (
+                    <div className="buzz-actions">
+                      {!hasSkipped ? (
+                        <>
+                          <motion.button
+                            className="buzzer-button"
+                            onClick={handleBuzz}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          >
+                            BUZZ IN!
+                          </motion.button>
+                          <span className="keyboard-hint">Press SPACE to buzz</span>
+                          <span className="skip-link" onClick={handleSkipQuestion}>Skip</span>
+                        </>
+                      ) : (
+                        <p className="skip-status">Skipped — waiting for others...</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Already buzzed and got wrong — just wait */}
+                  {hasAlreadyBuzzed && !buzzerWinnerId && !buzzTimedOut && !canBuzz && !correctAnswerReveal && (
+                    <p className="waiting-for-answer">Waiting for other players...</p>
+                  )}
+
+                  {/* Buzzer Winner */}
+                  {buzzerWinnerId && (
+                    <div className="buzzer-winner-display">
+                      <p className="buzzer-winner-text">
+                        {iAmBuzzerWinner ? 'You buzzed first!' : <>{renderPlayerName(buzzerWinner)} buzzed first!</>}
+                      </p>
+
+                      {iAmBuzzerWinner && !showAnswer && (
+                        <motion.button
+                          className="reveal-button"
+                          onClick={handleRevealAnswer}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Reveal Answer
+                        </motion.button>
+                      )}
+
+                      {iAmBuzzerWinner && showAnswer && (
+                        <motion.div
+                          className="answer-section"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                        >
+                          <p className="answer-label">Correct Response:</p>
+                          <p className="answer-text">{currentQuestion.question}</p>
+                          <div className="scoring-buttons">
+                            <motion.button className="btn-correct" onClick={() => handleAnswerResult(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              I Got It Right
+                            </motion.button>
+                            <motion.button className="btn-incorrect" onClick={() => handleAnswerResult(false)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              I Got It Wrong
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {!iAmBuzzerWinner && (
+                        <p className="waiting-for-answer">Waiting for their answer...</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Correct Answer Reveal */}
+                  {correctAnswerReveal && (
+                    <motion.div
+                      className="correct-answer-reveal"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => {
+                        setCorrectAnswerReveal(null);
+                        setCurrentQuestion(null);
+                      }}
+                    >
+                      <p className="answer-label">Correct Response:</p>
+                      <p className="answer-text">{correctAnswerReveal}</p>
+                      <span className="dismiss-hint">Click to dismiss</span>
+                    </motion.div>
+                  )}
+
+                  {/* Timeout */}
+                  {buzzTimedOut && (
+                    <div className="timeout-display">
+                      <p className="timeout-message">Time's Up! No one buzzed in.</p>
+                      <div className="answer-section">
+                        <p className="answer-label">Correct Response:</p>
+                        <p className="answer-text">{currentQuestion.question}</p>
+                      </div>
+                      {!hasContinued ? (
+                        <button className="btn-primary" onClick={handleTimeoutContinue}>Continue</button>
+                      ) : (
+                        <p className="waiting-text">Waiting for other players...</p>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* HOST MODE - Question Display (Both Host and Players see this) */}
           {isHostMode && currentQuestion && !isDailyDouble && (

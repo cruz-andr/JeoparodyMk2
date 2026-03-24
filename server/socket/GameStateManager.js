@@ -38,8 +38,9 @@ export class GameStateManager {
       throw new Error('Room not found');
     }
 
-    if (room.status !== 'waiting') {
-      throw new Error('Game already in progress');
+    // Block joins during Final Jeopardy
+    if (room.status === 'in_progress' && room.gameState?.phase === 'finalJeopardy') {
+      throw new Error('Game is in Final Jeopardy, cannot join');
     }
 
     if (room.players.size >= room.settings.maxPlayers) {
@@ -47,29 +48,39 @@ export class GameStateManager {
     }
 
     const playerId = socket.sessionId;
+    const isLateJoin = room.status === 'in_progress';
     const player = {
       id: playerId,
       socketId: socket.id,
       displayName,
       signature,
       score: 0,
-      isReady: false,
+      isReady: isLateJoin ? true : false,
       isConnected: true,
       isHost: playerId === room.hostId,
+      waitingToJoin: isLateJoin && !!room.gameState?.currentQuestion,
     };
 
     room.players.set(playerId, player);
     this.playerRooms.set(socket.id, roomCode);
     this.sessionRooms.set(socket.sessionId, roomCode);
 
-    return {
+    const result = {
       roomId: room.id,
       roomCode: room.code,
-      type: room.type,  // Include room type so players know if it's host mode
+      type: room.type,
       players: Array.from(room.players.values()),
       settings: room.settings,
       isHost: player.isHost,
+      isLateJoin,
     };
+
+    // Late joiners need the full game state to render the board
+    if (isLateJoin) {
+      result.gameState = room.gameState;
+    }
+
+    return result;
   }
 
   leaveRoom(socket, roomCode) {
@@ -1285,5 +1296,19 @@ export class GameStateManager {
       skippedCount: skipped,
       totalEligible: eligible,
     };
+  }
+
+  // Clear waitingToJoin flag for late joiners when a question resolves
+  activateWaitingPlayers(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return [];
+    const activated = [];
+    for (const [id, player] of room.players) {
+      if (player.waitingToJoin) {
+        player.waitingToJoin = false;
+        activated.push(id);
+      }
+    }
+    return activated;
   }
 }

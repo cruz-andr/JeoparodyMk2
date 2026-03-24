@@ -69,8 +69,10 @@ export default function JoinPage() {
       // Mark as fresh join to prevent reconnection race condition
       sessionStorage.setItem('jeopardy_fresh_join', 'true');
 
-      // Navigate to game/lobby
-      navigate(`/game/${code}`);
+      // Navigate to game/lobby (pass late join state if game is in progress)
+      navigate(`/game/${code}`, {
+        state: result.isLateJoin ? { lateJoin: true, gameState: result.gameState } : undefined,
+      });
     } catch (err) {
       setError(err.message || 'Failed to join room');
       setIsJoining(false);
