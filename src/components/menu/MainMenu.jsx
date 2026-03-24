@@ -58,12 +58,21 @@ export default function MainMenu() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
-        whileHover={{ y: -2, boxShadow: '0 8px 30px rgba(214, 159, 76, 0.2)' }}
+        whileHover="hover"
         whileTap={{ scale: 0.98 }}
       >
         <div className="daily-card-content">
-          <span className="daily-card-label">Daily Challenge</span>
-          <span className="daily-card-desc">New puzzle every day</span>
+          <motion.span
+            className="star-icon gold"
+            variants={{
+              hover: { scale: 1.3, rotate: 25 },
+            }}
+            transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+          />
+          <div>
+            <span className="daily-card-label">Daily Challenge</span>
+            <span className="daily-card-desc">New puzzle every day</span>
+          </div>
         </div>
         <div className="daily-card-meta">
           {stats.currentStreak > 0 && (
@@ -85,9 +94,16 @@ export default function MainMenu() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.25 + i * 0.06 }}
-            whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)' }}
+            whileHover="hover"
             whileTap={{ scale: 0.98 }}
           >
+            <motion.span
+              className="star-icon"
+              variants={{
+                hover: { scale: 1.25, rotate: 20 },
+              }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+            />
             <span className="mode-label">{mode.label}</span>
             <span className="mode-desc">{mode.description}</span>
           </motion.button>
