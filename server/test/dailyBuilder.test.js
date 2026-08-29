@@ -14,6 +14,8 @@ import {
   buildSixer,
   buildDailyChallenge,
   ROW_VALUES,
+  sixerTargetValue,
+  SIXER_WEEK_VALUES,
 } from '../services/dailyBuilder.js';
 
 let passed = 0;
@@ -281,9 +283,96 @@ export async function runAsyncTests() {
 
 await runAsyncTests();
 
+// --- the Sixer gets harder across the week -----------------------------
+
+// Mon 31 Aug 2026 through Sun 6 Sep 2026.
+const WEEK = ['2026-08-31','2026-09-01','2026-09-02','2026-09-03',
+              '2026-09-04','2026-09-05','2026-09-06'];
+
+test('the week climbs and never drops back', () => {
+  const values = WEEK.map(sixerTargetValue);
+  for (let i = 1; i < values.length; i++) {
+    assert.ok(values[i] >= values[i - 1], `${WEEK[i]} is not easier than the day before`);
+  }
+});
+
+test('Monday is the easiest day and Sunday the hardest', () => {
+  assert.equal(sixerTargetValue('2026-08-31'), 400);
+  assert.equal(sixerTargetValue('2026-09-06'), 2000);
+});
+
+test('the two repeated tiers fall mid week, not at either end', () => {
+  const values = WEEK.map(sixerTargetValue);
+  const repeated = values.filter((v, i) => i && v === values[i - 1]);
+  assert.equal(repeated.length, 2, 'seven days over five tiers repeats exactly twice');
+  assert.notEqual(values[0], values[1], 'Monday stands alone');
+  assert.notEqual(values[5], values[6], 'Sunday stands alone');
+});
+
+test('the week starts on Monday, as the weekly best reset does', () => {
+  // Sunday must be the END of a week, not the start of the next one.
+  assert.equal(sixerTargetValue('2026-09-06'), SIXER_WEEK_VALUES[6]);
+  assert.equal(sixerTargetValue('2026-09-07'), SIXER_WEEK_VALUES[0]);
+});
+
+test('a missing or unparsable date falls back to the easiest tier', () => {
+  assert.equal(sixerTargetValue(null), 400);
+  assert.equal(sixerTargetValue('not-a-date'), 400);
+});
+
+test('the Sixer picks the day\'s tier out of each category', () => {
+  const clues = [];
+  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    for (const value of [400, 800, 1200, 1600, 2000]) {
+      clues.push({ category, value, clue: `${category} ${value} clue`, answer: `${category}${value}` });
+    }
+  }
+  const monday = buildSixer(clues, 0, sixerTargetValue('2026-08-31'));
+  assert.deepEqual(monday.questions.map((q) => q.value), [400, 400, 400, 400, 400, 400]);
+
+  const sunday = buildSixer(clues, 0, sixerTargetValue('2026-09-06'));
+  assert.deepEqual(sunday.questions.map((q) => q.value), [2000, 2000, 2000, 2000, 2000, 2000]);
+});
+
+test('a category missing the exact tier gives up its nearest clue', () => {
+  const clues = [];
+  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    // no 2000 anywhere: the hardest day has to settle for 1600
+    for (const value of [400, 800, 1200, 1600]) {
+      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
+    }
+  }
+  const sunday = buildSixer(clues, 0, sixerTargetValue('2026-09-06'));
+  assert.deepEqual(sunday.questions.map((q) => q.value), [1600, 1600, 1600, 1600, 1600, 1600]);
+});
+
+test('the same day gives every player the same six', () => {
+  const clues = [];
+  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    for (const value of [400, 800, 1200, 1600, 2000]) {
+      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
+    }
+  }
+  const a = buildSixer(clues, 3, sixerTargetValue('2026-09-03'));
+  const b = buildSixer(clues, 3, sixerTargetValue('2026-09-03'));
+  assert.deepEqual(a.questions, b.questions);
+});
+
+test('no target given keeps the old behaviour', () => {
+  const clues = [];
+  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    for (const value of [400, 2000]) {
+      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
+    }
+  }
+  const sixer = buildSixer(clues, 0);
+  assert.equal(sixer.questions.length, 6);
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 for (const { name, err } of failures) {
   console.log(`  FAIL  ${name}`);
-  console.log(`        ${err.message.split('\n')[0]}`);
+  
+console.log(`        ${err.message.split('\n')[0]}`);
 }
 process.exit(failures.length ? 1 : 0);
