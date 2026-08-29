@@ -10,6 +10,11 @@ import './BoardWheel.css';
  * board turns: one category per row, five rows on screen, and the middle three
  * are playable.
  *
+ * It loops: past the last category comes the first again, so there is no top
+ * or bottom to hit and every category is reachable in either direction. The
+ * position is an unbounded number and each row reads its category through a
+ * modulo, which is why nothing here clamps.
+ *
  * The wheel tracks your thumb 1:1 and coasts on release, rather than stepping
  * one category per swipe. It does this by hand because CSS scroll snap cannot:
  * on iOS, snapping disables momentum outright, so a native scroller would give
@@ -21,7 +26,6 @@ const VISIBLE_RADIUS = 3; // rows kept in the DOM either side of centre
 const PLAYABLE_RADIUS = 1; // rows that can be tapped either side of centre
 const SLOT = 150; // px per category, matching the band spacing
 const DRAG_SLOP = 10; // past this, the gesture is a swipe and not a tap
-const EDGE_RESISTANCE = 0.32; // how much of a drag past the ends actually lands
 const COAST_MS = 190; // how far a flick's velocity is allowed to carry
 const MIN_SETTLE_MS = 340;
 const MAX_SETTLE_MS = 1100;
@@ -71,12 +75,14 @@ export default function BoardWheel({
   const moved = useRef(false);
   const pending = useRef(null); // what to run once the wheel stops
 
-  const lastIndex = Math.max(0, categories.length - 1);
+  const count = categories.length;
   const rowCount = pointValues.length;
 
-  const clamp = useCallback(
-    (value) => Math.max(0, Math.min(value, lastIndex)),
-    [lastIndex]
+  // Rows are addressed by an unbounded "slot" that can run past either end or
+  // go negative; this is the category it actually shows.
+  const wrap = useCallback(
+    (slot) => (count > 0 ? ((slot % count) + count) % count : 0),
+    [count]
   );
   const answerAt = (categoryIndex, pointIndex) =>
     answers[categoryIndex * rowCount + pointIndex];
@@ -99,12 +105,24 @@ export default function BoardWheel({
   }, []);
 
   const syncSettled = useCallback(() => {
-    const next = clamp(Math.round(offset.current));
+    const next = Math.round(offset.current);
     if (next !== settledRef.current) {
       settledRef.current = next;
       setSettled(next);
     }
-  }, [clamp]);
+  }, []);
+
+  /* Spinning one way for long enough would otherwise walk the slot number up
+     for ever. At rest, slide both the position and the window back by whole
+     turns: the same categories sit in the same places, so nothing moves. */
+  const rebase = useCallback(() => {
+    if (count === 0) return;
+    const turns = Math.floor(settledRef.current / count) * count;
+    if (turns === 0) return;
+    offset.current -= turns;
+    settledRef.current -= turns;
+    setSettled(settledRef.current);
+  }, [count]);
 
   const tick = useCallback(() => {
     const run = glide.current;
@@ -125,10 +143,11 @@ export default function BoardWheel({
       return;
     }
     frame.current = null;
+    rebase();
     const after = pending.current;
     pending.current = null;
     if (after) after();
-  }, [paint, syncSettled]);
+  }, [paint, rebase, syncSettled]);
 
   const startLoop = useCallback(() => {
     if (frame.current === null) frame.current = requestAnimationFrame(tick);
@@ -137,7 +156,7 @@ export default function BoardWheel({
   /** Animate to a whole category, then run `after` once it has actually landed. */
   const glideTo = useCallback(
     (target, after) => {
-      const to = clamp(target);
+      const to = target;
       const from = offset.current;
       const distance = Math.abs(to - from);
 
@@ -163,18 +182,7 @@ export default function BoardWheel({
       pending.current = after || null;
       startLoop();
     },
-    [clamp, paint, reduceMotion, startLoop, syncSettled]
-  );
-
-  // Past either end the wheel still moves, but gives back only a third of the
-  // drag, so it reads as resistance and not as a dead stop.
-  const withResistance = useCallback(
-    (value) => {
-      if (value < 0) return value * EDGE_RESISTANCE;
-      if (value > lastIndex) return lastIndex + (value - lastIndex) * EDGE_RESISTANCE;
-      return value;
-    },
-    [lastIndex]
+    [paint, reduceMotion, startLoop, syncSettled]
   );
 
   const onTouchStart = (e) => {
@@ -201,7 +209,7 @@ export default function BoardWheel({
     const dy = y - held.startY;
     if (Math.abs(dy) > DRAG_SLOP) moved.current = true;
 
-    offset.current = withResistance(held.startOffset - dy / SLOT);
+    offset.current = held.startOffset - dy / SLOT;
 
     const now = performance.now();
     held.samples.push({ t: now, y });
@@ -221,7 +229,12 @@ export default function BoardWheel({
     // px/ms of thumb, converted to categories/ms. Negative dy raises the offset.
     const velocity = elapsed > 0 ? -((last.y - first.y) / elapsed) / SLOT : 0;
 
-    glideTo(Math.round(offset.current + velocity * COAST_MS));
+    // A throw stops one short of a full turn. Allowing the whole turn means the
+    // hardest possible flick lands exactly where it started, which reads as the
+    // wheel having ignored you.
+    const coast = velocity * COAST_MS;
+    const limit = Math.max(1, count - 1);
+    glideTo(Math.round(offset.current + Math.max(-limit, Math.min(limit, coast))));
   };
 
   /* Registered by hand because React's touchmove is passive and so can never
@@ -269,21 +282,29 @@ export default function BoardWheel({
    * in first, then opens: the second beat is what makes an angled target feel
    * deliberate rather than lucky.
    */
-  const handleTile = (categoryIndex, pointIndex) => {
+  const handleTile = (slot, pointIndex) => {
     if (moved.current) return; // this click is the tail of a swipe
     if (drag.current) return;
+    const categoryIndex = wrap(slot);
     if (answerAt(categoryIndex, pointIndex)?.revealed) return;
 
-    if (Math.abs(categoryIndex - settled) > PLAYABLE_RADIUS) {
-      glideTo(categoryIndex); // context row: just bring it in
+    if (Math.abs(slot - settled) > PLAYABLE_RADIUS) {
+      glideTo(slot); // context row: just bring it in
       return;
     }
-    glideTo(categoryIndex, () => onSelect(categoryIndex, pointIndex));
+    glideTo(slot, () => onSelect(categoryIndex, pointIndex));
+  };
+
+  /** The nearest slot showing `categoryIndex`, in whichever direction is shorter. */
+  const nearestSlot = (categoryIndex) => {
+    const here = Math.round(offset.current);
+    const ahead = wrap(categoryIndex - here);
+    return here + (ahead > count / 2 ? ahead - count : ahead);
   };
 
   const onKeyDown = (e) => {
     const step = { ArrowUp: -1, ArrowDown: 1 }[e.key];
-    const jump = { Home: 0, End: lastIndex }[e.key];
+    const jump = { Home: 0, End: count - 1 }[e.key];
     if (step === undefined && jump === undefined) return;
 
     e.preventDefault();
@@ -291,8 +312,20 @@ export default function BoardWheel({
     // a context row becomes disabled, and the browser would drop focus to the
     // body, after which no further arrow key reaches the wheel at all.
     wheelRef.current?.focus();
-    glideTo(step !== undefined ? Math.round(offset.current) + step : jump);
+    glideTo(
+      step !== undefined ? Math.round(offset.current) + step : nearestSlot(jump)
+    );
   };
+
+  if (count === 0) return null;
+
+  // The rows on screen are a window that slides with the wheel, not the
+  // category list: the same category can legitimately appear at both edges
+  // when there are fewer categories than slots, which is what a wheel does.
+  const slots = [];
+  for (let slot = settled - VISIBLE_RADIUS; slot <= settled + VISIBLE_RADIUS; slot += 1) {
+    slots.push(slot);
+  }
 
   return (
     <div
@@ -301,32 +334,33 @@ export default function BoardWheel({
       onKeyDown={onKeyDown}
       tabIndex={0}
       role="group"
-      aria-label={`Game board, category ${settled + 1} of ${categories.length}, ${
-        categories[settled] ?? ''
+      aria-label={`Game board, category ${wrap(settled) + 1} of ${count}, ${
+        categories[wrap(settled)] ?? ''
       }. Use up and down arrows to change category.`}
     >
       <div className="wheel-track" ref={trackRef}>
-        {categories.map((name, categoryIndex) => {
-          const distance = Math.abs(categoryIndex - settled);
-          if (distance > VISIBLE_RADIUS) return null;
+        {slots.map((slot) => {
+          const categoryIndex = wrap(slot);
+          const name = categories[categoryIndex];
+          const distance = Math.abs(slot - settled);
           const playable = distance <= PLAYABLE_RADIUS;
 
           return (
             <div
-              key={`${name}-${categoryIndex}`}
+              key={slot}
               ref={(node) => {
-                if (node) bandRefs.current.set(categoryIndex, node);
-                else bandRefs.current.delete(categoryIndex);
+                if (node) bandRefs.current.set(slot, node);
+                else bandRefs.current.delete(slot);
               }}
               className={`wheel-band d${Math.min(distance, 2)} ${
                 playable ? 'playable' : 'context'
               }`}
-              style={{ top: `${categoryIndex * SLOT}px` }}
+              style={{ top: `${slot * SLOT}px` }}
             >
               <button
                 type="button"
                 className="wheel-name"
-                onClick={() => !moved.current && glideTo(categoryIndex)}
+                onClick={() => !moved.current && glideTo(slot)}
                 aria-label={`${name}, bring to centre`}
               >
                 {name}
@@ -342,7 +376,7 @@ export default function BoardWheel({
                       type="button"
                       key={pointIndex}
                       className={`wheel-tile ${done ? 'done' : ''}`}
-                      onClick={() => handleTile(categoryIndex, pointIndex)}
+                      onClick={() => handleTile(slot, pointIndex)}
                       disabled={done || !playable}
                       aria-label={
                         done
