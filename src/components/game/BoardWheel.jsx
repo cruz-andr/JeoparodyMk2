@@ -23,8 +23,10 @@ const SLOT = 150; // px per category, matching the band spacing
 const DRAG_SLOP = 10; // past this, the gesture is a swipe and not a tap
 const EDGE_RESISTANCE = 0.32; // how much of a drag past the ends actually lands
 const COAST_MS = 190; // how far a flick's velocity is allowed to carry
-const MIN_SETTLE_MS = 260;
-const MAX_SETTLE_MS = 820;
+const MIN_SETTLE_MS = 340;
+const MAX_SETTLE_MS = 1100;
+const SETTLE_BASE_MS = 380; // the cost of moving at all
+const SETTLE_PER_ROW_MS = 150; // and of each category crossed
 const VELOCITY_WINDOW_MS = 90; // only the end of the drag decides the throw
 
 /* Tilt, scale and fade read off four stops by distance from centre. The old
@@ -41,9 +43,12 @@ function stopAt(distance, stops) {
   return stops[low] + (stops[high] - stops[low]) * (d - low);
 }
 
-// Quintic ease out: nearly all the distance is covered early, so a throw reads
-// as momentum bleeding off rather than as a slide of a fixed length.
-const easeOut = (t) => 1 - (1 - t) ** 5;
+/* Cubic, not quintic. A quintic ease out covers roughly four fifths of the
+   distance in the first third of its duration, which reads as a snap followed
+   by a crawl: the rows you flicked past are gone before you can see them, and
+   the wheel looks sped up however long the duration is. Cubic starts at three
+   times the average speed rather than five, so the travel stays legible. */
+const easeOut = (t) => 1 - (1 - t) ** 3;
 
 export default function BoardWheel({
   categories = [],
@@ -150,7 +155,10 @@ export default function BoardWheel({
         start: performance.now(),
         // longer throws take longer, but not proportionally: a five category
         // flick should feel fast, not five times the length of a one.
-        duration: Math.min(MAX_SETTLE_MS, Math.max(MIN_SETTLE_MS, 250 + distance * 105)),
+        duration: Math.min(
+          MAX_SETTLE_MS,
+          Math.max(MIN_SETTLE_MS, SETTLE_BASE_MS + distance * SETTLE_PER_ROW_MS)
+        ),
       };
       pending.current = after || null;
       startLoop();
