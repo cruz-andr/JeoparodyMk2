@@ -40,28 +40,29 @@ export function previousDateString(dateString) {
 }
 
 /**
- * The streak after finishing a run.
+ * The streak after finishing a run: showing up is what counts.
  *
- * Deliberately unchanged from the original rule, which is stricter than most
- * daily games: only a perfect run extends a streak. A run with at least one
- * right answer holds it, and a run with none breaks it.
+ * The original rule only extended a streak on a PERFECT run. That was written
+ * for the six-clue daily, where a clean sheet is achievable. Applied unchanged
+ * to the thirty-clue Board it makes the streak unreachable in practice, so the
+ * Board's streak would have read zero for every player forever.
+ *
+ * Finishing the run is now what extends the streak, which is how daily games
+ * generally work and is the only rule that behaves sensibly at both lengths.
  */
-export function computeStreak(stats, { correctCount, totalQuestions, today }) {
-  const perfect = totalQuestions > 0 && correctCount === totalQuestions;
-  const playedYesterday = stats.lastPlayedDate === previousDateString(today);
+export function computeStreak(stats, { totalQuestions, today }) {
+  // An empty board is not a run, so it neither extends nor breaks anything.
+  if (!(totalQuestions > 0)) return stats.currentStreak;
 
-  if (playedYesterday) {
-    if (perfect) return stats.currentStreak + 1;
-    return correctCount > 0 ? stats.currentStreak : 0;
-  }
-  return perfect ? 1 : 0;
+  const playedYesterday = stats.lastPlayedDate === previousDateString(today);
+  return playedYesterday ? stats.currentStreak + 1 : 1;
 }
 
 /** Stats after finishing a run. Returns the same object if already played today. */
 export function applyCompletion(stats, { correctCount, totalQuestions, today }) {
   if (stats.lastPlayedDate === today) return stats;
 
-  const currentStreak = computeStreak(stats, { correctCount, totalQuestions, today });
+  const currentStreak = computeStreak(stats, { totalQuestions, today });
 
   return {
     gamesPlayed: stats.gamesPlayed + 1,
@@ -110,24 +111,54 @@ export function toBoardGrid(questions, {
 
 /**
  * Lay the board's results out the way the board itself reads: six categories
- * across, five values down.
+ * across, five values down. Returns rows of cells, so callers can render them
+ * or join them as they need.
  *
  * Answers are stored category-major (all of category 1, then category 2), so
  * emitting them in storage order and wrapping every six produces a grid where
  * no row means anything. Transpose instead.
  */
-export function shareGridRows(cells, { categories = BOARD_CATEGORY_COUNT, rows = BOARD_ROW_COUNT } = {}) {
+export function boardGridRows(cells, { categories = BOARD_CATEGORY_COUNT, rows = BOARD_ROW_COUNT } = {}) {
   const out = [];
   for (let r = 0; r < rows; r++) {
-    let line = '';
+    const row = [];
     for (let c = 0; c < categories; c++) {
       const cell = cells[c * rows + r];
       if (cell === undefined) return null;
-      line += cell;
+      row.push(cell);
     }
-    out.push(line);
+    out.push(row);
   }
   return out;
+}
+
+/**
+ * Pack the player's typed answers into a URL-safe blob so a friend opening a
+ * shared link can reveal them after playing.
+ *
+ * btoa only accepts latin1, and answers can contain anything a keyboard emits,
+ * so the JSON is UTF-8 encoded first. Encode and decode must stay a matched
+ * pair; that is what the round-trip test guards.
+ */
+export function encodeAnswers(answers) {
+  try {
+    const bytes = new TextEncoder().encode(JSON.stringify(answers));
+    const binary = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
+    return encodeURIComponent(btoa(binary));
+  } catch {
+    return null;
+  }
+}
+
+export function decodeAnswers(code) {
+  try {
+    const binary = atob(decodeURIComponent(code));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes));
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -165,8 +165,8 @@ export default function MainMenu() {
             </div>
             <h1 className="menu-hero-title">The Board</h1>
             <p className="menu-hero-copy">
-              A fresh board every day. Six categories, thirty clues, and one Daily
-              Double hidden somewhere in the rows.
+              A fresh board every day. Six categories and thirty clues, the same
+              ones for every player, pulled from a real episode.
             </p>
             <span className="menu-hero-kicker">What is a good twenty minutes?</span>
           </div>

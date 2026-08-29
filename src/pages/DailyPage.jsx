@@ -58,8 +58,13 @@ export default function DailyPage() {
   // Load daily challenge on mount
   useEffect(() => {
     const loadChallenge = async () => {
+      // `error` is shared by both daily pages and outlives a route change, so
+      // a failure on The Board would otherwise strand this screen on "Oops!".
+      setError(null);
+
       // If already played today, show results
       if (hasPlayedToday(FORMAT)) {
+        setLoading(false);
         return;
       }
 

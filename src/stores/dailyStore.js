@@ -7,7 +7,8 @@ import {
   emptyRun,
   emptyFormatStats,
   migrateToTwoFormats,
-  shareGridRows,
+  boardGridRows,
+  encodeAnswers,
 } from './dailyLogic';
 
 /**
@@ -161,11 +162,23 @@ export const useDailyStore = create(
 
         // The Board shares as the board looks: six across, five down.
         const emoji = format === 'board'
-          ? (shareGridRows(grid) ?? grid).join('\n')
+          ? (boardGridRows(grid)?.map((row) => row.join('')) ?? [grid.join('')]).join('\n')
           : grid.join('');
 
         const dateStr = run.date || toDateString();
-        return `Jeoparody ${label} ${dateStr}\n${emoji}\n${correctCount}/${run.questions.length}\nhttps://jeoparody-mk2.vercel.app/daily`;
+        const path = format === 'board' ? '/daily/board' : '/daily';
+
+        // The Sixer carries the player's typed answers so a friend can reveal
+        // them after playing. The Board is self-graded and has none, so its
+        // link is plain.
+        let query = '';
+        if (format === 'sixer') {
+          const packed = encodeAnswers(run.answers.map((a) => a.playerAnswer || ''));
+          // A share without the reveal beats no share at all.
+          if (packed) query = `?verify=${packed}`;
+        }
+
+        return `Jeoparody ${label} ${dateStr}\n${emoji}\n${correctCount}/${run.questions.length}\nhttps://jeoparody-mk2.vercel.app${path}${query}`;
       },
 
       shareResults: async (format) => {

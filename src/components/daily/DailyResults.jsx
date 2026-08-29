@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
+import { boardGridRows, decodeAnswers } from '../../stores/dailyLogic';
 import './DailyResults.css';
 
 // Clues per run, used to turn a running total into an accuracy percentage.
@@ -19,13 +20,22 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
   const handleRevealTheirAnswers = () => {
     if (!verifyCode) return;
     try {
-      const decoded = JSON.parse(atob(verifyCode));
+      const decoded = decodeAnswers(verifyCode);
+      if (!decoded) return;
       setTheirAnswers(decoded);
       setShowTheirAnswers(true);
     } catch (e) {
       console.error('Failed to decode verification code:', e);
     }
   };
+
+  // Transposed for the Board so each row is a value tier, as on the board
+  // itself; a single row for the Sixer.
+  const emojiRows = (() => {
+    const flags = answers.map((a) => Boolean(a.correct));
+    if (format !== 'board') return [flags];
+    return boardGridRows(flags) ?? [flags];
+  })();
 
   const correctCount = answers.filter((a) => a.correct).length;
   const totalQuestions = questions.length;
@@ -69,18 +79,28 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
       <h2>Today's Results</h2>
       <p className="results-date">{formatDisplayDate(todayDate)}</p>
 
-      {/* Emoji Grid */}
-      <div className="emoji-grid">
-        {answers.map((answer, index) => (
-          <motion.span
-            key={index}
-            className={`emoji-block ${answer.correct ? 'correct' : 'incorrect'}`}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1, type: 'spring' }}
-          >
-            {answer.correct ? '🟩' : '🟥'}
-          </motion.span>
+      {/* Results grid. The Board is laid out the way the board reads, six
+          categories across and five values down, matching the shared text.
+          The Sixer stays a single row. */}
+      <div className={`emoji-grid ${format === 'board' ? 'board' : ''}`}>
+        {emojiRows.map((row, rowIndex) => (
+          <div className="emoji-row" key={rowIndex}>
+            {row.map((correct, colIndex) => {
+              const n = rowIndex * row.length + colIndex;
+              return (
+                <motion.span
+                  key={colIndex}
+                  className={`emoji-block ${correct ? 'correct' : 'incorrect'}`}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  // capped so a thirty cell board does not take three seconds
+                  transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
+                >
+                  {correct ? '🟩' : '🟥'}
+                </motion.span>
+              );
+            })}
+          </div>
         ))}
       </div>
 

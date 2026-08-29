@@ -14,7 +14,9 @@ import {
   toBoardGrid,
   migrateToTwoFormats,
   emptyFormatStats,
-  shareGridRows,
+  boardGridRows,
+  encodeAnswers,
+  decodeAnswers,
 } from './dailyLogic.js';
 
 let passed = 0;
@@ -56,40 +58,39 @@ test('the previous day handles a leap day', () => {
 });
 
 // =========================================================================
-// Streaks — the original rule, preserved
+// Streaks: finishing the run is what counts
 // =========================================================================
 
-test('a perfect run the day after playing extends the streak', () => {
+test('finishing the day after playing extends the streak', () => {
   const s = stats({ currentStreak: 4, lastPlayedDate: '2026-08-28' });
-  assert.equal(computeStreak(s, { correctCount: 6, totalQuestions: 6, today: '2026-08-29' }), 5);
+  assert.equal(computeStreak(s, { totalQuestions: 6, today: '2026-08-29' }), 5);
 });
 
-test('an imperfect run with some right answers holds the streak', () => {
-  const s = stats({ currentStreak: 4, lastPlayedDate: '2026-08-28' });
-  assert.equal(computeStreak(s, { correctCount: 3, totalQuestions: 6, today: '2026-08-29' }), 4);
+test('a thirty clue board can extend a streak without being perfect', () => {
+  // The old rule only counted perfect runs, which nobody achieves on a 30
+  // clue board, so the Board's streak would have been stuck at zero forever.
+  const s = stats({ currentStreak: 3, lastPlayedDate: '2026-08-28' });
+  assert.equal(computeStreak(s, { totalQuestions: 30, today: '2026-08-29' }), 4);
 });
 
-test('a run with nothing right breaks the streak', () => {
-  const s = stats({ currentStreak: 4, lastPlayedDate: '2026-08-28' });
-  assert.equal(computeStreak(s, { correctCount: 0, totalQuestions: 6, today: '2026-08-29' }), 0);
+test('a rough day still keeps the streak alive', () => {
+  const s = stats({ currentStreak: 9, lastPlayedDate: '2026-08-28' });
+  assert.equal(computeStreak(s, { totalQuestions: 30, today: '2026-08-29' }), 10,
+    'turning up is the habit worth rewarding');
 });
 
-test('missing a day resets to 1 on a perfect run', () => {
+test('missing a day restarts the streak at one', () => {
   const s = stats({ currentStreak: 9, lastPlayedDate: '2026-08-20' });
-  assert.equal(computeStreak(s, { correctCount: 6, totalQuestions: 6, today: '2026-08-29' }), 1);
+  assert.equal(computeStreak(s, { totalQuestions: 6, today: '2026-08-29' }), 1);
 });
 
-test('missing a day resets to 0 on an imperfect run', () => {
-  const s = stats({ currentStreak: 9, lastPlayedDate: '2026-08-20' });
-  assert.equal(computeStreak(s, { correctCount: 5, totalQuestions: 6, today: '2026-08-29' }), 0);
+test('a first ever run starts the streak at one', () => {
+  assert.equal(computeStreak(stats(), { totalQuestions: 6, today: '2026-08-29' }), 1);
 });
 
-test('a first-ever perfect run starts the streak at 1', () => {
-  assert.equal(computeStreak(stats(), { correctCount: 6, totalQuestions: 6, today: '2026-08-29' }), 1);
-});
-
-test('an empty board is never counted as perfect', () => {
-  assert.equal(computeStreak(stats(), { correctCount: 0, totalQuestions: 0, today: '2026-08-29' }), 0);
+test('an empty board neither extends nor breaks a streak', () => {
+  const s = stats({ currentStreak: 4, lastPlayedDate: '2026-08-28' });
+  assert.equal(computeStreak(s, { totalQuestions: 0, today: '2026-08-29' }), 4);
 });
 
 // =========================================================================
@@ -98,11 +99,11 @@ test('an empty board is never counted as perfect', () => {
 
 test('completing a run records the day, the score and the streak', () => {
   const s = stats({ gamesPlayed: 3, totalCorrect: 11, currentStreak: 2, maxStreak: 5, lastPlayedDate: '2026-08-28' });
-  const next = applyCompletion(s, { correctCount: 6, totalQuestions: 6, today: '2026-08-29' });
+  const next = applyCompletion(s, { correctCount: 4, totalQuestions: 6, today: '2026-08-29' });
 
   assert.equal(next.gamesPlayed, 4);
-  assert.equal(next.totalCorrect, 17);
-  assert.equal(next.currentStreak, 3);
+  assert.equal(next.totalCorrect, 15, 'correct answers still feed the accuracy total');
+  assert.equal(next.currentStreak, 3, 'and the streak counts the day, not the score');
   assert.equal(next.lastPlayedDate, '2026-08-29');
 });
 
@@ -166,19 +167,48 @@ test('a short board is refused rather than half built', () => {
 // Share grid
 // =========================================================================
 
-test('the shared board reads six across and five down', () => {
+test('the board grid reads six across and five down', () => {
   // cells are stored category-major: c0r0..c0r4, c1r0..c1r4, ...
   const cells = [];
   for (let c = 0; c < 6; c++) for (let r = 0; r < 5; r++) cells.push(`${c}${r}`);
 
-  const rows = shareGridRows(cells);
+  const rows = boardGridRows(cells);
   assert.equal(rows.length, 5, 'five value tiers');
-  assert.equal(rows[0], '001020304050', 'the top row is the cheapest clue of each category');
-  assert.equal(rows[4], '041424344454', 'the bottom row is the dearest of each');
+  assert.equal(rows[0].length, 6, 'six categories across');
+  assert.equal(rows[0].join(''), '001020304050', 'the top row is each category\'s cheapest clue');
+  assert.equal(rows[4].join(''), '041424344454', 'the bottom row is each category\'s dearest');
 });
 
-test('a short board yields no share grid rather than a scrambled one', () => {
-  assert.equal(shareGridRows(['a', 'b']), null);
+test('the grid preserves cell types, so booleans survive it', () => {
+  const flags = Array.from({ length: 30 }, (_, i) => i % 2 === 0);
+  const rows = boardGridRows(flags);
+  assert.equal(typeof rows[0][0], 'boolean', 'the results grid renders booleans, not text');
+  assert.equal(rows.flat().length, 30);
+});
+
+test('a short board yields no grid rather than a scrambled one', () => {
+  assert.equal(boardGridRows(['a', 'b']), null);
+});
+
+// =========================================================================
+// Shared answer payload
+// =========================================================================
+
+test('typed answers survive a round trip through a shared link', () => {
+  const answers = ['Mars', 'what is gold', '', 'Moby Dick'];
+  assert.deepEqual(decodeAnswers(encodeAnswers(answers)), answers);
+});
+
+test('the payload handles characters btoa alone would choke on', () => {
+  // btoa throws on anything outside latin1, which a keyboard produces easily.
+  const answers = ['Beyoncé', '日本', 'naïve café', '\u{1F7E9} emoji'];
+  assert.deepEqual(decodeAnswers(encodeAnswers(answers)), answers);
+});
+
+test('a corrupt or hostile verify code is refused, not thrown on', () => {
+  assert.equal(decodeAnswers('not-base64!!'), null);
+  assert.equal(decodeAnswers(''), null);
+  assert.equal(decodeAnswers(btoa('{"not":"an array"}')), null);
 });
 
 // =========================================================================

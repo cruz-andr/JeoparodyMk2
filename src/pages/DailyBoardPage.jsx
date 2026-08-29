@@ -40,7 +40,14 @@ export default function DailyBoardPage() {
   // Load today's board once.
   useEffect(() => {
     const load = async () => {
-      if (hasPlayedToday(FORMAT)) return;
+      // `error` is shared by both daily pages and outlives a route change, so
+      // a failure on the other one would strand this screen on "Oops!".
+      setError(null);
+
+      if (hasPlayedToday(FORMAT)) {
+        setLoading(false);
+        return;
+      }
       if (!isNewDay(FORMAT) && questions.length > 0) return;
 
       setLoading(true);
@@ -169,7 +176,7 @@ export default function DailyBoardPage() {
         </div>
         <div className="daily-board-score">
           <span className={score < 0 ? 'negative' : ''}>
-            ${Math.abs(score).toLocaleString()}
+            {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
           </span>
           {stats[FORMAT].currentStreak > 0 && (
             <span className="daily-board-streak">
