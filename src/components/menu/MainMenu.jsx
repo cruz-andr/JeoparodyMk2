@@ -49,7 +49,6 @@ export default function MainMenu() {
 
   const boardStreak = stats.board.currentStreak;
   const sixerStreak = stats.sixer.currentStreak;
-  const losses = Math.max(0, userStats.gamesPlayed - userStats.gamesWon);
 
   // Today's categories make the hero real. The menu must still work when the
   // backend is unreachable, so a failure here is silent.
@@ -95,13 +94,6 @@ export default function MainMenu() {
         </div>
 
         <div className="menu-identity">
-          <span className="menu-stat">
-            <span className="menu-stat-label">Record</span>
-            <span className="menu-stat-value">
-              {userStats.gamesWon}&ndash;{losses}
-            </span>
-          </span>
-          <span className="menu-divider" />
           <span className="menu-stat">
             <span className="menu-stat-label">Best</span>
             <span className="menu-stat-value gold">
