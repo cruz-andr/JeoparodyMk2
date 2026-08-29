@@ -42,7 +42,13 @@ export default function MultiplayerPage() {
 
     try {
       // First create room on backend
-      const { roomCode: newRoomCode } = await socketClient.createRoom('multiplayer');
+      // Send the room's rule settings up front. Creating with none left the
+      // server reading enableDailyDouble as undefined, so a private game never
+      // got a Daily Double while the lobby still showed it as enabled.
+      const { roomCode: newRoomCode } = await socketClient.createRoom(
+        'multiplayer',
+        useRoomStore.getState().settings
+      );
 
       // Update local store
       useRoomStore.getState().setRoomCode(newRoomCode);

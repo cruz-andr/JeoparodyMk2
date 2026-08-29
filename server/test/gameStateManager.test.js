@@ -764,8 +764,46 @@ test('round 1 places exactly one Daily Double', () => {
   }
 });
 
+test('Daily Doubles stay on the board when it has fewer than five rows', () => {
+  // An imported or hand-built board can be any height; a Daily Double placed on
+  // a row that does not exist simply never triggers.
+  for (const rows of [1, 2, 3, 4, 6]) {
+    for (let i = 0; i < 60; i++) {
+      for (const dd of placeDailyDoubles(6, 2, rows)) {
+        assert.ok(
+          dd.pointIndex >= 0 && dd.pointIndex < rows,
+          `row ${dd.pointIndex} is off a ${rows}-row board`
+        );
+      }
+    }
+  }
+});
+
+test('a single-row board still gets its Daily Double', () => {
+  const dds = placeDailyDoubles(6, 1, 1);
+  assert.equal(dds.length, 1);
+  assert.equal(dds[0].pointIndex, 0);
+});
+
 test('placement terminates on a board narrower than the Daily Double count', () => {
   assert.equal(placeDailyDoubles(1, 2).length, 1, 'must not loop forever');
+});
+
+test('a quickplay match identifies players the way every other event does', () => {
+  const gm = new GameStateManager();
+  const sockets = [mkSocket(), mkSocket(), mkSocket()];
+  sockets.forEach((s, i) => gm.joinMatchmakingQueue(s, `P${i}`));
+
+  const match = gm.tryCreateMatch();
+  assert.ok(match, 'three players is a match');
+
+  const room = gm.rooms.get(match.roomCode);
+  for (const player of match.players) {
+    assert.ok(
+      room.players.has(player.id),
+      'the id in the payload must be the key the room stores'
+    );
+  }
 });
 
 // =========================================================================

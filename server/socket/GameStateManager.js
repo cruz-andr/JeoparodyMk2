@@ -176,7 +176,9 @@ export class GameStateManager {
 
       // Place Daily Doubles if setting enabled
       if (room.settings.enableDailyDouble) {
-        room.gameState.dailyDoubles = this.placeDailyDoubles(questions.length, 1);
+        room.gameState.dailyDoubles = this.placeDailyDoubles(
+          questions.length, 1, questions[0]?.length || 5
+        );
       } else {
         room.gameState.dailyDoubles = [];
       }
@@ -190,8 +192,8 @@ export class GameStateManager {
     }
   }
 
-  placeDailyDoubles(categoryCount, round) {
-    return placeDailyDoubles(categoryCount, round);
+  placeDailyDoubles(categoryCount, round, rowCount) {
+    return placeDailyDoubles(categoryCount, round, rowCount);
   }
 
   selectQuestion(socket, roomCode, categoryIndex, pointIndex) {
@@ -209,8 +211,7 @@ export class GameStateManager {
 
     question.revealed = true;
     room.gameState.currentQuestion = { ...question, categoryIndex, pointIndex };
-    room.gameState.buzzes = {};
-    room.gameState.playersWhoBuzzed = new Set();
+    this.resetBuzzState(room.gameState);
 
     // Check if this is a Daily Double
     const isDailyDouble = room.gameState.dailyDoubles?.some(
@@ -548,7 +549,9 @@ export class GameStateManager {
 
     // Place Daily Doubles for round 2 if setting enabled (2 for Double Jeopardy)
     if (room.settings.enableDailyDouble) {
-      room.gameState.dailyDoubles = this.placeDailyDoubles(questions.length, 2);
+      room.gameState.dailyDoubles = this.placeDailyDoubles(
+        questions.length, 2, questions[0]?.length || 5
+      );
     } else {
       room.gameState.dailyDoubles = [];
     }
@@ -599,7 +602,20 @@ export class GameStateManager {
       category: randomFJ.category,
       clue: randomFJ.clue,
       answer: randomFJ.answer,
+      // Zero means nobody can play, and the round must be skipped rather than
+      // left waiting on wagers that can never arrive.
+      eligibleCount: room.gameState.finalJeopardy.eligiblePlayers.size,
     };
+  }
+
+  // Eligible players who are still here. A player who drops out after the
+  // eligibility snapshot must not hold the round open for everyone else.
+  getFJParticipants(room) {
+    const fj = room.gameState?.finalJeopardy;
+    if (!fj) return [];
+    return Array.from(fj.eligiblePlayers).filter(
+      id => room.players.get(id)?.isConnected
+    );
   }
 
   submitFJWager(roomCode, playerId, wager) {
@@ -616,8 +632,9 @@ export class GameStateManager {
     const requested = Number.isFinite(Number(wager)) ? Math.floor(Number(wager)) : 0;
     fj.wagers.set(playerId, Math.min(Math.max(requested, 0), Math.max(score, 0)));
 
-    // Check if all eligible players have wagered
-    return fj.wagers.size >= fj.eligiblePlayers.size;
+    // Check if everyone still playing has wagered
+    const participants = this.getFJParticipants(room);
+    return participants.length > 0 && participants.every(id => fj.wagers.has(id));
   }
 
   submitFJAnswer(roomCode, playerId, answer) {
@@ -631,8 +648,9 @@ export class GameStateManager {
 
     fj.answers.set(playerId, answer);
 
-    // Check if all eligible players have answered
-    return fj.answers.size >= fj.eligiblePlayers.size;
+    // Check if everyone still playing has answered
+    const participants = this.getFJParticipants(room);
+    return participants.length > 0 && participants.every(id => fj.answers.has(id));
   }
 
   getFJResults(roomCode) {
@@ -829,6 +847,10 @@ export class GameStateManager {
     return {
       roomCode,
       players: matchedPlayers.map(p => ({
+        // The session id is how the server keys players everywhere else, so it
+        // has to travel with the match. Clients that keyed off socketId never
+        // matched a score update or a turn.
+        id: p.socket.sessionId,
         socketId: p.socket.id,
         displayName: p.displayName,
         signature: p.signature,
@@ -972,6 +994,18 @@ export class GameStateManager {
     return { success: true };
   }
 
+  // Everything that must not survive from one clue to the next. recordBuzz
+  // refuses a buzz while buzzedPlayerId is set, so leaving it behind used to
+  // kill the buzzer for the rest of the game.
+  resetBuzzState(gameState) {
+    gameState.buzzedPlayerId = null;
+    gameState.buzzes = {};
+    gameState.buzzWindowOpen = false;
+    gameState.buzzReceived = false;
+    gameState.playersWhoBuzzed = new Set();
+    gameState.skippedPlayers = new Set();
+  }
+
   // Host-mode answer tracking is created when a clue is dealt, but clients can
   // emit an answer at any moment. Touching these maps before they exist threw a
   // TypeError inside the socket handler, which took the whole server down.
@@ -1030,8 +1064,7 @@ export class GameStateManager {
     room.gameState.mcSelections = new Map();
     room.gameState.autoGradeResults = new Map();
     room.gameState.judgedPlayers = new Set();
-    room.gameState.buzzes = {};
-    room.gameState.playersWhoBuzzed = new Set();
+    this.resetBuzzState(room.gameState);
 
     // Check if this is a Daily Double
     const isDailyDouble = room.gameState.dailyDoubles?.some(
@@ -1264,8 +1297,8 @@ export class GameStateManager {
 
     if (questionClosed) {
       room.gameState.currentQuestion = null;
-      room.gameState.buzzedPlayerId = null;
       room.gameState.phase = 'playing';
+      this.resetBuzzState(room.gameState);
     }
 
     return {
@@ -1319,6 +1352,7 @@ export class GameStateManager {
     room.gameState.judgedPlayers = new Set();
     room.gameState.phase = 'playing';
     room.gameState.isDailyDouble = false;
+    this.resetBuzzState(room.gameState);
 
     return { success: true };
   }
@@ -1476,18 +1510,27 @@ export function normalizeAnswer(value) {
 // Weighted Daily Double placement. Rows are weighted toward the harder (higher
 // value) clues, and — as on the show — Double Jeopardy's two Daily Doubles
 // never land in the same category.
-export function placeDailyDoubles(categoryCount, round) {
+//
+// rowCount is taken from the board rather than assumed to be five: an imported
+// or hand-built board with fewer rows used to have its Daily Double placed on a
+// row that does not exist, so it never triggered.
+export function placeDailyDoubles(categoryCount, round, rowCount = 5) {
   const count = round === 1 ? 1 : 2;
-  const weights = [0, 0.1, 0.2, 0.3, 0.4]; // Row weights - favor harder questions
+  if (categoryCount < 1 || rowCount < 1) return [];
+
+  // Weight by row index, so the cheapest row is skipped and the dearest row is
+  // likeliest. On a standard five-row board that is 10/20/30/40%.
+  const weights = Array.from({ length: rowCount }, (_, i) => i);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
 
   const pickRow = () => {
+    if (totalWeight === 0) return 0; // single-row board
     let random = Math.random() * totalWeight;
-    for (let i = 0; i < weights.length; i++) {
+    for (let i = 0; i < rowCount; i++) {
       random -= weights[i];
       if (random <= 0 && weights[i] > 0) return i;
     }
-    return weights.length - 1;
+    return rowCount - 1;
   };
 
   const available = Array.from({ length: categoryCount }, (_, i) => i);

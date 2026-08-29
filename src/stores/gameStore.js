@@ -59,7 +59,7 @@ export const useGameStore = create((set, get) => ({
 
   setQuestions: (questions, enableDailyDouble = true) => {
     const dailyDoubles = enableDailyDouble
-      ? placeDailyDoubles(questions.length, get().currentRound)
+      ? placeDailyDoubles(questions.length, get().currentRound, questions[0]?.length)
       : [];
     set({ questions, dailyDoubles });
   },
@@ -171,7 +171,7 @@ export const useGameStore = create((set, get) => ({
 
   startRound2: (newCategories, newQuestions, enableDailyDouble = true) => {
     const dailyDoubles = enableDailyDouble
-      ? placeDailyDoubles(newQuestions.length, 2)
+      ? placeDailyDoubles(newQuestions.length, 2, newQuestions[0]?.length)
       : [];
     set({
       currentRound: 2,
@@ -218,35 +218,32 @@ export const useGameStore = create((set, get) => ({
 }));
 
 // Helper function to place daily doubles
-function placeDailyDoubles(categoryCount, round) {
+// Mirrors the server's placement rules: rows weighted toward the harder clues,
+// no two Daily Doubles in one category, and the board's real row count.
+function placeDailyDoubles(categoryCount, round, rowCount = 5) {
   const count = round === 1 ? 1 : 2;
-  const dailyDoubles = [];
-  const weights = [0, 0.1, 0.2, 0.3, 0.4]; // Row weights - favor harder questions
+  if (categoryCount < 1 || rowCount < 1) return [];
 
-  while (dailyDoubles.length < count) {
-    // Weighted random row selection (skip row 0 - easiest)
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const weights = Array.from({ length: rowCount }, (_, i) => i);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  const pickRow = () => {
+    if (totalWeight === 0) return 0;
     let random = Math.random() * totalWeight;
-    let pointIndex = 0;
-
-    for (let i = 0; i < weights.length; i++) {
+    for (let i = 0; i < rowCount; i++) {
       random -= weights[i];
-      if (random <= 0) {
-        pointIndex = i;
-        break;
-      }
+      if (random <= 0 && weights[i] > 0) return i;
     }
+    return rowCount - 1;
+  };
 
-    const categoryIndex = Math.floor(Math.random() * categoryCount);
+  const available = Array.from({ length: categoryCount }, (_, i) => i);
+  const dailyDoubles = [];
 
-    // Check if this position is already taken
-    const exists = dailyDoubles.some(
-      dd => dd.categoryIndex === categoryIndex && dd.pointIndex === pointIndex
-    );
-
-    if (!exists && pointIndex > 0) {
-      dailyDoubles.push({ categoryIndex, pointIndex });
-    }
+  while (dailyDoubles.length < count && available.length > 0) {
+    const pick = Math.floor(Math.random() * available.length);
+    const [categoryIndex] = available.splice(pick, 1);
+    dailyDoubles.push({ categoryIndex, pointIndex: pickRow() });
   }
 
   return dailyDoubles;

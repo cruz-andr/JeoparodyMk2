@@ -176,12 +176,14 @@ export function initializeSocketHandlers(io) {
 
     // Host selected a genre (sync to other players for viewing)
     socket.on('game:genre-selected', ({ roomCode, genre }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Genre selected for room ${roomCode}: ${genre}`);
       io.to(roomCode).emit('game:genre-selected', { genre });
     });
 
     // Host edits a category in real-time (sync to other players)
     socket.on('game:category-edited', ({ roomCode, index, value }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       // Broadcast to others (not back to sender)
       socket.to(roomCode).emit('game:category-edited', { index, value });
     });
@@ -237,8 +239,14 @@ export function initializeSocketHandlers(io) {
               reactionTime: winner.reactionTime,
             });
 
-            // Start answer window and server-side answer timeout
             gameManager.startAnswerWindow(roomCode);
+
+            // In a host-run room the host judges every answer. Arming an
+            // auto-incorrect timer here docked the player and cleared the clue
+            // out from under the host's judge buttons.
+            if (currentRoom.type === 'host') return;
+
+            // Start server-side answer timeout
             const answerDuration = answerWindowMs(currentRoom);
 
             gameManager.clearAnswerTimeout(roomCode);
@@ -410,9 +418,17 @@ export function initializeSocketHandlers(io) {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Final Jeopardy for room ${roomCode}`);
       const fjData = gameManager.startFinalJeopardy(roomCode);
-      if (fjData) {
-        io.to(roomCode).emit('game:final-jeopardy-started', fjData);
+      if (!fjData) return;
+
+      // Jeopardy needs a positive score to play. If that leaves nobody, go
+      // straight to the results instead of a wager screen nobody can satisfy.
+      if (fjData.eligibleCount === 0) {
+        console.log(`No eligible players for Final Jeopardy in ${roomCode}, ending game`);
+        io.to(roomCode).emit('game:ended');
+        return;
       }
+
+      io.to(roomCode).emit('game:final-jeopardy-started', fjData);
     });
 
     // Final Jeopardy wager submitted
@@ -683,6 +699,13 @@ export function initializeSocketHandlers(io) {
     // Host skips question
     socket.on('host:skip-question', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
+
+      // Abandoning a clue must also abandon its timers, or a stale one fires
+      // against whatever clue happens to be open when it lands.
+      gameManager.clearBuzzTimeout(roomCode);
+      gameManager.clearAnswerTimeout(roomCode);
+      if (room?.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
+
       const result = gameManager.skipQuestion(roomCode, socket.sessionId);
 
       if (result) {

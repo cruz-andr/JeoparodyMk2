@@ -46,7 +46,7 @@ function once(socket, event, timeout = 3000) {
     );
     socket.once(event, (payload) => {
       clearTimeout(timer);
-      resolve(payload);
+      resolve(payload ?? true);
     });
   });
 }
@@ -102,6 +102,26 @@ async function startGame({ buzzMs = 30000, answerMs = 5000 } = {}) {
   await ready;
 
   return { host, guest, roomCode, hostId: hostJoin.players[0].id, guestId: guestJoin.players[1].id };
+}
+
+/** A started host-run game: host controls the board, players answer. */
+async function startHostGame({ answerMs = 400, answerMode = 'verbal' } = {}) {
+  const host = await connect(`h-${Math.random()}`);
+  const guest = await connect(`g-${Math.random()}`);
+
+  const { roomCode } = await emitAck(host, 'room:create', {
+    type: 'host',
+    settings: { enableDailyDouble: false, answerMode, answerTimeLimit: answerMs },
+  });
+
+  const hostJoin = await emitAck(host, 'room:join', { roomCode, displayName: 'Host' });
+  await emitAck(guest, 'room:join', { roomCode, displayName: 'Guest' });
+
+  await emitAck(host, 'host:set-custom-questions', {
+    roomCode, questions: board(), categories: ['A', 'B'],
+  });
+
+  return { host, guest, roomCode, hostId: hostJoin.players[0].id };
 }
 
 async function test(name, fn) {
@@ -281,6 +301,146 @@ async function run() {
     assert.equal(state.success, true);
     const me = state.players.find((p) => p.id === guestId);
     assert.equal(me.score, 400, 'a reload must not wipe the scoreboard');
+  });
+
+  await test('host mode leaves the verdict to the host, not a timer', async (open) => {
+    const { host, guest, roomCode } = await startHostGame({ answerMs: 300 });
+    open.push(host, guest);
+
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await once(guest, 'game:question-selected');
+    host.emit('host:open-buzzer', { roomCode });
+    await once(guest, 'host:buzzer-opened');
+
+    guest.emit('game:buzz-in', { roomCode, reactionTime: 40 });
+    await once(guest, 'game:buzzer-winner');
+
+    // The host is still deciding. Nothing may score the answer for them.
+    assert.ok(
+      await notEmitted(guest, 'game:answer-result', 1200),
+      'an auto-timeout would dock the player and clear the clue mid-judgement'
+    );
+  });
+
+  await test('a skipped clue cannot be scored by its stale answer timer', async (open) => {
+    const { host, guest, roomCode } = await startHostGame({ answerMs: 600 });
+    open.push(host, guest);
+
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await once(guest, 'game:question-selected');
+    host.emit('host:open-buzzer', { roomCode });
+    await once(guest, 'host:buzzer-opened');
+    guest.emit('game:buzz-in', { roomCode, reactionTime: 30 });
+    await once(guest, 'game:buzzer-winner');
+
+    // Host abandons the clue and opens a different, more valuable one.
+    host.emit('host:skip-question', { roomCode });
+    await once(guest, 'host:question-skipped');
+    host.emit('game:select-question', { roomCode, categoryIndex: 1, pointIndex: 1 });
+    await once(guest, 'game:question-selected');
+
+    assert.ok(
+      await notEmitted(guest, 'game:answer-result', 1200),
+      'the abandoned clue\'s timer must not charge anyone for the new one'
+    );
+  });
+
+  await test('a non-host cannot rewrite the genre or categories', async (open) => {
+    const { host, guest, roomCode } = await startGame();
+    open.push(host, guest);
+
+    guest.emit('game:genre-selected', { roomCode, genre: 'HACKED' });
+    assert.ok(await notEmitted(host, 'game:genre-selected'));
+
+    guest.emit('game:category-edited', { roomCode, index: 0, value: 'HACKED' });
+    assert.ok(await notEmitted(host, 'game:category-edited'));
+  });
+
+  await test('a private room honours the Daily Double setting it was created with', async (open) => {
+    const host = await connect(`h-${Math.random()}`);
+    open.push(host);
+
+    const { roomCode } = await emitAck(host, 'room:create', {
+      type: 'multiplayer',
+      settings: { enableDailyDouble: true, questionTimeLimit: 30000 },
+    });
+    const join = await emitAck(host, 'room:join', { roomCode, displayName: 'Host' });
+
+    const ready = once(host, 'game:questions-ready');
+    host.emit('game:set-questions', {
+      roomCode, questions: board(), categories: ['A', 'B'],
+      firstPickerId: join.players[0].id,
+    });
+    await ready;
+
+    // Walk the whole 2x2 board; one cell must be a Daily Double.
+    let sawDailyDouble = false;
+    for (const [c, r] of [[0, 0], [0, 1], [1, 0], [1, 1]]) {
+      const selected = once(host, 'game:question-selected');
+      host.emit('game:select-question', { roomCode, categoryIndex: c, pointIndex: r });
+      const payload = await selected;
+      if (payload.isDailyDouble) sawDailyDouble = true;
+      host.emit('host:skip-question', { roomCode });
+      await wait(60);
+    }
+    assert.ok(sawDailyDouble, 'the setting was sent at creation, so it must apply');
+  });
+
+  await test('the buzzer still works on the clue after a skip', async (open) => {
+    const { host, guest, roomCode } = await startHostGame();
+    open.push(host, guest);
+
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await once(guest, 'game:question-selected');
+    host.emit('host:open-buzzer', { roomCode });
+    await once(guest, 'host:buzzer-opened');
+    guest.emit('game:buzz-in', { roomCode, reactionTime: 30 });
+    await once(guest, 'game:buzzer-winner');
+
+    host.emit('host:skip-question', { roomCode });
+    await once(guest, 'host:question-skipped');
+
+    // A stale buzzedPlayerId would make recordBuzz reject every later buzz.
+    host.emit('game:select-question', { roomCode, categoryIndex: 1, pointIndex: 0 });
+    await once(guest, 'game:question-selected');
+    host.emit('host:open-buzzer', { roomCode });
+    await once(guest, 'host:buzzer-opened');
+
+    const winner = once(guest, 'game:buzzer-winner', 2000);
+    guest.emit('game:buzz-in', { roomCode, reactionTime: 25 });
+    assert.ok(await winner, 'the next clue must be buzzable');
+  });
+
+  await test('Final Jeopardy is skipped when nobody qualifies', async (open) => {
+    const { host, guest, roomCode } = await startGame();
+    open.push(host, guest);
+
+    // Both players are on $0, so nobody may play. The game should end rather
+    // than strand everyone on a wager screen that can never be satisfied.
+    const ended = once(guest, 'game:ended', 2500);
+    host.emit('game:start-final-jeopardy', { roomCode });
+    assert.ok(await ended);
+  });
+
+  await test('Final Jeopardy is not blocked by a player who drops out', async (open) => {
+    const { host, guest, roomCode, hostId, guestId } = await startGame();
+    open.push(host, guest);
+
+    // Give both players a positive score so both are eligible.
+    host.emit('host:override-score', { roomCode, playerId: hostId, newScore: 500 });
+    host.emit('host:override-score', { roomCode, playerId: guestId, newScore: 500 });
+    await wait(150);
+
+    host.emit('game:start-final-jeopardy', { roomCode });
+    await once(guest, 'game:final-jeopardy-started');
+
+    // The guest leaves without wagering; the host alone must still advance.
+    guest.disconnect();
+    await wait(150);
+
+    const showClue = once(host, 'game:fj-show-clue', 2500);
+    host.emit('game:fj-wager', { roomCode, wager: 100 });
+    assert.ok(await showClue, 'a departed player cannot hold the round open');
   });
 
   console.log(`\n${passed} passed, ${failures.length} failed\n`);

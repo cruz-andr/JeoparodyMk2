@@ -118,6 +118,10 @@ export default function GamePage() {
   const [answerFeedbackResult, setAnswerFeedbackResult] = useState(null); // true=correct, false=incorrect, null=hidden
 
   const isHostMode = roomType === 'host';
+  // Read inside the socket effect, which deliberately does not re-subscribe on
+  // every render.
+  const isHostModeRef = useRef(isHostMode);
+  isHostModeRef.current = isHostMode;
   const answerMode = settings?.answerMode || 'verbal';
   const projectorMode = settings?.projectorMode || false;
 
@@ -363,15 +367,19 @@ export default function GamePage() {
         setBuzzerWinnerId(null);
         // TTS will be triggered when wager is confirmed
       } else {
-        // Regular question - start buzz window
         setIsDailyDouble(false);
         setDailyDoublePhase(null);
-        setSignalArrivedTime(Date.now());
-        setCanBuzz(true);
         setBuzzerWinnerId(null);
-        // Reset timer for new question
         setBuzzTimerKey(prev => prev + 1);
 
+        // In a host-run room the buzzer stays shut until the host opens it, so
+        // the clue can be read aloud first. Arming it here let a player buzz
+        // early: the server rejected the buzz, but the client had already
+        // marked them as having used their turn, locking them out of the clue.
+        if (!isHostModeRef.current) {
+          setSignalArrivedTime(Date.now());
+          setCanBuzz(true);
+        }
       }
     });
 
