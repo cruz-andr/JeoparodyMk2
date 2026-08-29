@@ -19,6 +19,11 @@ export const emptyFormatStats = () => ({
   currentStreak: 0,
   maxStreak: 0,
   lastPlayedDate: null,
+  // null, not 0: a board can be scored below zero, so "no score yet" and
+  // "scored nothing" are different states and must look different.
+  bestScore: null,
+  weekBestScore: null,
+  weekKey: null,
 });
 
 /** YYYY-MM-DD for a Date, in UTC so every player gets the same board. */
@@ -40,6 +45,29 @@ export function previousDateString(dateString) {
 }
 
 /**
+ * The Monday on or before a date, as YYYY-MM-DD. Weeks run Monday to Sunday in
+ * UTC, matching the boundary the daily board itself turns on.
+ */
+export function startOfWeek(dateString) {
+  const d = new Date(`${dateString}T00:00:00Z`);
+  // getUTCDay: 0 is Sunday, so Sunday belongs to the week that began six days back
+  const shift = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - shift);
+  return toDateString(d);
+}
+
+/**
+ * This week's best, or null once the week has rolled over.
+ *
+ * Read through this rather than off the field directly: a stored value from
+ * last week is stale, and showing it would make the reset look broken.
+ */
+export function currentWeekBest(stats, today) {
+  if (!stats || stats.weekKey !== startOfWeek(today)) return null;
+  return stats.weekBestScore ?? null;
+}
+
+/**
  * The streak after finishing a run: showing up is what counts.
  *
  * The original rule only extended a streak on a PERFECT run. That was written
@@ -58,18 +86,39 @@ export function computeStreak(stats, { totalQuestions, today }) {
   return playedYesterday ? stats.currentStreak + 1 : 1;
 }
 
-/** Stats after finishing a run. Returns the same object if already played today. */
-export function applyCompletion(stats, { correctCount, totalQuestions, today }) {
+/**
+ * Stats after finishing a run. Returns the same object if already played today.
+ *
+ * `score` is optional: The Board is worth dollars, The Sixer is just six clues
+ * right or wrong, so only the former carries one.
+ */
+export function applyCompletion(stats, { correctCount, totalQuestions, today, score = null }) {
   if (stats.lastPlayedDate === today) return stats;
 
   const currentStreak = computeStreak(stats, { totalQuestions, today });
+  const week = startOfWeek(today);
+  const scored = typeof score === 'number' && Number.isFinite(score);
+
+  // A best that never resets saturates: the board tops out at a fixed maximum,
+  // so an all-time high stops being a target within a few weeks. The weekly one
+  // stays beatable; the all-time one is kept for the highscores page.
+  const weekIsCurrent = stats.weekKey === week;
+  const priorWeekBest = weekIsCurrent ? stats.weekBestScore : null;
 
   return {
+    ...stats,
     gamesPlayed: stats.gamesPlayed + 1,
     totalCorrect: stats.totalCorrect + correctCount,
     currentStreak,
     maxStreak: Math.max(stats.maxStreak, currentStreak),
     lastPlayedDate: today,
+    bestScore: scored
+      ? Math.max(stats.bestScore ?? -Infinity, score)
+      : stats.bestScore ?? null,
+    weekBestScore: scored
+      ? Math.max(priorWeekBest ?? -Infinity, score)
+      : priorWeekBest ?? null,
+    weekKey: scored ? week : stats.weekKey ?? null,
   };
 }
 

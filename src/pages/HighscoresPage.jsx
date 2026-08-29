@@ -1,11 +1,15 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
+import { useDailyStore } from '../stores/dailyStore';
 import './HighscoresPage.css';
 
 export default function HighscoresPage() {
   const navigate = useNavigate();
   const { localHighscores, stats } = useUserStore();
+  // The all-time board best lives here rather than on the menu: the menu's job
+  // is a target you can beat today, this is the record.
+  const dailyStats = useDailyStore((s) => s.stats);
 
   return (
     <div className="highscores-page">
@@ -24,7 +28,15 @@ export default function HighscoresPage() {
           </div>
           <div className="stat-card">
             <span className="stat-value">${stats.highestScore.toLocaleString()}</span>
-            <span className="stat-label">Best Score</span>
+            <span className="stat-label">Best Solo Score</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-value">
+              {dailyStats.board.bestScore === null
+                ? '\u2014'
+                : `${dailyStats.board.bestScore < 0 ? '-' : ''}$${Math.abs(dailyStats.board.bestScore).toLocaleString()}`}
+            </span>
+            <span className="stat-label">Best Board, All Time</span>
           </div>
           <div className="stat-card">
             <span className="stat-value">

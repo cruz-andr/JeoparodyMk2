@@ -14,6 +14,8 @@ import {
   toBoardGrid,
   migrateToTwoFormats,
   emptyFormatStats,
+  startOfWeek,
+  currentWeekBest,
   boardGridRows,
   encodeAnswers,
   decodeAnswers,
@@ -91,6 +93,88 @@ test('a first ever run starts the streak at one', () => {
 test('an empty board neither extends nor breaks a streak', () => {
   const s = stats({ currentStreak: 4, lastPlayedDate: '2026-08-28' });
   assert.equal(computeStreak(s, { totalQuestions: 0, today: '2026-08-29' }), 4);
+});
+
+// =========================================================================
+// Weeks
+// =========================================================================
+
+test('a week begins on Monday', () => {
+  assert.equal(startOfWeek('2026-08-24'), '2026-08-24', 'Monday is its own start');
+  assert.equal(startOfWeek('2026-08-26'), '2026-08-24', 'Wednesday looks back');
+});
+
+test('Sunday belongs to the week that began six days earlier', () => {
+  assert.equal(startOfWeek('2026-08-30'), '2026-08-24',
+    'the usual off-by-one: Sunday is day 0, but it ends the week');
+  assert.equal(startOfWeek('2026-08-31'), '2026-08-31', 'the next Monday starts a new one');
+});
+
+test('a week can span a year boundary', () => {
+  assert.equal(startOfWeek('2026-01-01'), '2025-12-29');
+});
+
+test('last week\'s best does not leak into this week', () => {
+  const s = stats({ weekBestScore: 9000, weekKey: '2026-08-17' });
+  assert.equal(currentWeekBest(s, '2026-08-26'), null, 'the week rolled over');
+  assert.equal(currentWeekBest(s, '2026-08-19'), 9000, 'same week, still shown');
+});
+
+test('a player with no scores has no weekly best', () => {
+  assert.equal(currentWeekBest(stats(), '2026-08-26'), null);
+  assert.equal(currentWeekBest(null, '2026-08-26'), null);
+});
+
+// =========================================================================
+// Best scores
+// =========================================================================
+
+test('a first score sets both the weekly and the all-time best', () => {
+  const next = applyCompletion(stats(), {
+    correctCount: 20, totalQuestions: 30, today: '2026-08-26', score: 7400,
+  });
+  assert.equal(next.bestScore, 7400);
+  assert.equal(next.weekBestScore, 7400);
+  assert.equal(next.weekKey, '2026-08-24');
+});
+
+test('a better score raises both bests', () => {
+  const s = stats({ bestScore: 7400, weekBestScore: 7400, weekKey: '2026-08-24', lastPlayedDate: '2026-08-26' });
+  const next = applyCompletion(s, { correctCount: 26, totalQuestions: 30, today: '2026-08-27', score: 11200 });
+  assert.equal(next.bestScore, 11200);
+  assert.equal(next.weekBestScore, 11200);
+});
+
+test('a worse score raises neither', () => {
+  const s = stats({ bestScore: 11200, weekBestScore: 11200, weekKey: '2026-08-24', lastPlayedDate: '2026-08-26' });
+  const next = applyCompletion(s, { correctCount: 9, totalQuestions: 30, today: '2026-08-27', score: 1800 });
+  assert.equal(next.bestScore, 11200);
+  assert.equal(next.weekBestScore, 11200);
+});
+
+test('a new week resets the weekly best but never the all-time one', () => {
+  const s = stats({ bestScore: 11200, weekBestScore: 11200, weekKey: '2026-08-24', lastPlayedDate: '2026-08-28' });
+  const next = applyCompletion(s, { correctCount: 12, totalQuestions: 30, today: '2026-08-31', score: 3000 });
+
+  assert.equal(next.weekKey, '2026-08-31', 'rolled to the new week');
+  assert.equal(next.weekBestScore, 3000, 'this week starts fresh, even from a lower score');
+  assert.equal(next.bestScore, 11200, 'the trophy survives');
+});
+
+test('a negative score is a real score, not an absent one', () => {
+  const next = applyCompletion(stats(), {
+    correctCount: 2, totalQuestions: 30, today: '2026-08-26', score: -1400,
+  });
+  assert.equal(next.bestScore, -1400, 'a bad day still beats never having played');
+  assert.equal(next.weekBestScore, -1400);
+});
+
+test('a scoreless format leaves the best fields alone', () => {
+  // The Sixer is six clues right or wrong; it carries no dollar score.
+  const next = applyCompletion(stats(), { correctCount: 5, totalQuestions: 6, today: '2026-08-26' });
+  assert.equal(next.bestScore, null);
+  assert.equal(next.weekBestScore, null);
+  assert.equal(next.weekKey, null);
 });
 
 // =========================================================================

@@ -4,6 +4,7 @@ import SettingsModal from '../common/SettingsModal';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useUserStore } from '../../stores';
 import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
+import { currentWeekBest, toDateString } from '../../stores/dailyLogic';
 import './MainMenu.css';
 
 /**
@@ -49,6 +50,9 @@ export default function MainMenu() {
 
   const boardStreak = stats.board.currentStreak;
   const sixerStreak = stats.sixer.currentStreak;
+  // The Board's own best, for the week in progress. Read through the helper so
+  // a value left over from last week is not shown as if it still counted.
+  const boardWeekBest = currentWeekBest(stats.board, toDateString());
 
   // Today's categories make the hero real. The menu must still work when the
   // backend is unreachable, so a failure here is silent.
@@ -95,7 +99,7 @@ export default function MainMenu() {
 
         <div className="menu-identity">
           <span className="menu-stat">
-            <span className="menu-stat-label">Best</span>
+            <span className="menu-stat-label">Solo Best</span>
             <span className="menu-stat-value gold">
               ${userStats.highestScore.toLocaleString()}
             </span>
@@ -174,9 +178,11 @@ export default function MainMenu() {
               </span>
               <span className="menu-bigstat">
                 <span className="menu-bigstat-value">
-                  ${userStats.highestScore.toLocaleString()}
+                  {boardWeekBest === null
+                    ? '\u2014'
+                    : `${boardWeekBest < 0 ? '-' : ''}$${Math.abs(boardWeekBest).toLocaleString()}`}
                 </span>
-                <span className="menu-bigstat-label">Your Best</span>
+                <span className="menu-bigstat-label">Best This Week</span>
               </span>
             </div>
           </div>
