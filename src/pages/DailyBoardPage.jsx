@@ -202,14 +202,15 @@ export default function DailyBoardPage() {
 
   /* A pass uses the clue up and scores nothing. It is recorded rather than
      just closed: a clue you could reopen was a free look that also handed you
-     a fresh clock, and a run of skipped clues could never reach an end. */
+     a fresh clock, and a run of skipped clues could never reach an end.
+     Giving up still shows you the response, as on the Sixer, because the point
+     of passing is that you did not know it. Continue closes it, not this, so
+     the last clue cannot end the run before you have read the answer. */
   const passClue = useCallback(() => {
     if (!openCell) return;
     passQuestion(FORMAT, flatIndex(openCell.categoryIndex, openCell.pointIndex));
-    setOpenCell(null);
-    setResult(null);
-    finishIfDone();
-  }, [openCell, passQuestion, finishIfDone]);
+    setResult({ correct: false, passed: true, playerAnswer: '' });
+  }, [openCell, passQuestion]);
 
   const backToMenu = () => navigate('/menu');
 

@@ -235,6 +235,13 @@
 
 .typed-badge.correct { background: var(--color-success); color: var(--text-primary); }
 
+/* A pass is neither, so it wears neither colour. */
+.typed-badge.passed {
+  background: rgba(242, 236, 224, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(242, 236, 224, 0.3);
+}
+
 .typed-badge.incorrect {
   background: rgba(255, 107, 107, 0.3);
   color: var(--color-error);

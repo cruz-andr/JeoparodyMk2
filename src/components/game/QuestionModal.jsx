@@ -127,23 +127,31 @@ export default function QuestionModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className={`typed-badge ${result.correct ? 'correct' : 'incorrect'}`}>
-                {result.correct
-                  ? `Correct +$${points.toLocaleString()}`
-                  : `Incorrect -$${points.toLocaleString()}`}
+              <div
+                className={`typed-badge ${
+                  result.passed ? 'passed' : result.correct ? 'correct' : 'incorrect'
+                }`}
+              >
+                {result.passed
+                  ? 'Passed'
+                  : result.correct
+                    ? `Correct +$${points.toLocaleString()}`
+                    : `Incorrect -$${points.toLocaleString()}`}
               </div>
 
               <p className="typed-said">
-                {result.playerAnswer
-                  ? <>You said: <span>{result.playerAnswer}</span></>
-                  : 'You did not answer.'}
+                {result.passed
+                  ? 'No points either way.'
+                  : result.playerAnswer
+                    ? <>You said: <span>{result.playerAnswer}</span></>
+                    : 'You did not answer.'}
               </p>
               <p className="typed-truth">
                 Correct response: <span>{question.question}</span>
               </p>
 
               <div className="typed-after">
-                {!result.correct && onOverride && (
+                {!result.correct && !result.passed && onOverride && (
                   <button type="button" className="typed-override" onClick={onOverride}>
                     I was right
                   </button>
