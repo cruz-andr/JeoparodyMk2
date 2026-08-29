@@ -14,6 +14,7 @@ import {
   toBoardGrid,
   migrateToTwoFormats,
   emptyFormatStats,
+  shareGridRows,
 } from './dailyLogic.js';
 
 let passed = 0;
@@ -159,6 +160,25 @@ test('thirty clues fold into a 6 by 5 grid, cheapest first', () => {
 test('a short board is refused rather than half built', () => {
   assert.equal(toBoardGrid(Array.from({ length: 29 }, (_, i) => ({ id: i }))), null);
   assert.equal(toBoardGrid([]), null);
+});
+
+// =========================================================================
+// Share grid
+// =========================================================================
+
+test('the shared board reads six across and five down', () => {
+  // cells are stored category-major: c0r0..c0r4, c1r0..c1r4, ...
+  const cells = [];
+  for (let c = 0; c < 6; c++) for (let r = 0; r < 5; r++) cells.push(`${c}${r}`);
+
+  const rows = shareGridRows(cells);
+  assert.equal(rows.length, 5, 'five value tiers');
+  assert.equal(rows[0], '001020304050', 'the top row is the cheapest clue of each category');
+  assert.equal(rows[4], '041424344454', 'the bottom row is the dearest of each');
+});
+
+test('a short board yields no share grid rather than a scrambled one', () => {
+  assert.equal(shareGridRows(['a', 'b']), null);
 });
 
 // =========================================================================

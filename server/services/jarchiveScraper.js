@@ -208,15 +208,26 @@ export function candidateGameIds(seed, attempts = CANDIDATE_ATTEMPTS) {
   return ids;
 }
 
-// Get a deterministic pair of boards for today's daily challenge
-export async function getDailyChallenge() {
+// The challenge is identical for everybody all day, so it is built once and
+// held in memory. Without this, every visitor would re-scrape J-Archive up to
+// CANDIDATE_ATTEMPTS times for a board that never changes, which is both
+// pointless and a good way to get the server blocked.
+let dailyCache = null; // { date, challenge }
+let dailyInFlight = null; // { date, promise }
+
+// Exposed for tests; there is no reason to call this in normal operation.
+export function _clearDailyCache() {
+  dailyCache = null;
+  dailyInFlight = null;
+}
+
+async function buildTodaysChallenge(fetchGame, dateString) {
   const seed = getDailySeed();
-  const dateString = getTodayDateString();
   const problems = [];
 
   for (const gameId of candidateGameIds(seed)) {
     try {
-      const gameData = await fetchGameById(gameId);
+      const gameData = await fetchGame(gameId);
       const challenge = buildDailyChallenge(gameData.clues, {
         seed,
         date: dateString,
@@ -233,4 +244,28 @@ export async function getDailyChallenge() {
   // Returning a short or empty board would be cached by the client for the
   // rest of the day, so fail loudly instead.
   throw new Error(`Could not build a daily challenge. Tried ${problems.join('; ')}`);
+}
+
+// Get a deterministic pair of boards for today's daily challenge
+export async function getDailyChallenge({ fetchGame = fetchGameById } = {}) {
+  const dateString = getTodayDateString();
+
+  if (dailyCache?.date === dateString) return dailyCache.challenge;
+
+  // Share one build across everyone who asks while it is still running, so a
+  // burst of visitors does not become a burst of scrapes.
+  if (dailyInFlight?.date === dateString) return dailyInFlight.promise;
+
+  const promise = buildTodaysChallenge(fetchGame, dateString)
+    .then((challenge) => {
+      dailyCache = { date: dateString, challenge };
+      return challenge;
+    })
+    .finally(() => {
+      // A failure must not be cached: the next request should try again.
+      if (dailyInFlight?.promise === promise) dailyInFlight = null;
+    });
+
+  dailyInFlight = { date: dateString, promise };
+  return promise;
 }

@@ -3,7 +3,11 @@
  * Run with: node server/test/dailyBuilder.test.js
  */
 import assert from 'node:assert/strict';
-import { candidateGameIds } from '../services/jarchiveScraper.js';
+import {
+  candidateGameIds,
+  getDailyChallenge,
+  _clearDailyCache,
+} from '../services/jarchiveScraper.js';
 import {
   orderCategoryMajor,
   buildBoard,
@@ -197,7 +201,85 @@ test('the same day always tries the same games', () => {
   assert.deepEqual(candidateGameIds(20260829), candidateGameIds(20260829));
 });
 
+// =========================================================================
+// Caching: the board is the same all day, so it is scraped once
+// =========================================================================
+
+async function asyncTest(name, fn) {
+  try {
+    await fn();
+    passed++;
+  } catch (err) {
+    failures.push({ name, err });
+  }
+}
+
+const stubFetcher = () => {
+  let calls = 0;
+  const fetchGame = async () => {
+    calls++;
+    return { clues: fullGame() };
+  };
+  return { fetchGame, calls: () => calls };
+};
+
+export async function runAsyncTests() {
+  await asyncTest('the day is scraped once, not once per visitor', async () => {
+    _clearDailyCache();
+    const stub = stubFetcher();
+
+    await getDailyChallenge({ fetchGame: stub.fetchGame });
+    await getDailyChallenge({ fetchGame: stub.fetchGame });
+    await getDailyChallenge({ fetchGame: stub.fetchGame });
+
+    assert.equal(stub.calls(), 1, 'three visitors must not mean three scrapes');
+  });
+
+  await asyncTest('a burst of visitors shares one build', async () => {
+    _clearDailyCache();
+    const stub = stubFetcher();
+
+    const all = await Promise.all(
+      Array.from({ length: 25 }, () => getDailyChallenge({ fetchGame: stub.fetchGame }))
+    );
+
+    assert.equal(stub.calls(), 1, 'concurrent requests must not each scrape');
+    assert.equal(new Set(all).size, 1, 'and they all get the same board');
+  });
+
+  await asyncTest('a failure is not cached, so the next request retries', async () => {
+    _clearDailyCache();
+    let calls = 0;
+    const failing = async () => {
+      calls++;
+      throw new Error('archive down');
+    };
+
+    await assert.rejects(() => getDailyChallenge({ fetchGame: failing }));
+    const afterFirst = calls;
+    await assert.rejects(() => getDailyChallenge({ fetchGame: failing }));
+
+    assert.ok(calls > afterFirst, 'a bad day must not be remembered as the answer');
+    _clearDailyCache();
+  });
+
+  await asyncTest('a cached day is returned without touching the network', async () => {
+    _clearDailyCache();
+    const stub = stubFetcher();
+    const first = await getDailyChallenge({ fetchGame: stub.fetchGame });
+
+    const second = await getDailyChallenge({
+      fetchGame: () => { throw new Error('must not be called'); },
+    });
+
+    assert.equal(second, first);
+    _clearDailyCache();
+  });
+}
+
 // --- report --------------------------------------------------------------
+
+await runAsyncTests();
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 for (const { name, err } of failures) {

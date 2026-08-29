@@ -7,6 +7,7 @@ import {
   emptyRun,
   emptyFormatStats,
   migrateToTwoFormats,
+  shareGridRows,
 } from './dailyLogic';
 
 /**
@@ -19,7 +20,9 @@ import {
  * apart: a bad week on The Board should not cost someone their Sixer habit.
  */
 
-const initialState = {
+// A factory, not a constant: a shared object would hand every reset the same
+// nested arrays, so one stray mutation would poison the blank state.
+const makeInitialState = () => ({
   board: emptyRun(),
   sixer: emptyRun(),
 
@@ -31,14 +34,14 @@ const initialState = {
     board: emptyFormatStats(),
     sixer: emptyFormatStats(),
   },
-};
+});
 
 const isFormat = (format) => format === 'board' || format === 'sixer';
 
 export const useDailyStore = create(
   persist(
     (set, get) => ({
-      ...initialState,
+      ...makeInitialState(),
 
       hasPlayedToday: (format) => {
         if (!isFormat(format)) return false;
@@ -156,13 +159,9 @@ export const useDailyStore = create(
         const grid = run.answers.map((a) => (a.correct ? '\u{1F7E9}' : '\u{1F7E5}'));
         const correctCount = run.answers.filter((a) => a.correct).length;
 
-        // The Board is 30 wide, so wrap it into rows of six like the real thing.
+        // The Board shares as the board looks: six across, five down.
         const emoji = format === 'board'
-          ? grid.reduce((rows, cell, i) => {
-              if (i % 6 === 0) rows.push('');
-              rows[rows.length - 1] += cell;
-              return rows;
-            }, []).join('\n')
+          ? (shareGridRows(grid) ?? grid).join('\n')
           : grid.join('');
 
         const dateStr = run.date || toDateString();
@@ -190,7 +189,7 @@ export const useDailyStore = create(
         }));
       },
 
-      fullReset: () => set({ ...initialState }),
+      fullReset: () => set(makeInitialState()),
     }),
     {
       name: 'jeoparody-daily',

@@ -109,6 +109,28 @@ export function toBoardGrid(questions, {
 }
 
 /**
+ * Lay the board's results out the way the board itself reads: six categories
+ * across, five values down.
+ *
+ * Answers are stored category-major (all of category 1, then category 2), so
+ * emitting them in storage order and wrapping every six produces a grid where
+ * no row means anything. Transpose instead.
+ */
+export function shareGridRows(cells, { categories = BOARD_CATEGORY_COUNT, rows = BOARD_ROW_COUNT } = {}) {
+  const out = [];
+  for (let r = 0; r < rows; r++) {
+    let line = '';
+    for (let c = 0; c < categories; c++) {
+      const cell = cells[c * rows + r];
+      if (cell === undefined) return null;
+      line += cell;
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+/**
  * Migrate the single-format persisted state to the two-format shape.
  *
  * The daily that shipped was the six-clue one, so its history becomes The
