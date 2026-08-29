@@ -135,7 +135,8 @@ export const useDailyStore = create(
         }));
       },
 
-      completeGame: (format) => {
+      /** `score` applies to formats that have one; The Sixer passes none. */
+      completeGame: (format, { score = null } = {}) => {
         if (!isFormat(format)) return;
         const state = get();
         const run = state[format];
@@ -148,6 +149,7 @@ export const useDailyStore = create(
               correctCount: run.answers.filter((a) => a.correct).length,
               totalQuestions: run.questions.length,
               today: toDateString(),
+              score,
             }),
           },
         });

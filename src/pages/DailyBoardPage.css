@@ -123,3 +123,15 @@
     min-width: 0;
   }
 }
+
+/* This week's best, shown as the number to chase while playing. */
+.daily-board-target {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(242, 236, 224, 0.5);
+  border: 1px solid rgba(242, 236, 224, 0.2);
+  padding: 4px 9px;
+  white-space: nowrap;
+}

@@ -2,7 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
-import { toBoardGrid, BOARD_ROW_COUNT } from '../stores/dailyLogic';
+import {
+  toBoardGrid,
+  BOARD_ROW_COUNT,
+  currentWeekBest,
+  toDateString,
+} from '../stores/dailyLogic';
 import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import GameBoard from '../components/game/GameBoard';
 import QuestionModal from '../components/game/QuestionModal';
@@ -36,6 +41,8 @@ export default function DailyBoardPage() {
 
   const { date, questions, answers, isComplete } = board;
   const alreadyPlayed = hasPlayedToday(FORMAT);
+  // The number to chase while playing. Null until there is one this week.
+  const weekBest = currentWeekBest(stats[FORMAT], toDateString());
 
   // Load today's board once.
   useEffect(() => {
@@ -109,10 +116,16 @@ export default function DailyBoardPage() {
       setOpenCell(null);
       setShowAnswer(false);
 
-      const remaining = useDailyStore
-        .getState()
-        .board.answers.filter((a) => !a?.revealed).length;
-      if (remaining === 0) completeGame(FORMAT);
+      // Recompute from the store rather than the memo: the answer that just
+      // landed is not in `score` yet.
+      const settled = useDailyStore.getState().board.answers;
+      if (settled.every((a) => a?.revealed)) {
+        const finalScore = settled.reduce((total, a, i) => {
+          const points = POINT_VALUES[i % BOARD_ROW_COUNT];
+          return a.correct ? total + points : total - points;
+        }, 0);
+        completeGame(FORMAT, { score: finalScore });
+      }
     },
     [openCell, revealAnswer, completeGame]
   );
@@ -178,6 +191,11 @@ export default function DailyBoardPage() {
           <span className={score < 0 ? 'negative' : ''}>
             {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
           </span>
+          {weekBest !== null && (
+            <span className="daily-board-target">
+              Beat ${weekBest.toLocaleString()}
+            </span>
+          )}
           {stats[FORMAT].currentStreak > 0 && (
             <span className="daily-board-streak">
               {stats[FORMAT].currentStreak} day streak
