@@ -136,7 +136,6 @@
   color: rgba(242, 236, 224, 0.8);
   text-shadow: none;
   padding-bottom: 4px;
-  cursor: default;
 }
 
 .wheel-band.d1 .wheel-name {
@@ -161,6 +160,7 @@
   background: linear-gradient(180deg, rgba(3, 5, 15, 0) 0%, rgba(3, 5, 15, 0.92) 88%);
 }
 
+.wheel:focus-visible,
 .wheel-tile:focus-visible,
 .wheel-name:focus-visible {
   outline: 3px solid var(--jeopardy-gold-light);

@@ -221,7 +221,6 @@ export default function DailyBoardPage() {
 
         <BoardWheel
           categories={board.categories ?? []}
-          questions={grid}
           answers={answers}
           pointValues={POINT_VALUES}
           onSelect={handleSelect}

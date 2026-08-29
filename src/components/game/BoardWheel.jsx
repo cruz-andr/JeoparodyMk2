@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePrefersReducedMotion } from '../../hooks/useMediaQuery';
 import './BoardWheel.css';
 
@@ -21,7 +21,6 @@ const SWIPE_THRESHOLD = 40;
 
 export default function BoardWheel({
   categories = [],
-  questions = [],
   answers = [],
   pointValues = [],
   onSelect,
@@ -31,6 +30,10 @@ export default function BoardWheel({
   const reduceMotion = usePrefersReducedMotion();
   const rollTimer = useRef(null);
   const touchStart = useRef(null);
+
+  // A roll that is still pending when the page unmounts would call onSelect
+  // into a screen that no longer exists.
+  useEffect(() => () => clearTimeout(rollTimer.current), []);
 
   const rowCount = pointValues.length;
   const lastIndex = Math.max(0, categories.length - 1);
@@ -73,6 +76,17 @@ export default function BoardWheel({
     [focus, rolling, reduceMotion, onSelect, answers, rowCount, lastIndex]
   );
 
+  const onKeyDown = (e) => {
+    const step = { ArrowUp: -1, ArrowDown: 1 }[e.key];
+    if (step !== undefined) {
+      e.preventDefault();
+      setFocus((f) => clamp(f + step));
+      return;
+    }
+    if (e.key === 'Home') { e.preventDefault(); setFocus(0); }
+    if (e.key === 'End') { e.preventDefault(); setFocus(lastIndex); }
+  };
+
   const onTouchStart = (e) => {
     touchStart.current = e.touches[0]?.clientY ?? null;
   };
@@ -90,6 +104,10 @@ export default function BoardWheel({
       className={`wheel ${reduceMotion ? 'no-motion' : ''}`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
+      role="group"
+      aria-label={`Game board, ${categories[focus] ?? ''} of ${categories.length} categories. Use up and down arrows to change category.`}
     >
       <div className="wheel-track" style={{ transform: `translateY(${-focus * 150}px)` }}>
         {categories.map((name, categoryIndex) => {
@@ -111,7 +129,7 @@ export default function BoardWheel({
                 type="button"
                 className="wheel-name"
                 onClick={() => setFocus(categoryIndex)}
-                tabIndex={playable ? 0 : -1}
+                aria-label={`${name}, bring to centre`}
               >
                 {name}
               </button>
