@@ -13,7 +13,10 @@
   overflow: hidden;
   perspective: 620px;
   perspective-origin: 50% 50%;
-  touch-action: pan-y;
+  /* pan-y here handed vertical drags to the browser as page scrolls, which is
+     the one gesture this component exists to interpret. */
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* Uniform 150px slots, so a roll is always the same distance.

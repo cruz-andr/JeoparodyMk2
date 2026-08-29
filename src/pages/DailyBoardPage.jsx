@@ -30,6 +30,14 @@ export default function DailyBoardPage() {
   // be a media query in CSS.
   const isPhone = useMediaQuery('(max-width: 768px)');
 
+  // The wheel is a fixed surface, so the document behind it must not scroll.
+  // See body.wheel-locked in DailyBoardPage.css.
+  useEffect(() => {
+    if (!isPhone) return undefined;
+    document.body.classList.add('wheel-locked');
+    return () => document.body.classList.remove('wheel-locked');
+  }, [isPhone]);
+
   const {
     board,
     isLoading,

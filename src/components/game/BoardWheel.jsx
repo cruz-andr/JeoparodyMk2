@@ -41,6 +41,24 @@ export default function BoardWheel({
   // into a screen that no longer exists.
   useEffect(() => () => clearTimeout(rollTimer.current), []);
 
+  // touch-action: none says we own vertical drags, but iOS still starts a
+  // scroll or a rubber band unless something calls preventDefault, and React's
+  // touchmove is passive so it cannot. Registered by hand, non-passive.
+  useEffect(() => {
+    const node = wheelRef.current;
+    if (!node) return undefined;
+
+    const onMove = (e) => {
+      if (touchStart.current === null) return;
+      e.preventDefault();
+      const delta = (e.touches[0]?.clientY ?? 0) - touchStart.current;
+      if (Math.abs(delta) > DRAG_SLOP) dragged.current = true;
+    };
+
+    node.addEventListener('touchmove', onMove, { passive: false });
+    return () => node.removeEventListener('touchmove', onMove);
+  }, []);
+
   const rowCount = pointValues.length;
   const lastIndex = Math.max(0, categories.length - 1);
   const clamp = (i) => Math.max(0, Math.min(i, lastIndex));
@@ -104,12 +122,6 @@ export default function BoardWheel({
     touchStart.current = e.touches[0]?.clientY ?? null;
   };
 
-  const onTouchMove = (e) => {
-    if (touchStart.current === null) return;
-    const delta = (e.touches[0]?.clientY ?? 0) - touchStart.current;
-    if (Math.abs(delta) > DRAG_SLOP) dragged.current = true;
-  };
-
   const onTouchEnd = (e) => {
     if (touchStart.current === null) return;
     const delta = (e.changedTouches[0]?.clientY ?? 0) - touchStart.current;
@@ -126,7 +138,6 @@ export default function BoardWheel({
       ref={wheelRef}
       className={`wheel ${reduceMotion ? 'no-motion' : ''}`}
       onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onKeyDown={onKeyDown}
       tabIndex={0}
