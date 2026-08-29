@@ -31,6 +31,7 @@ const initialState = {
   settings: {
     maxPlayers: 6,
     questionTimeLimit: 30000,
+    answerTimeLimit: 7000, // time to answer once buzzed in, close to the show's five
     enableDoubleJeopardy: true,
     enableDailyDouble: true,
     enableFinalJeopardy: true,

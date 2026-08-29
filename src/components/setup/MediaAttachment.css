@@ -1,0 +1,208 @@
+.media-attachment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.media-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Type selector */
+.media-type-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.media-type-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.media-type-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.media-type-btn.active {
+  background: rgba(214, 159, 76, 0.15);
+  border-color: rgba(214, 159, 76, 0.3);
+  color: var(--jeopardy-gold, #D69F4C);
+}
+
+/* Image dropzone */
+.media-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.media-dropzone:hover,
+.media-dropzone.drag-over {
+  border-color: rgba(214, 159, 76, 0.4);
+  background: rgba(214, 159, 76, 0.05);
+}
+
+.media-drop-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.media-drop-hint {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.media-compress-text {
+  font-size: 0.85rem;
+  color: rgba(214, 159, 76, 0.8);
+}
+
+/* Image preview */
+.media-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.media-preview-img {
+  max-height: 80px;
+  max-width: 140px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.media-remove-btn {
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  color: #fca5a5;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.media-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* YouTube section */
+.media-youtube-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.media-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-primary, #fff);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.media-input:focus {
+  border-color: rgba(214, 159, 76, 0.4);
+}
+
+.media-input.input-error {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Time inputs */
+.media-time-row {
+  display: flex;
+  gap: 10px;
+}
+
+.media-time-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.media-time-field label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.media-time-input {
+  width: 100%;
+  text-align: center;
+}
+
+/* Checkbox */
+.media-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.media-checkbox input[type="checkbox"] {
+  accent-color: var(--jeopardy-gold, #D69F4C);
+}
+
+/* Preview button */
+.media-preview-btn {
+  align-self: flex-start;
+  padding: 5px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.media-preview-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.media-yt-preview {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Alt text input */
+.media-alt-input {
+  margin-top: 4px;
+}
+
+/* Error */
+.media-error {
+  font-size: 0.75rem;
+  color: #fca5a5;
+}

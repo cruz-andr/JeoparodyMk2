@@ -66,7 +66,9 @@ export default function QuickplayPage() {
       const timer = setTimeout(() => {
         // Set players in room store before navigating
         const players = matchFound.players.map(p => ({
-          id: p.socketId, // Use socketId as player ID for quickplay
+          // Session id, not socket id: it is what every server event uses, and
+          // it survives a reconnect.
+          id: p.id,
           socketId: p.socketId,
           displayName: p.displayName,
           signature: p.signature || null,

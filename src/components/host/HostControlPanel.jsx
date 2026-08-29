@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socketClient } from '../../services/socket/socketClient';
+import MediaClueDisplay from '../media/MediaClueDisplay';
 import './HostControlPanel.css';
 
 // Format reaction time: show seconds for >= 1000ms, otherwise ms
@@ -37,6 +38,7 @@ export default function HostControlPanel({
   currentQuestion,
   buzzedPlayer,
   typedAnswers = [],
+  submittedPlayerIds = [],
   players = [],
   answerMode = 'verbal',
   buzzerOpen = false,
@@ -49,13 +51,14 @@ export default function HostControlPanel({
 
   const points = currentQuestion?.points || 0;
 
+  // Everyone the host is waiting on for an answer.
+  const answeringPlayers = players.filter(p => !p.isHost);
+  const hasSubmitted = (playerId) => submittedPlayerIds.includes(playerId);
+  const submittedCount = answeringPlayers.filter(p => hasSubmitted(p.id)).length;
+
   const handleJudge = (playerId, correct) => {
-    socketClient.emit('host:judge-answer', {
-      roomCode,
-      playerId,
-      correct,
-      points,
-    });
+    // The server scores from the board itself; `points` here is display only.
+    socketClient.emit('host:judge-answer', { roomCode, playerId, correct });
   };
 
   const handleSkipQuestion = () => {
@@ -150,6 +153,9 @@ export default function HostControlPanel({
             <span className="points-label">${points}</span>
           </div>
           <div className="question-content">
+            {currentQuestion.mediaType && (
+              <MediaClueDisplay question={currentQuestion} compact roomCode={roomCode} />
+            )}
             <p className="clue-text">{currentQuestion.answer}</p>
             <p className="answer-text">
               <strong>Answer:</strong> {currentQuestion.question}
@@ -185,6 +191,11 @@ export default function HostControlPanel({
               >
                 Close Buzzer
               </button>
+              {buzzerOpen && (
+                <span className="buzzer-waiting-hint">
+                  Waiting for a buzz&hellip;
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -211,6 +222,24 @@ export default function HostControlPanel({
           </div>
           {answerWindowOpen && (
             <p className="answer-window-hint">Players can now submit their answers...</p>
+          )}
+          {answeringPlayers.length > 0 && (
+            <div className="submission-tracker">
+              <span className="submission-count">
+                {submittedCount} of {answeringPlayers.length} answered
+              </span>
+              <div className="submission-pills">
+                {answeringPlayers.map(player => (
+                  <span
+                    key={player.id}
+                    className={`submission-pill ${hasSubmitted(player.id) ? 'in' : 'waiting'}`}
+                    title={hasSubmitted(player.id) ? 'Answer locked in' : 'Still answering'}
+                  >
+                    {player.displayName || player.name}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}

@@ -73,6 +73,17 @@ export function validateQuestionFile(data) {
           errors.push(`${prefix}: Options must be an array with at least 2 items`);
         }
       }
+
+      // Validate media fields if present
+      if (q.mediaType) {
+        const validTypes = ['image', 'youtube'];
+        if (!validTypes.includes(q.mediaType)) {
+          errors.push(`${prefix}: Invalid mediaType "${q.mediaType}" (must be image or youtube)`);
+        }
+        if (q.mediaType === 'youtube' && q.youtubeStart != null && q.youtubeEnd != null && q.youtubeEnd <= q.youtubeStart) {
+          errors.push(`${prefix}: YouTube end time must be after start time`);
+        }
+      }
     });
   });
 
@@ -114,6 +125,13 @@ function normalizeData(data) {
           answer: existing?.answer?.trim() || '',
           question: existing?.question?.trim() || '',
           options: existing?.options?.map((o) => o?.trim() || '') || ['', '', '', ''],
+          // Preserve media fields if present
+          mediaType: existing?.mediaType || null,
+          mediaData: existing?.mediaData || null,
+          youtubeStart: existing?.youtubeStart ?? null,
+          youtubeEnd: existing?.youtubeEnd ?? null,
+          audioOnly: existing?.audioOnly || false,
+          altText: existing?.altText || null,
         };
       }),
     })),
@@ -181,11 +199,20 @@ export function generateSampleTemplate() {
     version: 1,
     categories: Array.from({ length: 6 }, (_, i) => ({
       name: `CATEGORY ${i + 1}`,
-      questions: POINT_VALUES.map((points) => ({
+      questions: POINT_VALUES.map((points, qIdx) => ({
         points,
         answer: `Clue for $${points} question`,
         question: 'What is the answer?',
         options: ['Option A', 'Option B', 'Option C', 'Option D'],
+        // Media fields are optional — examples shown on first question only
+        ...(qIdx === 0 && i === 0 ? {
+          mediaType: 'youtube',
+          mediaData: 'dQw4w9WgXcQ',
+          youtubeStart: 0,
+          youtubeEnd: 30,
+          audioOnly: false,
+          altText: 'Example video clue',
+        } : {}),
       })),
     })),
     finalJeopardy: {

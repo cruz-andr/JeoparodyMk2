@@ -25,6 +25,7 @@ export class GameStateManager {
       },
       gameState: null,
       createdAt: Date.now(),
+      lastActiveAt: Date.now(),
     };
 
     this.rooms.set(roomCode, room);
@@ -43,19 +44,23 @@ export class GameStateManager {
       throw new Error('Game is in Final Jeopardy, cannot join');
     }
 
-    if (room.players.size >= room.settings.maxPlayers) {
+    if (!room.players.has(socket.sessionId) &&
+        room.players.size >= room.settings.maxPlayers) {
       throw new Error('Room is full');
     }
 
     const playerId = socket.sessionId;
-    const isLateJoin = room.status === 'in_progress';
+    const existing = room.players.get(playerId);
+    const isLateJoin = room.status === 'in_progress' && !existing;
     const player = {
       id: playerId,
       socketId: socket.id,
       displayName,
       signature,
-      score: 0,
-      isReady: isLateJoin ? true : false,
+      // Someone rejoining with the same session keeps what they earned —
+      // re-joining used to silently reset their score to zero.
+      score: existing?.score || 0,
+      isReady: existing?.isReady ?? (isLateJoin ? true : false),
       isConnected: true,
       isHost: playerId === room.hostId,
       waitingToJoin: isLateJoin && !!room.gameState?.currentQuestion,
@@ -92,10 +97,26 @@ export class GameStateManager {
     this.playerRooms.delete(socket.id);
     this.sessionRooms.delete(socket.sessionId);
 
+    // If the leaver held the pick, hand it to someone who is still here so the
+    // board does not sit waiting on a player who has gone.
+    this.reassignPickerIfNeeded(room, playerId);
+
     // If room is empty, delete it
     if (room.players.size === 0) {
-      this.rooms.delete(roomCode);
+      this.destroyRoom(roomCode);
     }
+  }
+
+  // If the player who left/was removed was the current picker, pass control on.
+  reassignPickerIfNeeded(room, departedId) {
+    if (!room.gameState || room.gameState.currentPickerId !== departedId) return null;
+
+    const next = room.type === 'host'
+      ? room.hostId
+      : this.getActivePlayerIds(room)[0] || null;
+
+    room.gameState.currentPickerId = next;
+    return next;
   }
 
   setPlayerReady(socket, roomCode, ready) {
@@ -155,7 +176,9 @@ export class GameStateManager {
 
       // Place Daily Doubles if setting enabled
       if (room.settings.enableDailyDouble) {
-        room.gameState.dailyDoubles = this.placeDailyDoubles(questions.length, 1);
+        room.gameState.dailyDoubles = this.placeDailyDoubles(
+          questions.length, 1, questions[0]?.length || 5
+        );
       } else {
         room.gameState.dailyDoubles = [];
       }
@@ -169,38 +192,8 @@ export class GameStateManager {
     }
   }
 
-  placeDailyDoubles(categoryCount, round) {
-    const count = round === 1 ? 1 : 2;
-    const dailyDoubles = [];
-    const weights = [0, 0.1, 0.2, 0.3, 0.4]; // Row weights - favor harder questions
-
-    while (dailyDoubles.length < count) {
-      // Weighted random row selection (skip row 0 - easiest)
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
-      let random = Math.random() * totalWeight;
-      let pointIndex = 0;
-
-      for (let i = 0; i < weights.length; i++) {
-        random -= weights[i];
-        if (random <= 0) {
-          pointIndex = i;
-          break;
-        }
-      }
-
-      const categoryIndex = Math.floor(Math.random() * categoryCount);
-
-      // Check if this position is already taken
-      const exists = dailyDoubles.some(
-        dd => dd.categoryIndex === categoryIndex && dd.pointIndex === pointIndex
-      );
-
-      if (!exists && pointIndex > 0) {
-        dailyDoubles.push({ categoryIndex, pointIndex });
-      }
-    }
-
-    return dailyDoubles;
+  placeDailyDoubles(categoryCount, round, rowCount) {
+    return placeDailyDoubles(categoryCount, round, rowCount);
   }
 
   selectQuestion(socket, roomCode, categoryIndex, pointIndex) {
@@ -218,8 +211,7 @@ export class GameStateManager {
 
     question.revealed = true;
     room.gameState.currentQuestion = { ...question, categoryIndex, pointIndex };
-    room.gameState.buzzes = {};
-    room.gameState.playersWhoBuzzed = new Set();
+    this.resetBuzzState(room.gameState);
 
     // Check if this is a Daily Double
     const isDailyDouble = room.gameState.dailyDoubles?.some(
@@ -238,10 +230,8 @@ export class GameStateManager {
       categoryIndex,
       pointIndex,
       question: {
-        category: question.category,
-        points: question.points,
-        answer: question.answer,
-        question: question.question,
+        ...question,
+        revealed: undefined,
       },
       isDailyDouble,
       pickerId: playerId,
@@ -285,23 +275,49 @@ export class GameStateManager {
     }
   }
 
+  // Players who can actually act on a question: connected, not the host of a
+  // hosted room, and not a late joiner still waiting to be dealt in. Anything
+  // that waits on "everyone" must use this, otherwise a disconnected or
+  // waiting player stalls the room forever.
+  getActivePlayerIds(room) {
+    if (!room) return [];
+    const ids = [];
+    for (const [id, player] of room.players) {
+      if (!player.isConnected) continue;
+      if (player.waitingToJoin) continue;
+      if (room.type === 'host' && id === room.hostId) continue;
+      ids.push(id);
+    }
+    return ids;
+  }
+
+  countActivePlayers(roomCode) {
+    return this.getActivePlayerIds(this.rooms.get(roomCode)).length;
+  }
+
   recordBuzz(roomCode, playerId, reactionTime) {
     const room = this.rooms.get(roomCode);
-    if (!room || !room.gameState) return;
+    if (!room || !room.gameState) return false;
 
-    // Mark that a buzz was received (guards against stale timeout callbacks)
-    room.gameState.buzzReceived = true;
+    // Reject buzzes that arrive outside an open window, or from a player who
+    // already had their shot at this clue. Rejected buzzes must NOT mark the
+    // question as answered — doing so used to suppress the buzz timeout and
+    // freeze the room with no winner and no timer.
+    if (!room.gameState.buzzWindowOpen) return false;
+    if (room.gameState.buzzedPlayerId) return false;
+    if (room.gameState.playersWhoBuzzed?.has(playerId)) return false;
 
     // Calculate reaction time server-side (more accurate, cheat-proof)
     const serverReactionTime = room.gameState.buzzWindowStartTime
       ? Date.now() - room.gameState.buzzWindowStartTime
       : reactionTime;
 
-    // Only record if they haven't already buzzed for this question
-    if (!room.gameState.playersWhoBuzzed.has(playerId)) {
-      room.gameState.buzzes[playerId] = serverReactionTime;
-      room.gameState.playersWhoBuzzed.add(playerId);
-    }
+    room.gameState.buzzes[playerId] = serverReactionTime;
+    room.gameState.playersWhoBuzzed.add(playerId);
+
+    // Mark that a valid buzz was received (guards against stale timeout callbacks)
+    room.gameState.buzzReceived = true;
+    return true;
   }
 
   determineBuzzerWinner(roomCode) {
@@ -324,7 +340,7 @@ export class GameStateManager {
     };
   }
 
-  handleAnswer(roomCode, playerId, correct, points) {
+  handleAnswer(roomCode, playerId, correct) {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
@@ -335,6 +351,10 @@ export class GameStateManager {
 
     const player = room.players.get(playerId);
     if (!player) return null;
+
+    // Points come from the board, never from the client — a client-supplied
+    // value let any player award themselves an arbitrary score.
+    const points = room.gameState.currentQuestion?.points || 0;
 
     // Capture correct answer before potentially clearing state
     const correctAnswer = room.gameState.currentQuestion?.question;
@@ -359,10 +379,15 @@ export class GameStateManager {
     } else {
       player.score = (player.score || 0) - points;
 
-      // Check if others can still buzz
-      const totalPlayers = room.players.size;
-      const playersBuzzed = room.gameState.playersWhoBuzzed?.size || 0;
-      const canBuzzAgain = playersBuzzed < totalPlayers;
+      // Check if others can still buzz. Only players who can actually act count:
+      // counting disconnected players (or the host of a hosted room) here left
+      // the clue open forever waiting on a buzz that could never arrive.
+      const activeIds = this.getActivePlayerIds(room);
+      const buzzed = room.gameState.playersWhoBuzzed || new Set();
+      const skipped = room.gameState.skippedPlayers || new Set();
+      const canBuzzAgain = activeIds.some(
+        id => !buzzed.has(id) && !skipped.has(id)
+      );
 
       if (!canBuzzAgain) {
         // No one left to buzz - move on, keep same picker
@@ -414,9 +439,11 @@ export class GameStateManager {
     room.gameState.continuedPlayers = room.gameState.continuedPlayers || new Set();
     room.gameState.continuedPlayers.add(playerId);
 
-    // Check if all players have continued
-    const allPlayers = Array.from(room.players.keys());
-    return allPlayers.every(id => room.gameState.continuedPlayers.has(id));
+    // Check if all players who can act have continued (a disconnected player
+    // will never click Continue, so waiting on them hangs the board)
+    const activeIds = this.getActivePlayerIds(room);
+    if (activeIds.length === 0) return true;
+    return activeIds.every(id => room.gameState.continuedPlayers.has(id));
   }
 
   // Reset continue tracking (called when new question is selected)
@@ -449,14 +476,26 @@ export class GameStateManager {
     if (room.gameState.currentPickerId !== playerId) return null;
     if (!room.gameState.isDailyDouble) return null;
 
-    room.gameState.dailyDoubleWager = wager;
+    const clamped = this.clampDailyDoubleWager(room, playerId, wager);
+    room.gameState.dailyDoubleWager = clamped;
     room.gameState.phase = 'dailyDoubleQuestion';
 
     return {
       playerId,
-      wager,
+      wager: clamped,
       question: room.gameState.currentQuestion,
     };
+  }
+
+  // Jeopardy rule: a Daily Double wager is at least $5 and at most the greater
+  // of the player's score and the highest clue value on the current board.
+  clampDailyDoubleWager(room, playerId, wager) {
+    const player = room.players.get(playerId);
+    const score = player?.score || 0;
+    const maxBoardValue = (room.gameState?.currentRound || 1) === 1 ? 1000 : 2000;
+    const max = Math.max(score, maxBoardValue, 5);
+    const requested = Number.isFinite(Number(wager)) ? Math.floor(Number(wager)) : 5;
+    return Math.min(Math.max(requested, 5), max);
   }
 
   handleDailyDoubleAnswer(roomCode, playerId, correct) {
@@ -510,7 +549,9 @@ export class GameStateManager {
 
     // Place Daily Doubles for round 2 if setting enabled (2 for Double Jeopardy)
     if (room.settings.enableDailyDouble) {
-      room.gameState.dailyDoubles = this.placeDailyDoubles(questions.length, 2);
+      room.gameState.dailyDoubles = this.placeDailyDoubles(
+        questions.length, 2, questions[0]?.length || 5
+      );
     } else {
       room.gameState.dailyDoubles = [];
     }
@@ -547,9 +588,12 @@ export class GameStateManager {
       eligiblePlayers: new Set(),
     };
 
-    // Only players with score >= 0 can participate
-    for (const [playerId, player] of room.players) {
-      if ((player.score || 0) >= 0) {
+    // Jeopardy rule: you need a positive score to play Final Jeopardy.
+    // Only players who can actually answer are counted, so a disconnected
+    // player never blocks the reveal.
+    for (const playerId of this.getActivePlayerIds(room)) {
+      const player = room.players.get(playerId);
+      if ((player.score || 0) > 0) {
         room.gameState.finalJeopardy.eligiblePlayers.add(playerId);
       }
     }
@@ -558,7 +602,20 @@ export class GameStateManager {
       category: randomFJ.category,
       clue: randomFJ.clue,
       answer: randomFJ.answer,
+      // Zero means nobody can play, and the round must be skipped rather than
+      // left waiting on wagers that can never arrive.
+      eligibleCount: room.gameState.finalJeopardy.eligiblePlayers.size,
     };
+  }
+
+  // Eligible players who are still here. A player who drops out after the
+  // eligibility snapshot must not hold the round open for everyone else.
+  getFJParticipants(room) {
+    const fj = room.gameState?.finalJeopardy;
+    if (!fj) return [];
+    return Array.from(fj.eligiblePlayers).filter(
+      id => room.players.get(id)?.isConnected
+    );
   }
 
   submitFJWager(roomCode, playerId, wager) {
@@ -570,10 +627,14 @@ export class GameStateManager {
     // Only eligible players can wager
     if (!fj.eligiblePlayers.has(playerId)) return false;
 
-    fj.wagers.set(playerId, wager);
+    // Jeopardy rule: you can wager anything from $0 up to your own score.
+    const score = room.players.get(playerId)?.score || 0;
+    const requested = Number.isFinite(Number(wager)) ? Math.floor(Number(wager)) : 0;
+    fj.wagers.set(playerId, Math.min(Math.max(requested, 0), Math.max(score, 0)));
 
-    // Check if all eligible players have wagered
-    return fj.wagers.size >= fj.eligiblePlayers.size;
+    // Check if everyone still playing has wagered
+    const participants = this.getFJParticipants(room);
+    return participants.length > 0 && participants.every(id => fj.wagers.has(id));
   }
 
   submitFJAnswer(roomCode, playerId, answer) {
@@ -587,8 +648,9 @@ export class GameStateManager {
 
     fj.answers.set(playerId, answer);
 
-    // Check if all eligible players have answered
-    return fj.answers.size >= fj.eligiblePlayers.size;
+    // Check if everyone still playing has answered
+    const participants = this.getFJParticipants(room);
+    return participants.length > 0 && participants.every(id => fj.answers.has(id));
   }
 
   getFJResults(roomCode) {
@@ -596,6 +658,10 @@ export class GameStateManager {
     if (!room || !room.gameState?.finalJeopardy) return [];
 
     const fj = room.gameState.finalJeopardy;
+
+    // Scoring mutates player totals, so only ever run it once per game.
+    if (fj.results) return fj.results;
+
     const results = [];
 
     for (const playerId of fj.eligiblePlayers) {
@@ -605,13 +671,9 @@ export class GameStateManager {
       const wager = fj.wagers.get(playerId) || 0;
       const answer = fj.answers.get(playerId) || '';
 
-      // Simple answer validation (normalize and compare)
-      const normalize = (s) => s.toLowerCase()
-        .replace(/^(what|who|where|when|why|how)\s+(is|are|was|were)\s+/i, '')
-        .replace(/[^a-z0-9]/g, '')
-        .trim();
-
-      const correct = normalize(answer) === normalize(fj.answer);
+      // Graded the same way as every other answer, so a typo or the question
+      // form ("What is ...?") does not cost someone the game.
+      const correct = this.fuzzyMatchAnswer(answer, fj.answer).isCorrect;
 
       // Calculate final score
       const previousScore = player.score || 0;
@@ -633,6 +695,7 @@ export class GameStateManager {
     // Sort by final score (highest first)
     results.sort((a, b) => b.finalScore - a.finalScore);
 
+    fj.results = results;
     return results;
   }
 
@@ -715,13 +778,7 @@ export class GameStateManager {
   }
 
   validateAnswer(playerAnswer, correctAnswer) {
-    // Simple validation - in production, use AI
-    const normalize = (s) => s.toLowerCase()
-      .replace(/^(what|who|where|when|why|how)\s+(is|are|was|were)\s+/i, '')
-      .replace(/[^a-z0-9]/g, '')
-      .trim();
-
-    return normalize(playerAnswer) === normalize(correctAnswer);
+    return this.fuzzyMatchAnswer(playerAnswer, correctAnswer).isCorrect;
   }
 
   // Matchmaking
@@ -790,6 +847,10 @@ export class GameStateManager {
     return {
       roomCode,
       players: matchedPlayers.map(p => ({
+        // The session id is how the server keys players everywhere else, so it
+        // has to travel with the match. Clients that keyed off socketId never
+        // matched a score update or a turn.
+        id: p.socket.sessionId,
         socketId: p.socket.id,
         displayName: p.displayName,
         signature: p.signature,
@@ -874,12 +935,40 @@ export class GameStateManager {
   cleanupStaleRooms() {
     const now = Date.now();
     const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    const emptyRoomGrace = 30 * 60 * 1000; // 30 minutes with nobody connected
 
     for (const [code, room] of this.rooms) {
-      if (now - room.createdAt > maxAge && room.status !== 'in_progress') {
-        this.rooms.delete(code);
+      const anyoneConnected = Array.from(room.players.values()).some(p => p.isConnected);
+
+      if (anyoneConnected) {
+        room.lastActiveAt = now;
+        continue;
       }
+
+      // An abandoned in-progress game used to live forever, holding its
+      // players, questions and pending timers in memory.
+      const idleSince = room.lastActiveAt || room.createdAt;
+      const expired = now - room.createdAt > maxAge || now - idleSince > emptyRoomGrace;
+      if (expired) this.destroyRoom(code);
     }
+  }
+
+  destroyRoom(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return;
+
+    if (room.buzzTimeout) clearTimeout(room.buzzTimeout);
+    if (room.answerTimeout) clearTimeout(room.answerTimeout);
+    if (room.autoOpenTimer) clearTimeout(room.autoOpenTimer);
+
+    for (const [playerId, player] of room.players) {
+      if (this.sessionRooms.get(playerId) === roomCode) {
+        this.sessionRooms.delete(playerId);
+      }
+      if (player.socketId) this.playerRooms.delete(player.socketId);
+    }
+
+    this.rooms.delete(roomCode);
   }
 
   // =====================
@@ -905,6 +994,52 @@ export class GameStateManager {
     return { success: true };
   }
 
+  // Everything that must not survive from one clue to the next. recordBuzz
+  // refuses a buzz while buzzedPlayerId is set, so leaving it behind used to
+  // kill the buzzer for the rest of the game.
+  resetBuzzState(gameState) {
+    gameState.buzzedPlayerId = null;
+    gameState.buzzes = {};
+    gameState.buzzWindowOpen = false;
+    gameState.buzzReceived = false;
+    gameState.playersWhoBuzzed = new Set();
+    gameState.skippedPlayers = new Set();
+  }
+
+  // Host-mode answer tracking is created when a clue is dealt, but clients can
+  // emit an answer at any moment. Touching these maps before they exist threw a
+  // TypeError inside the socket handler, which took the whole server down.
+  ensureAnswerState(room) {
+    const gs = room.gameState;
+    if (!gs) return null;
+
+    gs.typedAnswers = gs.typedAnswers || new Map();
+    gs.mcSelections = gs.mcSelections || new Map();
+    gs.autoGradeResults = gs.autoGradeResults || new Map();
+    gs.judgedPlayers = gs.judgedPlayers || new Set();
+    return gs;
+  }
+
+  // Multiple-choice options are authored with the correct answer first, so they
+  // must be shuffled before players ever see them — otherwise the answer is
+  // always "A". The shuffled index is kept server-side for scoring.
+  prepareMultipleChoice(room, question) {
+    if (!Array.isArray(question?.options) || question.options.length === 0) {
+      room.gameState.mcCorrectIndex = null;
+      return question;
+    }
+
+    const options = question.options.slice(0, 4);
+    const correct = options[0];
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+
+    room.gameState.mcCorrectIndex = options.indexOf(correct);
+    return { ...question, options };
+  }
+
   // Host-only question selection
   selectQuestionHostMode(socket, roomCode, categoryIndex, pointIndex) {
     const room = this.rooms.get(roomCode);
@@ -921,14 +1056,15 @@ export class GameStateManager {
     if (!question || question.revealed) return null;
 
     question.revealed = true;
-    room.gameState.currentQuestion = { ...question, categoryIndex, pointIndex };
+    const served = this.prepareMultipleChoice(room, question);
+    room.gameState.currentQuestion = { ...served, categoryIndex, pointIndex };
 
     // Clear previous answer tracking
     room.gameState.typedAnswers = new Map();
     room.gameState.mcSelections = new Map();
     room.gameState.autoGradeResults = new Map();
-    room.gameState.buzzes = {};
-    room.gameState.playersWhoBuzzed = new Set();
+    room.gameState.judgedPlayers = new Set();
+    this.resetBuzzState(room.gameState);
 
     // Check if this is a Daily Double
     const isDailyDouble = room.gameState.dailyDoubles?.some(
@@ -947,11 +1083,8 @@ export class GameStateManager {
       categoryIndex,
       pointIndex,
       question: {
-        category: question.category,
-        points: question.points,
-        answer: question.answer,
-        question: question.question,
-        options: question.options,
+        ...served,
+        revealed: undefined,
       },
       isDailyDouble,
       pickerId: playerId,
@@ -961,7 +1094,7 @@ export class GameStateManager {
   // Record typed answer from player
   submitTypedAnswer(roomCode, playerId, answer) {
     const room = this.rooms.get(roomCode);
-    if (!room?.gameState) return null;
+    if (!this.ensureAnswerState(room)) return null;
 
     // Prevent duplicate submissions
     if (room.gameState.typedAnswers.has(playerId)) {
@@ -973,10 +1106,10 @@ export class GameStateManager {
       submittedAt: Date.now(),
     });
 
-    // Check if all non-host players have answered
-    const nonHostPlayers = Array.from(room.players.values())
-      .filter(p => !p.isHost && p.isConnected);
-    const allAnswered = room.gameState.typedAnswers.size >= nonHostPlayers.length;
+    // Wait only on players who can actually answer this clue — a disconnected
+    // player or a late joiner still queued would otherwise never submit.
+    const expected = this.countActivePlayers(roomCode);
+    const allAnswered = room.gameState.typedAnswers.size >= expected;
 
     return { success: true, allAnswered };
   }
@@ -984,7 +1117,7 @@ export class GameStateManager {
   // Record MC selection from player
   submitMCSelection(roomCode, playerId, optionIndex) {
     const room = this.rooms.get(roomCode);
-    if (!room?.gameState) return null;
+    if (!this.ensureAnswerState(room)) return null;
 
     if (room.gameState.mcSelections.has(playerId)) {
       return { success: false, error: 'Already selected' };
@@ -992,10 +1125,9 @@ export class GameStateManager {
 
     room.gameState.mcSelections.set(playerId, optionIndex);
 
-    // Check if all non-host players have selected
-    const nonHostPlayers = Array.from(room.players.values())
-      .filter(p => !p.isHost && p.isConnected);
-    const allSelected = room.gameState.mcSelections.size >= nonHostPlayers.length;
+    // Same eligibility rule as typed answers: only players who can act count.
+    const expected = this.countActivePlayers(roomCode);
+    const allSelected = room.gameState.mcSelections.size >= expected;
 
     return { success: true, allSelected };
   }
@@ -1006,7 +1138,7 @@ export class GameStateManager {
     if (!room?.gameState) return [];
 
     const question = room.gameState.currentQuestion;
-    const correctIndex = 0; // First option is always correct
+    const correctIndex = room.gameState.mcCorrectIndex ?? 0;
     const points = question?.points || 0;
     const results = [];
 
@@ -1027,13 +1159,17 @@ export class GameStateManager {
       }
     }
 
-    return results;
+    // The clue is done; clear it so a reconnect lands back on the board.
+    room.gameState.currentQuestion = null;
+    room.gameState.phase = 'playing';
+
+    return { results, correctIndex, nextPickerId: room.hostId };
   }
 
   // Auto-grade typed answers using fuzzy matching
   autoGradeAnswers(roomCode) {
     const room = this.rooms.get(roomCode);
-    if (!room?.gameState) return [];
+    if (!this.ensureAnswerState(room)) return [];
 
     const question = room.gameState.currentQuestion;
     const correctAnswer = question?.question || '';
@@ -1057,28 +1193,37 @@ export class GameStateManager {
 
   // Fuzzy match answer against correct answer
   fuzzyMatchAnswer(playerAnswer, correctAnswer) {
-    const normalize = (s) => s.toLowerCase()
-      .replace(/^(what|who|where|when|why|how)\s+(is|are|was|were)\s+/i, '')
-      .replace(/[^a-z0-9\s]/g, '')
-      .trim();
+    const player = normalizeAnswer(playerAnswer);
+    const correct = normalizeAnswer(correctAnswer);
 
-    const normalizedPlayer = normalize(playerAnswer);
-    const normalizedCorrect = normalize(correctAnswer);
+    if (!player || !correct) {
+      return { isCorrect: false, confidence: 0, reason: 'No answer given' };
+    }
 
     // Exact match
-    if (normalizedPlayer === normalizedCorrect) {
+    if (player === correct) {
       return { isCorrect: true, confidence: 1.0, reason: 'Exact match' };
     }
 
-    // Contains match
-    if (normalizedPlayer.includes(normalizedCorrect) ||
-        normalizedCorrect.includes(normalizedPlayer)) {
-      return { isCorrect: true, confidence: 0.8, reason: 'Partial match' };
+    // Saying more than the answer is fine — "the novel Moby Dick" for
+    // "Moby Dick" is how people actually answer.
+    if (correct.length >= MIN_CONTAINMENT_LENGTH && player.includes(correct)) {
+      return { isCorrect: true, confidence: 0.9, reason: 'Answer included' };
+    }
+
+    // Saying less is only accepted when it covers most of the answer. An
+    // unguarded substring test marked a single stray letter correct, because
+    // "e" is contained in "Beethoven".
+    if (player.length >= MIN_CONTAINMENT_LENGTH && correct.includes(player)) {
+      const coverage = player.length / correct.length;
+      if (coverage >= MIN_COVERAGE) {
+        return { isCorrect: true, confidence: 0.8, reason: 'Partial match' };
+      }
     }
 
     // Levenshtein distance for typos
-    const distance = this.levenshteinDistance(normalizedPlayer, normalizedCorrect);
-    const maxLen = Math.max(normalizedPlayer.length, normalizedCorrect.length);
+    const distance = this.levenshteinDistance(player, correct);
+    const maxLen = Math.max(player.length, correct.length);
     const similarity = maxLen > 0 ? 1 - (distance / maxLen) : 0;
 
     if (similarity >= 0.85) {
@@ -1117,19 +1262,44 @@ export class GameStateManager {
   }
 
   // Host judges an answer
-  hostJudgeAnswer(roomCode, hostId, playerId, correct, points) {
+  hostJudgeAnswer(roomCode, hostId, playerId, correct) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostId) return null;
+    if (room?.hostId !== hostId) return null;
+    if (!this.ensureAnswerState(room)) return null;
 
     const player = room.players.get(playerId);
     if (!player) return null;
 
+    // One payout per player per clue — a double-clicked judge button used to
+    // award the points twice.
+    const judged = room.gameState.judgedPlayers;
+    if (judged.has(playerId)) return null;
+    judged.add(playerId);
+
+    // Value comes from the board, not the client (see handleAnswer).
+    const points = room.gameState.currentQuestion?.points || 0;
     const pointsToApply = correct ? points : -points;
     player.score = (player.score || 0) + pointsToApply;
 
-    // Clear current question state after judging (so reconnect returns to board)
-    room.gameState.currentQuestion = null;
-    room.gameState.buzzedPlayerId = null;
+    // In verbal mode exactly one player buzzed, so the clue is done. In typed
+    // and multiple-choice modes the host works through every submission, and
+    // clearing the clue after the first judgement dropped its point value to
+    // zero for everyone judged afterwards.
+    const answerMode = room.settings?.answerMode || 'verbal';
+    const submitted = answerMode === 'verbal'
+      ? null
+      : new Set([
+          ...room.gameState.typedAnswers.keys(),
+          ...room.gameState.mcSelections.keys(),
+        ]);
+    const questionClosed = submitted === null
+      || Array.from(submitted).every(id => judged.has(id));
+
+    if (questionClosed) {
+      room.gameState.currentQuestion = null;
+      room.gameState.phase = 'playing';
+      this.resetBuzzState(room.gameState);
+    }
 
     return {
       playerId,
@@ -1137,6 +1307,7 @@ export class GameStateManager {
       correct,
       points: pointsToApply,
       newScore: player.score,
+      questionClosed,
       // Host always picks next in host mode
       nextPickerId: hostId,
     };
@@ -1170,15 +1341,18 @@ export class GameStateManager {
   // Host skips current question
   skipQuestion(roomCode, hostId) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostId) return null;
+    if (room?.hostId !== hostId) return null;
+    if (!this.ensureAnswerState(room)) return null;
 
     // Clear current question state
     room.gameState.currentQuestion = null;
     room.gameState.typedAnswers = new Map();
     room.gameState.mcSelections = new Map();
     room.gameState.autoGradeResults = new Map();
+    room.gameState.judgedPlayers = new Set();
     room.gameState.phase = 'playing';
     room.gameState.isDailyDouble = false;
+    this.resetBuzzState(room.gameState);
 
     return { success: true };
   }
@@ -1199,13 +1373,15 @@ export class GameStateManager {
       this.playerRooms.delete(socketId);
     }
 
-    return { playerId, socketId };
+    const nextPickerId = this.reassignPickerIfNeeded(room, playerId);
+
+    return { playerId, socketId, nextPickerId };
   }
 
   // Get all typed answers for host view
   getTypedAnswers(roomCode) {
     const room = this.rooms.get(roomCode);
-    if (!room?.gameState) return [];
+    if (!this.ensureAnswerState(room)) return [];
 
     const results = [];
     for (const [playerId, data] of room.gameState.typedAnswers) {
@@ -1225,12 +1401,12 @@ export class GameStateManager {
   // Open answer window for host mode
   openHostAnswerWindow(roomCode) {
     const room = this.rooms.get(roomCode);
-    if (room && room.gameState) {
-      room.gameState.answerWindowOpen = true;
-      room.gameState.answerWindowStartTime = Date.now();
-      room.gameState.typedAnswers = new Map();
-      room.gameState.mcSelections = new Map();
-    }
+    if (!this.ensureAnswerState(room)) return;
+
+    room.gameState.answerWindowOpen = true;
+    room.gameState.answerWindowStartTime = Date.now();
+    room.gameState.typedAnswers = new Map();
+    room.gameState.mcSelections = new Map();
   }
 
   // Close answer window
@@ -1285,16 +1461,16 @@ export class GameStateManager {
     room.gameState.skippedPlayers.add(playerId);
 
     // Players who already buzzed are excluded from skip eligibility
-    const totalPlayers = room.players.size;
-    const alreadyBuzzed = room.gameState.playersWhoBuzzed?.size || 0;
-    const eligible = totalPlayers - alreadyBuzzed;
-    const skipped = room.gameState.skippedPlayers.size;
-    const allSkipped = skipped >= eligible;
+    const buzzed = room.gameState.playersWhoBuzzed || new Set();
+    const eligibleIds = this.getActivePlayerIds(room).filter(id => !buzzed.has(id));
+    const skippedSet = room.gameState.skippedPlayers;
+    const skipped = eligibleIds.filter(id => skippedSet.has(id)).length;
+    const allSkipped = eligibleIds.length > 0 && skipped >= eligibleIds.length;
 
     return {
       allSkipped,
       skippedCount: skipped,
-      totalEligible: eligible,
+      totalEligible: eligibleIds.length,
     };
   }
 
@@ -1311,4 +1487,60 @@ export class GameStateManager {
     }
     return activated;
   }
+}
+
+// Shortest answer that may be matched by containment rather than in full.
+const MIN_CONTAINMENT_LENGTH = 4;
+// How much of the real answer a shorter response must cover to count.
+const MIN_COVERAGE = 0.6;
+
+// Strips everything that should not decide whether an answer is right: the
+// "What is ...?" wrapper, punctuation, casing, a leading article, and any
+// irregular spacing.
+export function normalizeAnswer(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/^\s*(what|who|where|when|why|how)\s+(is|are|was|were)\s+/, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/^(the|a|an)\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Weighted Daily Double placement. Rows are weighted toward the harder (higher
+// value) clues, and — as on the show — Double Jeopardy's two Daily Doubles
+// never land in the same category.
+//
+// rowCount is taken from the board rather than assumed to be five: an imported
+// or hand-built board with fewer rows used to have its Daily Double placed on a
+// row that does not exist, so it never triggered.
+export function placeDailyDoubles(categoryCount, round, rowCount = 5) {
+  const count = round === 1 ? 1 : 2;
+  if (categoryCount < 1 || rowCount < 1) return [];
+
+  // Weight by row index, so the cheapest row is skipped and the dearest row is
+  // likeliest. On a standard five-row board that is 10/20/30/40%.
+  const weights = Array.from({ length: rowCount }, (_, i) => i);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  const pickRow = () => {
+    if (totalWeight === 0) return 0; // single-row board
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < rowCount; i++) {
+      random -= weights[i];
+      if (random <= 0 && weights[i] > 0) return i;
+    }
+    return rowCount - 1;
+  };
+
+  const available = Array.from({ length: categoryCount }, (_, i) => i);
+  const dailyDoubles = [];
+
+  while (dailyDoubles.length < count && available.length > 0) {
+    const pick = Math.floor(Math.random() * available.length);
+    const [categoryIndex] = available.splice(pick, 1);
+    dailyDoubles.push({ categoryIndex, pointIndex: pickRow() });
+  }
+
+  return dailyDoubles;
 }

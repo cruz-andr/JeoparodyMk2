@@ -13,6 +13,9 @@ const initialState = {
   // Answer Mode
   answerMode: 'verbal', // 'verbal' | 'typed' | 'multiple_choice' | 'auto_grade'
 
+  // Display Mode
+  projectorMode: false, // true = players get controller-only UI, host shows board on projector
+
   // Content Source
   contentSource: 'ai', // 'ai' | 'import'
 
@@ -42,7 +45,22 @@ const initialState = {
 //   question: string,     // The correct response
 //   options: string[],    // For multiple choice (4 options)
 //   revealed: false,
+//   mediaType: null | 'image' | 'youtube',
+//   mediaData: null | string,  // compressed base64 WebP (image) or YouTube video ID
+//   youtubeStart: null | number, // seconds
+//   youtubeEnd: null | number,   // seconds
+//   audioOnly: false,     // hide YT video, play audio only
+//   altText: null | string,
 // }
+
+const MEDIA_DEFAULTS = {
+  mediaType: null,
+  mediaData: null,
+  youtubeStart: null,
+  youtubeEnd: null,
+  audioOnly: false,
+  altText: null,
+};
 
 export const useHostStore = create((set, get) => ({
   ...initialState,
@@ -72,6 +90,9 @@ export const useHostStore = create((set, get) => ({
 
   // Answer Mode
   setAnswerMode: (mode) => set({ answerMode: mode }),
+
+  // Display Mode
+  setProjectorMode: (enabled) => set({ projectorMode: enabled }),
 
   // Content Source
   setContentSource: (source) => {
@@ -139,6 +160,7 @@ export const useHostStore = create((set, get) => ({
         question: '',
         options: ['', '', '', ''],
         revealed: false,
+        ...MEDIA_DEFAULTS,
       }))
     );
     set({ questions, categories });
@@ -155,6 +177,7 @@ export const useHostStore = create((set, get) => ({
         question: q.question,
         options: q.options || ['', '', '', ''],
         revealed: false,
+        ...MEDIA_DEFAULTS,
       }));
     });
     set({ questions });
@@ -173,6 +196,14 @@ export const useHostStore = create((set, get) => ({
           question: q.question,
           options: q.options || ['', '', '', ''],
           revealed: false,
+          ...MEDIA_DEFAULTS,
+          // Preserve media fields from imported data if present
+          ...(q.mediaType && { mediaType: q.mediaType }),
+          ...(q.mediaData && { mediaData: q.mediaData }),
+          ...(q.youtubeStart != null && { youtubeStart: q.youtubeStart }),
+          ...(q.youtubeEnd != null && { youtubeEnd: q.youtubeEnd }),
+          ...(q.audioOnly && { audioOnly: q.audioOnly }),
+          ...(q.altText && { altText: q.altText }),
         }))
       );
       set({
@@ -234,6 +265,22 @@ export const useHostStore = create((set, get) => ({
             `Category ${catIdx + 1}, $${q.points}: Missing answer`
           );
         }
+        // Validate media fields
+        if (q.mediaType === 'youtube' && !q.mediaData) {
+          errors.push(
+            `Category ${catIdx + 1}, $${q.points}: YouTube video ID is missing`
+          );
+        }
+        if (q.mediaType === 'youtube' && q.youtubeStart != null && q.youtubeEnd != null && q.youtubeEnd <= q.youtubeStart) {
+          errors.push(
+            `Category ${catIdx + 1}, $${q.points}: YouTube end time must be after start time`
+          );
+        }
+        if (q.mediaType === 'image' && !q.mediaData) {
+          errors.push(
+            `Category ${catIdx + 1}, $${q.points}: Image data is missing`
+          );
+        }
         // Validate MC options if in MC mode
         if (answerMode === 'multiple_choice') {
           const validOptions = q.options?.filter((o) => o && o.trim() !== '');
@@ -264,6 +311,12 @@ export const useHostStore = create((set, get) => ({
           question: q.question,
           options: q.options,
           revealed: false,
+          mediaType: q.mediaType || null,
+          mediaData: q.mediaData || null,
+          youtubeStart: q.youtubeStart ?? null,
+          youtubeEnd: q.youtubeEnd ?? null,
+          audioOnly: q.audioOnly || false,
+          altText: q.altText || null,
         }))
       ),
     };

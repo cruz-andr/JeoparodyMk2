@@ -24,6 +24,7 @@ export default function HostPage() {
     contentSubPhase,
     setContentSubPhase,
     answerMode,
+    projectorMode,
     contentSource,
     setContentSource,
     genre,
@@ -45,7 +46,7 @@ export default function HostPage() {
   // Reset host store on mount
   useEffect(() => {
     resetHost();
-  }, []);
+  }, [resetHost]);
 
   // Handle settings complete
   const handleSettingsComplete = () => {
@@ -118,6 +119,7 @@ export default function HostPage() {
       const { roomCode: newRoomCode } = await socketClient.createRoom('host', {
         maxPlayers: 30,
         answerMode: answerMode,
+        projectorMode: projectorMode,
         questionTimeLimit: settings.questionTimeLimit,
         enableDoubleJeopardy: settings.enableDoubleJeopardy,
         enableDailyDouble: settings.enableDailyDouble,
@@ -157,6 +159,7 @@ export default function HostPage() {
             categories: questionsData.categories,
             questions: questionsData.questions,
             answerMode: answerMode,
+            projectorMode: projectorMode,
           }
         }
       });

@@ -1,107 +1,90 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Howl, Howler } from 'howler';
-import { useAudioStore, useSettingsStore } from '../stores';
+import { useSettingsStore } from '../stores';
 
-// Audio file paths - these will need to be added to the project
+// Only files that actually ship in public/audio. Referencing a missing file
+// makes Howler log a load error on every page view.
 const AUDIO_FILES = {
   theme: '/audio/theme.mp3',
   dailyDouble: '/audio/daily-double.mp3',
   correct: '/audio/correct.mp3',
   wrong: '/audio/wrong.mp3',
-  timerTick: '/audio/timer-tick.mp3',
   finalJeopardy: '/audio/final-jeopardy.mp3',
-  buzzer: '/audio/buzzer.mp3',
 };
 
-export function useAudio() {
-  const soundsRef = useRef({});
-  const { registerSound, isLoaded } = useAudioStore();
-  const { soundEnabled, musicEnabled, volume } = useSettingsStore();
+// Long tracks that loop under the game rather than firing once.
+const MUSIC = new Set(['theme', 'finalJeopardy']);
 
-  // Initialize audio on mount
-  useEffect(() => {
-    // Set global volume
-    Howler.volume(volume);
+// The sound bank is a module singleton shared by every caller of useAudio.
+// It used to be per-component state guarded by an "already loaded" flag, which
+// meant the first component to mount loaded the files and every later one got
+// an empty bank — so AnswerFeedback's correct/wrong sounds never played.
+const sounds = {};
+let loaded = false;
 
-    // Only load if not already loaded
-    if (isLoaded) return;
+function loadSounds() {
+  if (loaded) return;
+  loaded = true;
 
-    // Create Howl instances for each sound
-    Object.entries(AUDIO_FILES).forEach(([name, path]) => {
-      try {
-        const isMusic = name === 'theme' || name === 'finalJeopardy';
-
-        const howl = new Howl({
-          src: [path],
-          loop: isMusic,
-          volume: volume,
-          preload: true,
-          onloaderror: (id, error) => {
-            console.warn(`Audio file not found: ${path}. Game will continue without this sound.`);
-          },
-        });
-
-        soundsRef.current[name] = howl;
-        registerSound(name, howl);
-      } catch (err) {
-        console.warn(`Could not load audio: ${name}`);
-      }
+  for (const [name, src] of Object.entries(AUDIO_FILES)) {
+    sounds[name] = new Howl({
+      src: [src],
+      loop: MUSIC.has(name),
+      preload: true,
+      onloaderror: () => {
+        console.warn(`Audio unavailable: ${src}. Continuing without it.`);
+      },
     });
+  }
+}
 
-    useAudioStore.getState().initAudio(Howl);
+export function useAudio() {
+  // Subscribe to each setting individually so an unrelated settings change
+  // does not re-render every component that plays a sound.
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const musicEnabled = useSettingsStore((s) => s.musicEnabled);
+  const volume = useSettingsStore((s) => s.volume);
 
-    // Cleanup on unmount
-    return () => {
-      Object.values(soundsRef.current).forEach((sound) => {
-        if (sound && sound.unload) {
-          sound.unload();
-        }
-      });
-    };
+  useEffect(() => {
+    loadSounds();
   }, []);
 
-  // Update volume when settings change
+  // Global volume covers every Howl at once. The bank is never unloaded —
+  // it outlives the components that use it.
   useEffect(() => {
     Howler.volume(volume);
   }, [volume]);
 
-  // Play sound effect
-  const playSound = useCallback((soundName) => {
+  const playSound = useCallback((name) => {
     if (!soundEnabled) return;
-
-    const sound = soundsRef.current[soundName];
-    if (sound) {
-      sound.play();
-    }
+    sounds[name]?.play();
   }, [soundEnabled]);
 
-  // Play music
-  const playMusic = useCallback((trackName) => {
+  const playMusic = useCallback((name) => {
     if (!musicEnabled) return;
-
-    const music = soundsRef.current[trackName];
-    if (music) {
-      music.play();
-    }
+    const track = sounds[name];
+    // Restarting a looping track that is already going would layer it on itself.
+    if (!track || track.playing()) return;
+    track.play();
   }, [musicEnabled]);
 
-  // Stop music
-  const stopMusic = useCallback((trackName) => {
-    const music = soundsRef.current[trackName];
-    if (music) {
-      music.stop();
-    }
+  const stopMusic = useCallback((name) => {
+    sounds[name]?.stop();
   }, []);
 
-  // Fade out music
-  const fadeOutMusic = useCallback((trackName, duration = 1000) => {
-    const music = soundsRef.current[trackName];
-    if (music) {
-      music.fade(music.volume(), 0, duration);
-      setTimeout(() => {
-        music.stop();
-      }, duration);
-    }
+  const fadeOutMusic = useCallback((name, duration = 1000) => {
+    const track = sounds[name];
+    if (!track?.playing()) return;
+
+    track.fade(track.volume(), 0, duration);
+    track.once('fade', () => {
+      track.stop();
+      track.volume(1); // restore so the next play is not silent
+    });
+  }, []);
+
+  const stopAll = useCallback(() => {
+    Object.values(sounds).forEach((s) => s.stop());
   }, []);
 
   return {
@@ -109,14 +92,15 @@ export function useAudio() {
     playMusic,
     stopMusic,
     fadeOutMusic,
-    playCorrect: () => playSound('correct'),
-    playWrong: () => playSound('wrong'),
-    playDailyDouble: () => playSound('dailyDouble'),
-    playTimerTick: () => playSound('timerTick'),
-    playBuzzer: () => playSound('buzzer'),
-    playTheme: () => playMusic('theme'),
-    stopTheme: () => stopMusic('theme'),
-    fadeOutTheme: (duration) => fadeOutMusic('theme', duration),
+    stopAll,
+    playCorrect: useCallback(() => playSound('correct'), [playSound]),
+    playWrong: useCallback(() => playSound('wrong'), [playSound]),
+    playDailyDouble: useCallback(() => playSound('dailyDouble'), [playSound]),
+    playTheme: useCallback(() => playMusic('theme'), [playMusic]),
+    stopTheme: useCallback(() => stopMusic('theme'), [stopMusic]),
+    fadeOutTheme: useCallback((d) => fadeOutMusic('theme', d), [fadeOutMusic]),
+    playFinalJeopardy: useCallback(() => playMusic('finalJeopardy'), [playMusic]),
+    stopFinalJeopardy: useCallback(() => stopMusic('finalJeopardy'), [stopMusic]),
   };
 }
 

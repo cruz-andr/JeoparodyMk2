@@ -3,6 +3,38 @@ import { GameStateManager } from './GameStateManager.js';
 
 const gameManager = new GameStateManager();
 
+// Lifecycle events (setting the board, ending rounds, starting Final Jeopardy)
+// change the game for everyone, so only the room's host may fire them. In
+// quickplay rooms there is no host, so the first player in acts as one.
+function isRoomController(roomCode, sessionId) {
+  const room = gameManager.rooms.get(roomCode);
+  if (!room) return false;
+  if (room.hostId) return room.hostId === sessionId;
+  return room.players.has(sessionId);
+}
+
+// Push the current typed answers to the host alone. Answers must never be
+// broadcast to the room — the other players have not answered yet.
+function sendTypedAnswersToHost(io, roomCode) {
+  const room = gameManager.rooms.get(roomCode);
+  const hostSocketId = room?.players.get(room.hostId)?.socketId;
+  if (!hostSocketId) return;
+
+  io.to(hostSocketId).emit('host:typed-answers-update', {
+    answers: gameManager.getTypedAnswers(roomCode),
+  });
+}
+
+// On the show a contestant gets about five seconds to answer once they have
+// buzzed in. Reusing the full clue timer here gave them the whole 30 seconds
+// and drained the tension out of every buzz. Seven is the default here because
+// the buzz window opens as the clue appears, so players are still reading.
+const DEFAULT_ANSWER_MS = 7000;
+const DEFAULT_BUZZ_MS = 30000;
+
+const buzzWindowMs = (room) => room?.settings?.questionTimeLimit || DEFAULT_BUZZ_MS;
+const answerWindowMs = (room) => room?.settings?.answerTimeLimit || DEFAULT_ANSWER_MS;
+
 // Debug flag - set DEBUG_GAME=true in .env to enable game debugging
 const DEBUG_GAME = process.env.DEBUG_GAME === 'true';
 
@@ -129,12 +161,14 @@ export function initializeSocketHandlers(io) {
 
     // Host starts game setup
     socket.on('game:start-setup', ({ roomCode }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game setup started for room ${roomCode}`);
       io.to(roomCode).emit('game:setup-started');
     });
 
     // Host sets categories
     socket.on('game:set-categories', ({ roomCode, categories }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Categories set for room ${roomCode}:`, categories);
       gameManager.setCategories(roomCode, categories);
       io.to(roomCode).emit('game:categories-set', { categories });
@@ -142,18 +176,21 @@ export function initializeSocketHandlers(io) {
 
     // Host selected a genre (sync to other players for viewing)
     socket.on('game:genre-selected', ({ roomCode, genre }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Genre selected for room ${roomCode}: ${genre}`);
       io.to(roomCode).emit('game:genre-selected', { genre });
     });
 
     // Host edits a category in real-time (sync to other players)
     socket.on('game:category-edited', ({ roomCode, index, value }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       // Broadcast to others (not back to sender)
       socket.to(roomCode).emit('game:category-edited', { index, value });
     });
 
     // Host sets questions and starts game
     socket.on('game:set-questions', ({ roomCode, questions, categories, firstPickerId }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Questions set for room ${roomCode}, first picker: ${firstPickerId}`);
       gameManager.setQuestions(roomCode, questions, categories, firstPickerId);
       io.to(roomCode).emit('game:questions-ready', { questions, categories, firstPickerId });
@@ -174,32 +211,48 @@ export function initializeSocketHandlers(io) {
         return;
       }
 
+      // A rejected buzz (window closed, or a player who already had their shot)
+      // must not touch the timers — cancelling the buzz timeout for one used to
+      // leave the room with no winner and no timer, frozen for good.
+      const accepted = gameManager.recordBuzz(roomCode, playerId, reactionTime);
+      if (!accepted) return;
+
       // Clear the server-side buzz timeout since someone buzzed
       gameManager.clearBuzzTimeout(roomCode);
-
-      gameManager.recordBuzz(roomCode, playerId, reactionTime);
 
       // Check if this is the first buzz (announce winner immediately for responsiveness)
       if (room && room.gameState.buzzes && Object.keys(room.gameState.buzzes).length === 1) {
         // First buzzer - announce them as winner after a brief delay
         setTimeout(() => {
+          // Half a second is long enough for the clue to be skipped, answered,
+          // or the room to be torn down. Re-read the live state rather than
+          // trusting the room captured when the buzz arrived.
+          const currentRoom = gameManager.rooms.get(roomCode);
+          if (!currentRoom?.gameState?.currentQuestion) return;
+
           const winner = gameManager.determineBuzzerWinner(roomCode);
           if (winner) {
-            const player = room.players.get(winner.playerId);
+            const player = currentRoom.players.get(winner.playerId);
             io.to(roomCode).emit('game:buzzer-winner', {
               playerId: winner.playerId,
               playerName: player?.displayName || 'Unknown',
               reactionTime: winner.reactionTime,
             });
 
-            // Start answer window and server-side answer timeout
             gameManager.startAnswerWindow(roomCode);
-            const answerDuration = room?.settings?.questionTimeLimit || 30000;
+
+            // In a host-run room the host judges every answer. Arming an
+            // auto-incorrect timer here docked the player and cleared the clue
+            // out from under the host's judge buttons.
+            if (currentRoom.type === 'host') return;
+
+            // Start server-side answer timeout
+            const answerDuration = answerWindowMs(currentRoom);
 
             gameManager.clearAnswerTimeout(roomCode);
-            room.answerTimeout = setTimeout(() => {
+            currentRoom.answerTimeout = setTimeout(() => {
               // Answer timeout - mark as incorrect automatically
-              const timeoutResult = gameManager.handleAnswer(roomCode, winner.playerId, false, room.gameState.currentQuestion?.points || 0);
+              const timeoutResult = gameManager.handleAnswer(roomCode, winner.playerId, false);
               if (timeoutResult) {
                 io.to(roomCode).emit('game:answer-result', {
                   ...timeoutResult,
@@ -209,9 +262,9 @@ export function initializeSocketHandlers(io) {
                 // If others can still buzz, restart buzz window with fresh timeout
                 if (timeoutResult.canBuzzAgain) {
                   gameManager.startBuzzWindow(roomCode);
-                  const buzzDuration = room?.settings?.questionTimeLimit || 30000;
+                  const buzzDuration = buzzWindowMs(currentRoom);
                   gameManager.clearBuzzTimeout(roomCode);
-                  room.buzzTimeout = setTimeout(() => {
+                  currentRoom.buzzTimeout = setTimeout(() => {
                     const currentRoom = gameManager.rooms.get(roomCode);
                     if (currentRoom?.gameState?.buzzReceived) return;
                     const btResult = gameManager.handleBuzzTimeout(roomCode);
@@ -233,13 +286,14 @@ export function initializeSocketHandlers(io) {
     });
 
     // Player submits answer
-    socket.on('game:submit-answer', ({ roomCode, correct, points, timeout }) => {
+    socket.on('game:submit-answer', ({ roomCode, correct }) => {
       const playerId = socket.sessionId;
 
       // Clear the server-side answer timeout since they answered
       gameManager.clearAnswerTimeout(roomCode);
 
-      const result = gameManager.handleAnswer(roomCode, playerId, correct, points);
+      // `points` deliberately ignored if sent — the board is the only source.
+      const result = gameManager.handleAnswer(roomCode, playerId, correct);
       if (result) {
         io.to(roomCode).emit('game:answer-result', result);
 
@@ -256,7 +310,7 @@ export function initializeSocketHandlers(io) {
           const room = gameManager.rooms.get(roomCode);
           if (room) {
             gameManager.startBuzzWindow(roomCode);
-            const buzzDuration = room?.settings?.questionTimeLimit || 30000;
+            const buzzDuration = buzzWindowMs(room);
             gameManager.clearBuzzTimeout(roomCode);
             room.buzzTimeout = setTimeout(() => {
               const currentRoom = gameManager.rooms.get(roomCode);
@@ -287,11 +341,12 @@ export function initializeSocketHandlers(io) {
     });
 
     // Buzz timer expired - no one buzzed in time (legacy client event - server now handles this)
-    socket.on('game:buzz-timeout', ({ roomCode, points }) => {
-      console.log(`Buzz timeout for room ${roomCode} (client-triggered, server handles this now)`);
-      const result = gameManager.handleBuzzTimeout(roomCode);
-      if (result) {
-        io.to(roomCode).emit('game:buzz-timeout-result', result);
+    socket.on('game:buzz-timeout', ({ roomCode }) => {
+      // The server owns the buzz timer. This legacy client event is kept only
+      // so old clients do not error; honouring it let any player kill a live
+      // clue for everyone.
+      if (DEBUG_GAME) {
+        console.log(`Ignoring client-triggered buzz timeout for room ${roomCode}`);
       }
     });
 
@@ -345,12 +400,14 @@ export function initializeSocketHandlers(io) {
 
     // Round 1 ended - transition to Double Jeopardy
     socket.on('game:round-end', ({ roomCode, round }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Round ${round} ended for room ${roomCode}`);
       io.to(roomCode).emit('game:round-ended', { round });
     });
 
     // Start Round 2 (Double Jeopardy)
     socket.on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Round 2 for room ${roomCode}`);
       gameManager.startRound2(roomCode, questions, categories, firstPickerId);
       io.to(roomCode).emit('game:round-2-started', { questions, categories, firstPickerId });
@@ -358,11 +415,20 @@ export function initializeSocketHandlers(io) {
 
     // Start Final Jeopardy
     socket.on('game:start-final-jeopardy', async ({ roomCode }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Final Jeopardy for room ${roomCode}`);
       const fjData = gameManager.startFinalJeopardy(roomCode);
-      if (fjData) {
-        io.to(roomCode).emit('game:final-jeopardy-started', fjData);
+      if (!fjData) return;
+
+      // Jeopardy needs a positive score to play. If that leaves nobody, go
+      // straight to the results instead of a wager screen nobody can satisfy.
+      if (fjData.eligibleCount === 0) {
+        console.log(`No eligible players for Final Jeopardy in ${roomCode}, ending game`);
+        io.to(roomCode).emit('game:ended');
+        return;
       }
+
+      io.to(roomCode).emit('game:final-jeopardy-started', fjData);
     });
 
     // Final Jeopardy wager submitted
@@ -390,6 +456,7 @@ export function initializeSocketHandlers(io) {
 
     // Game ends
     socket.on('game:end', ({ roomCode }) => {
+      if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game ended for room ${roomCode}`);
       io.to(roomCode).emit('game:ended');
     });
@@ -478,11 +545,37 @@ export function initializeSocketHandlers(io) {
           return;
         }
 
+        // Host mode: auto-open buzzer/answer window after a brief clue-reading delay
+        if (room?.type === 'host') {
+          const answerMode = room.settings?.answerMode || 'verbal';
+          const autoOpenDelay = 3000; // 3 seconds for clue reading
+
+          // Clear any existing auto-open timer
+          if (room.autoOpenTimer) clearTimeout(room.autoOpenTimer);
+
+          room.autoOpenTimer = setTimeout(() => {
+            const currentRoom = gameManager.rooms.get(roomCode);
+            if (!currentRoom?.gameState?.currentQuestion) return; // Question already resolved
+
+            if (answerMode === 'verbal') {
+              gameManager.startBuzzWindow(roomCode);
+              io.to(roomCode).emit('host:buzzer-opened');
+            } else {
+              gameManager.openHostAnswerWindow(roomCode);
+              io.to(roomCode).emit('host:answer-window-opened', {
+                duration: buzzWindowMs(currentRoom),
+              });
+            }
+          }, autoOpenDelay);
+
+          return; // Don't start buzz window immediately for host mode
+        }
+
         // Start buzz collection window
         gameManager.startBuzzWindow(roomCode);
 
         // Start server-side buzz timeout
-        const duration = room?.settings?.questionTimeLimit || 30000;
+        const duration = buzzWindowMs(room);
 
         // Clear any existing timeout
         gameManager.clearBuzzTimeout(roomCode);
@@ -546,6 +639,9 @@ export function initializeSocketHandlers(io) {
           playerName: player?.displayName || player?.name,
         });
 
+        // Feed the answer through to the host's control panel as it lands.
+        sendTypedAnswersToHost(io, roomCode);
+
         // If all answered, notify host
         if (result.allAnswered) {
           io.to(roomCode).emit('game:all-answers-in');
@@ -554,6 +650,8 @@ export function initializeSocketHandlers(io) {
           if (room?.settings?.answerMode === 'auto_grade') {
             const gradeResults = gameManager.autoGradeAnswers(roomCode);
             io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
+            // Refresh so the panel shows each answer with its grade attached.
+            sendTypedAnswersToHost(io, roomCode);
           }
         }
       }
@@ -571,16 +669,18 @@ export function initializeSocketHandlers(io) {
         });
 
         if (result.allSelected) {
-          // Auto-score MC answers
-          const mcResults = gameManager.scoreMCAnswers(roomCode);
-          io.to(roomCode).emit('game:mc-results', { results: mcResults });
+          // Auto-score MC answers. The payload carries correctIndex and
+          // nextPickerId — the client needs both to highlight the right option
+          // and to keep the host holding the pick.
+          io.to(roomCode).emit('game:mc-results', gameManager.scoreMCAnswers(roomCode));
         }
       }
     });
 
     // Host judges answer
-    socket.on('host:judge-answer', ({ roomCode, playerId, correct, points }) => {
-      const result = gameManager.hostJudgeAnswer(roomCode, socket.sessionId, playerId, correct, points);
+    socket.on('host:judge-answer', ({ roomCode, playerId, correct }) => {
+      // `points` deliberately ignored if sent — the board is the only source.
+      const result = gameManager.hostJudgeAnswer(roomCode, socket.sessionId, playerId, correct);
 
       if (result) {
         io.to(roomCode).emit('host:answer-judged', result);
@@ -599,6 +699,13 @@ export function initializeSocketHandlers(io) {
     // Host skips question
     socket.on('host:skip-question', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
+
+      // Abandoning a clue must also abandon its timers, or a stale one fires
+      // against whatever clue happens to be open when it lands.
+      gameManager.clearBuzzTimeout(roomCode);
+      gameManager.clearAnswerTimeout(roomCode);
+      if (room?.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
+
       const result = gameManager.skipQuestion(roomCode, socket.sessionId);
 
       if (result) {
@@ -615,7 +722,9 @@ export function initializeSocketHandlers(io) {
       if (room?.hostId !== socket.sessionId) return;
 
       const answers = gameManager.getTypedAnswers(roomCode);
+      // Revealing is deliberate, so this one does go to the whole room.
       io.to(roomCode).emit('host:answers-revealed', { answers });
+      sendTypedAnswersToHost(io, roomCode);
     });
 
     // Host kicks player
@@ -632,10 +741,13 @@ export function initializeSocketHandlers(io) {
       }
     });
 
-    // Host opens buzzer (verbal mode)
+    // Host opens buzzer (verbal mode) — manual override
     socket.on('host:open-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
+
+      // Clear auto-open timer since host is manually controlling
+      if (room.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
 
       gameManager.startBuzzWindow(roomCode);
       io.to(roomCode).emit('host:buzzer-opened');
@@ -653,15 +765,26 @@ export function initializeSocketHandlers(io) {
       io.to(roomCode).emit('host:buzzer-closed');
     });
 
-    // Host opens answer window (typed/MC mode)
+    // Host opens answer window (typed/MC mode) — manual override
     socket.on('host:open-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
 
+      // Clear auto-open timer since host is manually controlling
+      if (room.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
+
       gameManager.openHostAnswerWindow(roomCode);
       io.to(roomCode).emit('host:answer-window-opened', {
-        duration: room.settings?.questionTimeLimit || 30000,
+        duration: buzzWindowMs(room),
       });
+    });
+
+    // Host controls media playback (synced to all players)
+    socket.on('host:media-control', ({ roomCode, action }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (room?.hostId !== socket.sessionId) return;
+      // action: 'play' | 'pause' | 'replay'
+      socket.to(roomCode).emit('host:media-control', { action });
     });
 
     // Host closes answer window

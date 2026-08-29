@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { socketClient } from '../../services/socket/socketClient';
 import './AnswerInput.css';
@@ -26,25 +26,7 @@ export default function AnswerInput({
     }
   }, [isEnabled, timeLimit]);
 
-  // Timer countdown
-  useEffect(() => {
-    if (!isEnabled || submitted || hasSubmitted || timeLimit <= 0) return;
-
-    const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          // Auto-submit when time runs out
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isEnabled, submitted, hasSubmitted, timeLimit]);
-
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (submitted || hasSubmitted) return;
 
     const trimmedAnswer = answer.trim();
@@ -64,7 +46,32 @@ export default function AnswerInput({
     if (onSubmit) {
       onSubmit(trimmedAnswer);
     }
-  };
+  }, [submitted, hasSubmitted, answer, roomCode, onSubmit]);
+
+  // The timer must reach the *current* handleSubmit. Calling it from inside the
+  // interval closure submitted the answer as it was when the timer started —
+  // always empty, so anyone who ran out of time lost what they had typed.
+  const submitRef = useRef(handleSubmit);
+  submitRef.current = handleSubmit;
+
+  // Timer countdown
+  useEffect(() => {
+    if (!isEnabled || submitted || hasSubmitted || timeLimit <= 0) return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isEnabled, submitted, hasSubmitted, timeLimit]);
+
+  // Auto-submit on zero, kept out of the state updater so React's double
+  // invocation in development cannot submit twice.
+  useEffect(() => {
+    if (timeLimit > 0 && timeRemaining === 0 && isEnabled && !submitted && !hasSubmitted) {
+      submitRef.current();
+    }
+  }, [timeRemaining, timeLimit, isEnabled, submitted, hasSubmitted]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {

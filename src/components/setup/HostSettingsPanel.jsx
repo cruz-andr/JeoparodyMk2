@@ -8,25 +8,21 @@ const answerModes = [
     id: 'verbal',
     label: 'Buzzer + Verbal',
     description: 'Players buzz in, speak their answer aloud. You judge correct/incorrect.',
-    icon: '🎤',
   },
   {
     id: 'typed',
     label: 'Typed Answers',
     description: 'All players type their answers simultaneously. You see and judge each one.',
-    icon: '⌨️',
   },
   {
     id: 'multiple_choice',
     label: 'Multiple Choice',
     description: 'You define 4 options per question. Players select, auto-scored.',
-    icon: '🔘',
   },
   {
     id: 'auto_grade',
     label: 'Auto-Grade',
     description: 'Players type answers, system auto-grades with fuzzy matching. You can override.',
-    icon: '🤖',
   },
 ];
 
@@ -41,7 +37,7 @@ const timeLimitOptions = [
 const playerLimitOptions = [10, 15, 20, 25, 30];
 
 export default function HostSettingsPanel({ onNext, onBack }) {
-  const { answerMode, setAnswerMode } = useHostStore();
+  const { answerMode, setAnswerMode, projectorMode, setProjectorMode } = useHostStore();
   const {
     questionTimeLimit,
     setQuestionTimeLimit,
@@ -84,7 +80,6 @@ export default function HostSettingsPanel({ onNext, onBack }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <span className="mode-icon">{mode.icon}</span>
               <span className="mode-label">{mode.label}</span>
               <span className="mode-description">{mode.description}</span>
               {answerMode === mode.id && (
@@ -162,6 +157,25 @@ export default function HostSettingsPanel({ onNext, onBack }) {
             <div className="rule-info">
               <span className="rule-name">Final Jeopardy</span>
               <span className="rule-desc">Final wager question at the end</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Display Mode */}
+      <div className="settings-section">
+        <label className="section-label">Display Mode</label>
+        <div className="rules-grid">
+          <label className="rule-toggle">
+            <input
+              type="checkbox"
+              checked={projectorMode}
+              onChange={() => setProjectorMode(!projectorMode)}
+            />
+            <span className="toggle-indicator" />
+            <div className="rule-info">
+              <span className="rule-name">Projector Mode</span>
+              <span className="rule-desc">Players in same room? Their phones become controllers only</span>
             </div>
           </label>
         </div>

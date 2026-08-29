@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Timer from '../common/Timer';
+import MediaClueDisplay from '../media/MediaClueDisplay';
 import { useSettingsStore } from '../../stores';
 import './QuestionModal.css';
 
@@ -12,8 +13,12 @@ export default function QuestionModal({
   onIncorrect,
   onClose,
   onTimeUp,
+  // What this clue is actually worth. On a Daily Double the stake is the
+  // player's wager, not the value printed on the board.
+  points = question.points,
+  isDailyDouble = false,
 }) {
-  const { questionTimeLimit } = useSettingsStore();
+  const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
   const hasTimer = questionTimeLimit !== null;
 
   const handleTimeUp = () => {
@@ -78,10 +83,13 @@ export default function QuestionModal({
 
         <div className="question-header">
           <span className="question-category">{question.category}</span>
-          <span className="question-points">${question.points}</span>
+          <span className="question-points">
+            {isDailyDouble ? `Wager: $${points.toLocaleString()}` : `$${points.toLocaleString()}`}
+          </span>
         </div>
 
         <div className="question-content">
+          {question.mediaType && <MediaClueDisplay question={question} />}
           <p className="clue-text">{question.answer}</p>
         </div>
 
@@ -101,7 +109,7 @@ export default function QuestionModal({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                I Got It Right (+${question.points})
+                I Got It Right (+${points.toLocaleString()})
               </motion.button>
               <motion.button
                 className="btn-incorrect"
@@ -109,7 +117,7 @@ export default function QuestionModal({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                I Got It Wrong (-${question.points})
+                I Got It Wrong (-${points.toLocaleString()})
               </motion.button>
             </div>
             <span className="keyboard-hint">Press 1 for Correct, 2 for Incorrect</span>

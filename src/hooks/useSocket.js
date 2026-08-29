@@ -2,6 +2,27 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { socketClient } from '../services/socket/socketClient';
 import { useRoomStore, useUserStore } from '../stores';
 
+// socketClient is a singleton, so these bindings never change. Creating them
+// per render made the object returned by useSocket unstable, which forced every
+// consumer to leave it out of their dependency lists.
+const socketApi = {
+  // Room actions
+  joinRoom: socketClient.joinRoom.bind(socketClient),
+  leaveRoom: socketClient.leaveRoom.bind(socketClient),
+  reconnectToRoom: socketClient.reconnectToRoom.bind(socketClient),
+  setReady: socketClient.setReady.bind(socketClient),
+
+  // Game actions
+  startGame: socketClient.startGame.bind(socketClient),
+  selectQuestion: socketClient.selectQuestion.bind(socketClient),
+  buzz: socketClient.buzz.bind(socketClient),
+  submitAnswer: socketClient.submitAnswer.bind(socketClient),
+
+  // Quickplay actions
+  joinMatchmaking: socketClient.joinMatchmaking.bind(socketClient),
+  leaveMatchmaking: socketClient.leaveMatchmaking.bind(socketClient),
+};
+
 export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -118,36 +139,22 @@ export function useSocket() {
     subscribe,
     emit,
     socketId: socketClient.getSocketId(),
-
-    // Room actions
-    joinRoom: socketClient.joinRoom.bind(socketClient),
-    leaveRoom: socketClient.leaveRoom.bind(socketClient),
-    reconnectToRoom: socketClient.reconnectToRoom.bind(socketClient),
-    setReady: socketClient.setReady.bind(socketClient),
-
-    // Game actions
-    startGame: socketClient.startGame.bind(socketClient),
-    selectQuestion: socketClient.selectQuestion.bind(socketClient),
-    buzz: socketClient.buzz.bind(socketClient),
-    submitAnswer: socketClient.submitAnswer.bind(socketClient),
-
-    // Quickplay actions
-    joinMatchmaking: socketClient.joinMatchmaking.bind(socketClient),
-    leaveMatchmaking: socketClient.leaveMatchmaking.bind(socketClient),
+    ...socketApi,
   };
 }
 
 // Hook for room-specific functionality
 export function useRoom(roomCode) {
   const socket = useSocket();
-  const { setPlayers, addPlayer, removePlayer, setConnectionStatus } = useRoomStore();
+  const { subscribe, isConnected } = socket;
+  const { addPlayer, removePlayer } = useRoomStore();
   const [roomState, setRoomState] = useState(null);
 
   useEffect(() => {
-    if (!socket.isConnected || !roomCode) return;
+    if (!isConnected || !roomCode) return;
 
     // Subscribe to room events
-    const unsubPlayerJoined = socket.subscribe('room:player-joined', (data) => {
+    const unsubPlayerJoined = subscribe('room:player-joined', (data) => {
       // Transform socket data to store format
       addPlayer({
         id: data.playerId,
@@ -161,16 +168,16 @@ export function useRoom(roomCode) {
       });
     });
 
-    const unsubPlayerLeft = socket.subscribe('room:player-left', (data) => {
+    const unsubPlayerLeft = subscribe('room:player-left', (data) => {
       removePlayer(data.playerId);
     });
 
-    const unsubPlayerReady = socket.subscribe('room:player-ready', (data) => {
+    const unsubPlayerReady = subscribe('room:player-ready', (data) => {
       // Update player ready status in store
       useRoomStore.getState().updatePlayerReady(data.playerId, data.ready);
     });
 
-    const unsubGameStarted = socket.subscribe('game:started', (data) => {
+    const unsubGameStarted = subscribe('game:started', (data) => {
       setRoomState(data);
     });
 
@@ -180,7 +187,7 @@ export function useRoom(roomCode) {
       unsubPlayerReady();
       unsubGameStarted();
     };
-  }, [socket.isConnected, roomCode]);
+  }, [isConnected, roomCode, subscribe, addPlayer, removePlayer]);
 
   return {
     ...socket,
@@ -191,16 +198,16 @@ export function useRoom(roomCode) {
 
 // Hook for quickplay matchmaking
 export function useMatchmaking() {
-  const socket = useSocket();
+  const { isConnected, subscribe } = useSocket();
   const [isInQueue, setIsInQueue] = useState(false);
   const [matchFound, setMatchFound] = useState(null);
   const [queueTime, setQueueTime] = useState(0);
   const timerRef = useRef(null);
 
   useEffect(() => {
-    if (!socket.isConnected) return;
+    if (!isConnected) return;
 
-    const unsubQueueJoined = socket.subscribe('quickplay:queue-joined', () => {
+    const unsubQueueJoined = subscribe('quickplay:queue-joined', () => {
       setIsInQueue(true);
       setQueueTime(0);
 
@@ -210,7 +217,7 @@ export function useMatchmaking() {
       }, 1000);
     });
 
-    const unsubQueueLeft = socket.subscribe('quickplay:queue-left', () => {
+    const unsubQueueLeft = subscribe('quickplay:queue-left', () => {
       setIsInQueue(false);
       setQueueTime(0);
       if (timerRef.current) {
@@ -218,7 +225,7 @@ export function useMatchmaking() {
       }
     });
 
-    const unsubMatchFound = socket.subscribe('quickplay:match-found', (data) => {
+    const unsubMatchFound = subscribe('quickplay:match-found', (data) => {
       setMatchFound(data);
       setIsInQueue(false);
       if (timerRef.current) {
@@ -234,18 +241,18 @@ export function useMatchmaking() {
         clearInterval(timerRef.current);
       }
     };
-  }, [socket.isConnected]);
+  }, [isConnected, subscribe]);
 
   const joinQueue = useCallback((displayName, signature) => {
-    socket.joinMatchmaking(displayName, signature);
-  }, [socket]);
+    socketApi.joinMatchmaking(displayName, signature);
+  }, []);
 
   const leaveQueue = useCallback(() => {
-    socket.leaveMatchmaking();
-  }, [socket]);
+    socketApi.leaveMatchmaking();
+  }, []);
 
   return {
-    isConnected: socket.isConnected,
+    isConnected,
     isInQueue,
     matchFound,
     queueTime,

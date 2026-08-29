@@ -48,6 +48,7 @@ const io = new Server(httpServer, {
   },
   pingTimeout: 60000,
   pingInterval: 25000,
+  maxHttpBufferSize: 10 * 1024 * 1024, // 10MB for base64 media in questions
 });
 
 // Express middleware

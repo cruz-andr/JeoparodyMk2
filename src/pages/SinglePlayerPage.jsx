@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, useUserStore, useSettingsStore } from '../stores';
+import { useAudio } from '../hooks';
 import * as aiService from '../services/api/aiService';
-import { speakText, stopSpeaking } from '../services/ttsService';
 import GameBoard from '../components/game/GameBoard';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
@@ -24,6 +24,7 @@ export default function SinglePlayerPage() {
     questions,
     currentQuestion,
     showAnswer,
+    dailyDoubleWager,
     score,
     currentRound,
     loading,
@@ -49,7 +50,8 @@ export default function SinglePlayerPage() {
   } = useGameStore();
 
   const { updateStats, addHighscore } = useUserStore();
-  const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy, textToSpeechEnabled } = useSettingsStore();
+  const { playCorrect, playWrong } = useAudio();
+  const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy } = useSettingsStore();
 
   // Final Jeopardy state
   const [finalJeopardyData, setFinalJeopardyData] = useState(null);
@@ -62,18 +64,7 @@ export default function SinglePlayerPage() {
     setMode('single');
     setPhase('setup');
     return () => resetGame();
-  }, []);
-
-  // Read Final Jeopardy clue when it's shown
-  useEffect(() => {
-    if (phase === 'finalJeopardy' && finalJeopardyData?.answer && textToSpeechEnabled) {
-      // Small delay to let the category reveal animation play first
-      const timer = setTimeout(() => {
-        speakText(finalJeopardyData.answer);
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [phase, finalJeopardyData, textToSpeechEnabled]);
+  }, [setMode, setPhase, resetGame]);
 
   const handleGenerateCategories = async (selectedGenre) => {
     setLoading(true);
@@ -146,25 +137,19 @@ export default function SinglePlayerPage() {
 
   const handleQuestionSelect = (categoryIndex, pointIndex) => {
     selectQuestion(categoryIndex, pointIndex);
-    // Read the clue aloud if TTS is enabled
-    if (textToSpeechEnabled) {
-      const question = questions[categoryIndex]?.[pointIndex];
-      if (question?.answer) {
-        speakText(question.answer);
-      }
-    }
   };
 
   const handleAnswerResult = (correct) => {
     if (correct) {
+      playCorrect();
       markCorrect();
     } else {
+      playWrong();
       markIncorrect();
     }
   };
 
   const handleCloseQuestion = () => {
-    stopSpeaking();
     closeQuestion();
   };
 
@@ -410,6 +395,9 @@ export default function SinglePlayerPage() {
         {currentQuestion && phase === 'questionActive' && (
           <QuestionModal
             question={currentQuestion}
+            // A confirmed Daily Double wager replaces the board value as the stake.
+            points={dailyDoubleWager > 0 ? dailyDoubleWager : currentQuestion.points}
+            isDailyDouble={dailyDoubleWager > 0}
             showAnswer={showAnswer}
             onRevealAnswer={revealAnswer}
             onCorrect={() => {
@@ -435,10 +423,6 @@ export default function SinglePlayerPage() {
             onWagerConfirm={(wager) => {
               useGameStore.getState().setDailyDoubleWager(wager);
               useGameStore.getState().confirmDailyDoubleWager();
-              // Read the clue aloud for Daily Double
-              if (textToSpeechEnabled && currentQuestion?.answer) {
-                speakText(currentQuestion.answer);
-              }
             }}
           />
         )}

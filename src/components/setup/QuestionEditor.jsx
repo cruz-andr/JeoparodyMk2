@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHostStore } from '../../stores/hostStore';
 import { generateMCOptions } from '../../services/api/aiService';
+import MediaAttachment from './MediaAttachment';
 import './QuestionEditor.css';
 
 const POINT_VALUES = [200, 400, 600, 800, 1000];
@@ -141,6 +142,17 @@ export default function QuestionEditor({ onBack, onNext, answerMode = 'verbal' }
                         className="question-input"
                       />
                     </div>
+
+                    {/* Media Attachment */}
+                    <MediaAttachment
+                      mediaType={question.mediaType || null}
+                      mediaData={question.mediaData || null}
+                      youtubeStart={question.youtubeStart ?? null}
+                      youtubeEnd={question.youtubeEnd ?? null}
+                      audioOnly={question.audioOnly || false}
+                      altText={question.altText || null}
+                      onChange={(updates) => updateQuestion(activeTab, pointIndex, updates)}
+                    />
 
                     {/* Multiple Choice Options */}
                     {isMCMode && (
