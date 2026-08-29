@@ -8,6 +8,11 @@
   padding: 0;
 }
 
+/* Larger text for anyone who needs it. Set on the root so every rem in the
+   app moves together, including pages rendered through a portal. */
+html[data-text-scale='large'] { font-size: 112.5%; }
+html[data-text-scale='larger'] { font-size: 125%; }
+
 body {
   font-family: var(--font-body);
   background-color: var(--jeopardy-black);

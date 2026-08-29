@@ -76,13 +76,29 @@ Return ONLY a valid JSON object with no additional text:
   return JSON.parse(jsonStr).category;
 }
 
-export async function generateQuestions(categories, pointValues, round = 1) {
+/* `difficulty` is the player's setting. It used to be collected in Settings,
+   written by every preset, and then never read by anything, so choosing Easy
+   or Hard changed nothing about the questions you were served. */
+const DIFFICULTY_NOTES = {
+  easy: 'Pitch every clue at a general audience: recognisable people, places and events, nothing requiring specialist knowledge.',
+  medium: 'Pitch clues at a well read general audience, harder than a pub quiz but short of specialist knowledge.',
+  hard: 'Pitch every clue at a competitive quiz player: precise dates, secondary figures and less obvious works are fair game.',
+  mixed: 'Scale difficulty with the point values: $200 questions should be easy, $1000 questions should be challenging.',
+};
+
+export async function generateQuestions(
+  categories,
+  pointValues,
+  round = 1,
+  difficulty = 'mixed'
+) {
   const aiModel = getModel();
   const seed = generateSeed();
 
+  const chosen = DIFFICULTY_NOTES[difficulty] ?? DIFFICULTY_NOTES.mixed;
   const difficultyNote = round === 2
-    ? 'This is Double Jeopardy - make all questions significantly harder and more detailed than a regular round.'
-    : 'Scale difficulty appropriately with point values - $200 questions should be easy, $1000 questions should be challenging.';
+    ? `${chosen} This is also Double Jeopardy, so make every clue harder and more detailed again than a regular round.`
+    : chosen;
 
   const prompt = `You are a Jeopardy game assistant. Generate Jeopardy-style questions and answers for these categories: ${categories.join(', ')}.
 

@@ -69,11 +69,51 @@ export function buildBoard(roundClues) {
   return { categories, questions };
 }
 
+/*
+ * The Sixer gets harder across the week, the way a crossword does.
+ *
+ * Its clues come from the Double Jeopardy round, whose values run $400 to
+ * $2000, and value is the show's own measure of difficulty. Seven days against
+ * five tiers leaves two to place: they double up mid week, so the two ends of
+ * the week stay distinct and the climb in between is gradual.
+ *
+ * Monday first, matching startOfWeek and therefore the weekly best reset.
+ */
+export const SIXER_WEEK_VALUES = [400, 800, 800, 1200, 1200, 1600, 2000];
+
+/** The value tier a given date should be pitched at. */
+export function sixerTargetValue(date) {
+  if (!date) return SIXER_WEEK_VALUES[0];
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return SIXER_WEEK_VALUES[0];
+  // getUTCDay is 0 for Sunday, so shift it to make Monday the first day.
+  return SIXER_WEEK_VALUES[(d.getUTCDay() + 6) % 7];
+}
+
+/**
+ * The clue in a category closest to the day's tier.
+ *
+ * Closest rather than exact: a category is not guaranteed to hold every value,
+ * Daily Doubles carry the wager rather than the square's worth, and a board can
+ * be missing a clue entirely. Ties are broken deterministically, so every
+ * player worldwide still gets the same six.
+ */
+function pickForValue(clues, target, seed, offset) {
+  let best = Infinity;
+  for (const clue of clues) {
+    const gap = Math.abs(Number(clue.value) - target);
+    if (Number.isFinite(gap) && gap < best) best = gap;
+  }
+  const tied = clues.filter((c) => Math.abs(Number(c.value) - target) === best);
+  const pool = tied.length ? tied : clues;
+  return pool[(seed + offset) % pool.length];
+}
+
 /**
  * One clue from each category of the other round, chosen deterministically so
- * every player worldwide gets the same six.
+ * every player worldwide gets the same six, at the difficulty the day calls for.
  */
-export function buildSixer(roundClues, seed = 0) {
+export function buildSixer(roundClues, seed = 0, targetValue = null) {
   if (!Array.isArray(roundClues)) return null;
 
   const byCategory = new Map();
@@ -87,7 +127,11 @@ export function buildSixer(roundClues, seed = 0) {
   const picked = [];
   for (const [, clues] of byCategory) {
     if (picked.length >= SIXER_CLUES) break;
-    picked.push(clues[(seed + picked.length) % clues.length]);
+    picked.push(
+      targetValue === null
+        ? clues[(seed + picked.length) % clues.length]
+        : pickForValue(clues, targetValue, seed, picked.length)
+    );
   }
 
   // Not enough distinct categories: top up from whatever is left over.
@@ -126,7 +170,7 @@ export function buildDailyChallenge(gameClues, { seed = 0, date, gameId } = {}) 
   if (!board) return null;
 
   // The Sixer comes from the round the Board did not use.
-  const sixer = buildSixer(doubleJeopardy, seed);
+  const sixer = buildSixer(doubleJeopardy, seed, sixerTargetValue(date));
   if (!sixer) return null;
 
   return { date, seed, gameId, board, sixer };

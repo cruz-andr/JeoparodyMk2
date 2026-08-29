@@ -16,6 +16,7 @@ import { checkAnswer } from '../services/answerChecker';
 import GameBoard from '../components/game/GameBoard';
 import BoardWheel from '../components/game/BoardWheel';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useAudio } from '../hooks';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyResults from '../components/daily/DailyResults';
 import './DailyBoardPage.css';
@@ -34,6 +35,9 @@ export default function DailyBoardPage() {
   // The two boards are different components, not one restyled, so this cannot
   // be a media query in CSS.
   const isPhone = useMediaQuery('(max-width: 768px)');
+  // Both dailies were silent: the sound bank is loaded and the Sound toggle
+  // exists, but neither daily ever asked it for anything.
+  const { playCorrect, playWrong } = useAudio();
 
   // The wheel is a fixed surface, so the document behind it must not scroll.
   // See body.wheel-locked in DailyBoardPage.css.
@@ -171,8 +175,10 @@ export default function DailyBoardPage() {
       const { isCorrect } = checkAnswer(given, openQuestion.question);
       revealAnswer(FORMAT, index, isCorrect, given);
       setResult({ correct: isCorrect, playerAnswer: given });
+      if (isCorrect) playCorrect();
+      else playWrong();
     },
-    [openCell, openQuestion, revealAnswer]
+    [openCell, openQuestion, revealAnswer, playCorrect, playWrong]
   );
 
   // Fuzzy matching gets things wrong, so the player has the last word.
@@ -180,7 +186,8 @@ export default function DailyBoardPage() {
     if (!openCell) return;
     overrideAnswer(FORMAT, flatIndex(openCell.categoryIndex, openCell.pointIndex));
     setResult((r) => (r ? { ...r, correct: true } : r));
-  }, [openCell, overrideAnswer]);
+    playCorrect();
+  }, [openCell, overrideAnswer, playCorrect]);
 
   // Read the store rather than the memo: the answer that just landed is not in
   // `score` yet.

@@ -51,7 +51,8 @@ export default function SinglePlayerPage() {
 
   const { updateStats, addHighscore } = useUserStore();
   const { playCorrect, playWrong } = useAudio();
-  const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy } = useSettingsStore();
+  const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy, difficulty } =
+    useSettingsStore();
 
   // Final Jeopardy state
   const [finalJeopardyData, setFinalJeopardyData] = useState(null);
@@ -90,7 +91,7 @@ export default function SinglePlayerPage() {
 
     try {
       const pointValues = getPointValues();
-      const result = await aiService.generateQuestions(categories, pointValues, currentRound);
+      const result = await aiService.generateQuestions(categories, pointValues, currentRound, difficulty);
 
       // Transform AI response into our grid format
       const questionGrid = result.categories.map((cat) => {
@@ -167,7 +168,7 @@ export default function SinglePlayerPage() {
       // Generate new categories for Double Jeopardy
       const newCategories = await aiService.generateCategories(genre);
       const pointValues = [400, 800, 1200, 1600, 2000];
-      const result = await aiService.generateQuestions(newCategories, pointValues, 2);
+      const result = await aiService.generateQuestions(newCategories, pointValues, 2, difficulty);
 
       const questionGrid = result.categories.map((cat) => {
         return cat.questions.map((q) => ({

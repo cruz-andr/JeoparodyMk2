@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useSettingsStore } from '../stores';
+import { roomRulesFromSettings } from '../stores/settingsStore';
 import { useHostStore } from '../stores/hostStore';
 import { socketClient } from '../services/socket/socketClient';
 import { generateCategories, generateQuestions } from '../services/api/aiService';
@@ -87,7 +88,7 @@ export default function HostPage() {
     setIsGenerating(true, 'questions');
 
     try {
-      const questionsData = await generateQuestions(categories, POINT_VALUES, 1);
+      const questionsData = await generateQuestions(categories, POINT_VALUES, 1, settings.difficulty);
       setQuestionsFromAI(questionsData, categories);
       setContentSubPhase('questionEdit');
     } catch (err) {
@@ -120,10 +121,7 @@ export default function HostPage() {
         maxPlayers: 30,
         answerMode: answerMode,
         projectorMode: projectorMode,
-        questionTimeLimit: settings.questionTimeLimit,
-        enableDoubleJeopardy: settings.enableDoubleJeopardy,
-        enableDailyDouble: settings.enableDailyDouble,
-        enableFinalJeopardy: settings.enableFinalJeopardy,
+        ...roomRulesFromSettings(settings),
       });
 
       // Update room store

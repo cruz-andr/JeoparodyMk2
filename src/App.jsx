@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { useSettingsStore } from './stores/settingsStore';
 import './styles/globals.css';
 
 // Lazy-load all pages — each becomes its own chunk,
@@ -42,6 +43,14 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  /* Text size is set on the document rather than passed down, because it has to
+     reach every page including the ones rendered inside a portal. Type here is
+     mostly in rem, so moving the root size moves the whole app with it. */
+  const textScale = useSettingsStore((s) => s.textScale);
+  useEffect(() => {
+    document.documentElement.dataset.textScale = textScale;
+  }, [textScale]);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <RouterProvider router={router} />

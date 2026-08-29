@@ -23,6 +23,7 @@ import {
   answerMark,
   formatDuration,
   elapsedMs,
+  markEmoji,
 } from './dailyLogic.js';
 
 let passed = 0;
@@ -456,6 +457,34 @@ test('an untimed completion leaves the recorded times alone', () => {
   });
   assert.equal(after.lastTimeMs, 754000);
   assert.equal(after.bestTimeMs, 754000);
+});
+
+// --- a grid everyone can read ------------------------------------------
+
+test('the default grid is the familiar green and red', () => {
+  assert.equal(markEmoji('correct'), '\u{1F7E9}');
+  assert.equal(markEmoji('wrong'), '\u{1F7E5}');
+});
+
+test('high contrast drops red and green entirely', () => {
+  const correct = markEmoji('correct', true);
+  const wrong = markEmoji('wrong', true);
+  assert.equal(correct, '\u{1F7E7}');
+  assert.equal(wrong, '\u{1F7E6}');
+  assert.notEqual(correct, markEmoji('correct'));
+  assert.notEqual(wrong, markEmoji('wrong'));
+});
+
+test('a pass stays neutral in both palettes', () => {
+  assert.equal(markEmoji('passed'), '\u{2B1C}');
+  assert.equal(markEmoji('passed', true), '\u{2B1C}');
+});
+
+test('every state is a different square, in both palettes', () => {
+  for (const contrast of [false, true]) {
+    const seen = ['correct', 'wrong', 'passed'].map((m) => markEmoji(m, contrast));
+    assert.equal(new Set(seen).size, 3, `three distinct squares (highContrast=${contrast})`);
+  }
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

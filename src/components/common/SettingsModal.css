@@ -273,3 +273,54 @@
     width: 100%;
   }
 }
+
+/* Search, so a setting can be found by name rather than by hunting three
+   different screens for it. */
+.settings-search {
+  padding: 0 24px 4px;
+}
+
+.settings-search input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-md);
+}
+
+.settings-search input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.setting-row + .setting-row {
+  margin-top: 4px;
+}
+
+.setting-hint {
+  margin: 2px 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Marks a rule that is not personal: it travels with a room you create. */
+.room-badge {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 236, 224, 0.3);
+  font-size: 0.62rem;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.settings-empty {
+  padding: 8px 24px 24px;
+  color: var(--text-muted);
+}

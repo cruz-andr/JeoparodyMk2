@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSettingsStore } from '../stores/settingsStore';
 
 /**
  * Subscribes to a media query.
@@ -36,9 +37,19 @@ export function useMediaQuery(query) {
   return matches;
 }
 
-/** True when the user has asked for less motion. */
+/**
+ * True when the player has asked for less motion.
+ *
+ * The OS setting is the default, but it is not always reachable or right: a
+ * shared machine, a phone where the switch is buried, or someone who wants the
+ * motion here and not elsewhere. The in-app setting can force it either way.
+ */
 export function usePrefersReducedMotion() {
-  return useMediaQuery('(prefers-reduced-motion: reduce)');
+  const fromSystem = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const choice = useSettingsStore((s) => s.reduceMotion);
+  if (choice === 'on') return true;
+  if (choice === 'off') return false;
+  return fromSystem;
 }
 
 export default useMediaQuery;
