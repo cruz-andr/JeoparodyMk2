@@ -142,7 +142,11 @@
   padding: 0;
   gap: 0;
   height: 100vh;
-  height: 100dvh; /* so the podium is not under the browser chrome */
+  height: 100dvh;
+  /* The base rule sets min-height: 100vh, which clamps the used height back to
+     100vh and puts the podium under the browser chrome, which is the exact
+     thing the dvh above is for. */
+  min-height: 0;
   overflow: hidden;
   background: radial-gradient(120% 62% at 50% 16%, #16207a 0%, #070c2e 56%, #03050f 100%);
 }

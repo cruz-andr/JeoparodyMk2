@@ -16,8 +16,12 @@
   touch-action: pan-y;
 }
 
-/* Uniform 150px slots, so a roll is always the same distance. */
+/* Uniform 150px slots, so a roll is always the same distance.
+   preserve-3d matters: perspective on .wheel only reaches its direct child,
+   and a flat track would flatten the bands' rotateX into a plain vertical
+   squash with no depth, which is the whole premise of the wheel. */
 .wheel-track {
+  transform-style: preserve-3d;
   position: absolute;
   top: 50%;
   left: 0;

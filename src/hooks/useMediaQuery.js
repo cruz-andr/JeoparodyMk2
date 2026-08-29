@@ -21,8 +21,16 @@ export function useMediaQuery(query) {
     // read once on mount too: the query can differ from the initial render
     // after a rotation or a resize during hydration
     setMatches(list.matches);
-    list.addEventListener('change', onChange);
-    return () => list.removeEventListener('change', onChange);
+
+    // Safari 13 and older expose only the deprecated addListener. The daily
+    // board calls this unconditionally, so throwing here would take the whole
+    // page down rather than falling back to the desktop layout.
+    if (typeof list.addEventListener === 'function') {
+      list.addEventListener('change', onChange);
+      return () => list.removeEventListener('change', onChange);
+    }
+    list.addListener(onChange);
+    return () => list.removeListener(onChange);
   }, [query]);
 
   return matches;

@@ -18,6 +18,7 @@ const VISIBLE_RADIUS = 2; // rows drawn either side of centre
 const PLAYABLE_RADIUS = 1; // rows that can be tapped either side of centre
 const ROLL_MS = 380;
 const SWIPE_THRESHOLD = 40;
+const DRAG_SLOP = 10; // past this, the gesture is a swipe and not a tap
 
 export default function BoardWheel({
   categories = [],
@@ -30,6 +31,11 @@ export default function BoardWheel({
   const reduceMotion = usePrefersReducedMotion();
   const rollTimer = useRef(null);
   const touchStart = useRef(null);
+  // Nothing here scrolls, so the browser never swallows the click that follows
+  // a swipe. Without this, dragging from a tile changes category AND opens
+  // that tile's clue, burning a clue the player never chose.
+  const dragged = useRef(false);
+  const wheelRef = useRef(null);
 
   // A roll that is still pending when the page unmounts would call onSelect
   // into a screen that no longer exists.
@@ -50,6 +56,7 @@ export default function BoardWheel({
   const handleTile = useCallback(
     (categoryIndex, pointIndex) => {
       if (rolling) return;
+      if (dragged.current) return; // this click is the tail of a swipe
       if (answerAt(categoryIndex, pointIndex)?.revealed) return;
 
       const offset = categoryIndex - focus;
@@ -78,17 +85,29 @@ export default function BoardWheel({
 
   const onKeyDown = (e) => {
     const step = { ArrowUp: -1, ArrowDown: 1 }[e.key];
-    if (step !== undefined) {
-      e.preventDefault();
-      setFocus((f) => clamp(f + step));
-      return;
-    }
-    if (e.key === 'Home') { e.preventDefault(); setFocus(0); }
-    if (e.key === 'End') { e.preventDefault(); setFocus(lastIndex); }
+    const jump = { Home: 0, End: lastIndex }[e.key];
+    if (step === undefined && jump === undefined) return;
+
+    e.preventDefault();
+    if (rolling) return; // see onTouchEnd
+
+    // Focus lives on the container while arrowing. A tile that scrolls out to
+    // a context row becomes disabled, and the browser would drop focus to the
+    // body, after which no further arrow key reaches the wheel at all.
+    wheelRef.current?.focus();
+    if (step !== undefined) setFocus((f) => clamp(f + step));
+    else setFocus(jump);
   };
 
   const onTouchStart = (e) => {
+    dragged.current = false;
     touchStart.current = e.touches[0]?.clientY ?? null;
+  };
+
+  const onTouchMove = (e) => {
+    if (touchStart.current === null) return;
+    const delta = (e.touches[0]?.clientY ?? 0) - touchStart.current;
+    if (Math.abs(delta) > DRAG_SLOP) dragged.current = true;
   };
 
   const onTouchEnd = (e) => {
@@ -96,18 +115,25 @@ export default function BoardWheel({
     const delta = (e.changedTouches[0]?.clientY ?? 0) - touchStart.current;
     touchStart.current = null;
     if (Math.abs(delta) < SWIPE_THRESHOLD) return;
+    // A committed roll owns the wheel until it lands, or the timeout would
+    // open a clue that has since moved off centre.
+    if (rolling) return;
     setFocus((f) => clamp(f + (delta < 0 ? 1 : -1)));
   };
 
   return (
     <div
+      ref={wheelRef}
       className={`wheel ${reduceMotion ? 'no-motion' : ''}`}
       onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onKeyDown={onKeyDown}
       tabIndex={0}
       role="group"
-      aria-label={`Game board, ${categories[focus] ?? ''} of ${categories.length} categories. Use up and down arrows to change category.`}
+      aria-label={`Game board, category ${focus + 1} of ${categories.length}, ${
+        categories[focus] ?? ''
+      }. Use up and down arrows to change category.`}
     >
       <div className="wheel-track" style={{ transform: `translateY(${-focus * 150}px)` }}>
         {categories.map((name, categoryIndex) => {
