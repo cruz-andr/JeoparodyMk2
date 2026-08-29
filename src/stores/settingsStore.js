@@ -42,6 +42,67 @@ const initialState = {
  * a room, because hand copying the fields at each call site is how host mode
  * ended up sending four of them and multiplayer sending none.
  */
+/*
+ * The choices the settings screen offers.
+ *
+ * They live beside the presets rather than in the component, because a preset
+ * that sets a value the screen does not list leaves the group showing nothing
+ * selected: the preset looks like it did nothing and the player cannot see what
+ * the timer now is. A test holds the two in step.
+ */
+/**
+ * The presets, at module scope so a test can hold every value they set against
+ * the options the screen actually offers.
+ */
+export const PRESETS = {
+  casual: {
+    questionTimeLimit: null,
+    answerTimeLimit: 10000,
+    enableDoubleJeopardy: false,
+    enableDailyDouble: false,
+    enableFinalJeopardy: false,
+    difficulty: 'easy',
+  },
+  standard: {
+    questionTimeLimit: 30000,
+    answerTimeLimit: 7000,
+    enableDoubleJeopardy: true,
+    enableDailyDouble: true,
+    enableFinalJeopardy: true,
+    difficulty: 'mixed',
+  },
+  challenging: {
+    questionTimeLimit: 15000,
+    answerTimeLimit: 5000,
+    enableDoubleJeopardy: true,
+    enableDailyDouble: true,
+    enableFinalJeopardy: true,
+    difficulty: 'hard',
+  },
+  speed: {
+    questionTimeLimit: 10000,
+    answerTimeLimit: 5000,
+    enableDoubleJeopardy: true,
+    enableDailyDouble: true,
+    enableFinalJeopardy: false,
+    difficulty: 'medium',
+  },
+};
+
+export const QUESTION_TIME_LIMITS = [
+  { value: null, label: 'Unlimited' },
+  { value: 10000, label: '10 seconds' },
+  { value: 15000, label: '15 seconds' },
+  { value: 30000, label: '30 seconds' },
+  { value: 60000, label: '60 seconds' },
+];
+
+export const ANSWER_TIME_LIMITS = [
+  { value: 5000, label: '5 seconds' },
+  { value: 7000, label: '7 seconds' },
+  { value: 10000, label: '10 seconds' },
+];
+
 export function roomRulesFromSettings(settings, defaults = {}) {
   return {
     ...defaults,
@@ -117,40 +178,7 @@ export const useSettingsStore = create(
 
       // Presets
       loadPreset: (presetName) => {
-        const presets = {
-          casual: {
-            questionTimeLimit: null, // Unlimited
-            answerTimeLimit: 10000,
-            enableDoubleJeopardy: false,
-            enableDailyDouble: false,
-            enableFinalJeopardy: false,
-            difficulty: 'easy',
-          },
-          standard: {
-            questionTimeLimit: 30000,
-            answerTimeLimit: 7000,
-            enableDoubleJeopardy: true,
-            enableDailyDouble: true,
-            enableFinalJeopardy: true,
-            difficulty: 'mixed',
-          },
-          challenging: {
-            questionTimeLimit: 15000,
-            answerTimeLimit: 5000,
-            enableDoubleJeopardy: true,
-            enableDailyDouble: true,
-            enableFinalJeopardy: true,
-            difficulty: 'hard',
-          },
-          speed: {
-            questionTimeLimit: 10000,
-            answerTimeLimit: 5000,
-            enableDoubleJeopardy: true,
-            enableDailyDouble: true,
-            enableFinalJeopardy: false,
-            difficulty: 'medium',
-          },
-        };
+        const presets = PRESETS;
 
         if (presets[presetName]) {
           set(presets[presetName]);

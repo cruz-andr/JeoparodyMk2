@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '../../stores';
+import { QUESTION_TIME_LIMITS, ANSWER_TIME_LIMITS } from '../../stores/settingsStore';
 import './SettingsModal.css';
 
 /**
@@ -14,13 +15,6 @@ import './SettingsModal.css';
  * Settings marked `room` are rules rather than preferences: they travel with a
  * room you create, so everyone plays the same game. See roomRulesFromSettings.
  */
-
-const TIME_LIMITS = [
-  { value: null, label: 'Unlimited' },
-  { value: 15000, label: '15 seconds' },
-  { value: 30000, label: '30 seconds' },
-  { value: 60000, label: '60 seconds' },
-];
 
 const DIFFICULTIES = [
   { value: 'easy', label: 'Easy', hint: 'Recognisable people, places and events' },
@@ -109,7 +103,11 @@ export default function SettingsModal({ isOpen, onClose }) {
         id: 'timing', title: 'Timing', room: true,
         items: [
           radios('questionTimeLimit', 'Time to answer', 'timer clock seconds time limit',
-            TIME_LIMITS, s.questionTimeLimit, s.setQuestionTimeLimit),
+            QUESTION_TIME_LIMITS, s.questionTimeLimit, s.setQuestionTimeLimit),
+          radios('answerTimeLimit', 'Time to answer after buzzing in',
+            'buzz buzzer answer window seconds multiplayer',
+            ANSWER_TIME_LIMITS, s.answerTimeLimit, s.setAnswerTimeLimit,
+            'Multiplayer only: how long you have once you have buzzed in.'),
           toggle('showTimer', 'Show the timer', 'timer clock countdown hide',
             s.showTimer, s.toggleTimer),
         ],

@@ -5,7 +5,12 @@
  * No framework, so it runs anywhere with zero install.
  */
 import assert from 'node:assert/strict';
-import { roomRulesFromSettings } from './settingsStore.js';
+import {
+  roomRulesFromSettings,
+  PRESETS,
+  QUESTION_TIME_LIMITS,
+  ANSWER_TIME_LIMITS,
+} from './settingsStore.js';
 
 let passed = 0;
 const failures = [];
@@ -68,6 +73,48 @@ test('an unlimited timer survives, rather than reading as missing', () => {
   const rules = roomRulesFromSettings({ ...settings, questionTimeLimit: null });
   assert.equal(rules.questionTimeLimit, null);
   assert.equal('questionTimeLimit' in rules, true);
+});
+
+// --- a preset must never set a value the screen cannot show ------------
+
+test('every timer a preset sets is offered by the settings screen', () => {
+  // The bug this guards: Speed Round set a 10 second limit that the screen did
+  // not list, so picking it left the group with nothing selected. The preset
+  // looked like it had done nothing and the timer was unreadable.
+  const offered = QUESTION_TIME_LIMITS.map((o) => o.value);
+  for (const [name, preset] of Object.entries(PRESETS)) {
+    assert.ok(
+      offered.includes(preset.questionTimeLimit),
+      `${name} sets questionTimeLimit ${preset.questionTimeLimit}, which the screen does not offer`
+    );
+  }
+});
+
+test('every buzz-in window a preset sets is offered too', () => {
+  const offered = ANSWER_TIME_LIMITS.map((o) => o.value);
+  for (const [name, preset] of Object.entries(PRESETS)) {
+    assert.ok(
+      offered.includes(preset.answerTimeLimit),
+      `${name} sets answerTimeLimit ${preset.answerTimeLimit}, which the screen does not offer`
+    );
+  }
+});
+
+test('every option is distinct and labelled', () => {
+  for (const list of [QUESTION_TIME_LIMITS, ANSWER_TIME_LIMITS]) {
+    const values = list.map((o) => o.value);
+    assert.equal(new Set(values).size, values.length, 'no duplicate options');
+    assert.ok(list.every((o) => typeof o.label === 'string' && o.label), 'every option is labelled');
+  }
+});
+
+test('a preset that turns rounds off still reaches a room', () => {
+  const rules = roomRulesFromSettings(PRESETS.casual, {
+    enableDoubleJeopardy: true, enableDailyDouble: true, enableFinalJeopardy: true,
+  });
+  assert.equal(rules.enableDoubleJeopardy, false);
+  assert.equal(rules.enableDailyDouble, false);
+  assert.equal(rules.questionTimeLimit, null);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
