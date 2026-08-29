@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom, useAudio } from '../hooks';
-import { useRoomStore, useGameStore, useUserStore } from '../stores';
+import { useRoomStore, useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import GenreSelector from '../components/setup/GenreSelector';
@@ -45,6 +45,9 @@ export default function GamePage() {
   // Held in a ref so toggling sound does not tear down and rebuild every
   // socket subscription in the effect below.
   const audio = useAudio();
+  // Only the host generates the board, so the difficulty asked for is the
+  // host's own setting.
+  const difficulty = useSettingsStore((s) => s.difficulty);
   const audioRef = useRef(audio);
   audioRef.current = audio;
 
@@ -866,7 +869,7 @@ export default function GamePage() {
 
     try {
       const pointValues = [200, 400, 600, 800, 1000];
-      const result = await aiService.generateQuestions(categories, pointValues, 1);
+      const result = await aiService.generateQuestions(categories, pointValues, 1, difficulty);
 
       const questionGrid = result.categories.map((cat) => {
         return cat.questions.map((q) => ({
@@ -914,7 +917,7 @@ export default function GamePage() {
 
       // Generate questions with doubled point values
       const pointValues = [400, 800, 1200, 1600, 2000];
-      const result = await aiService.generateQuestions(newCategories, pointValues, 2);
+      const result = await aiService.generateQuestions(newCategories, pointValues, 2, difficulty);
 
       const questionGrid = result.categories.map((cat) => {
         return cat.questions.map((q) => ({

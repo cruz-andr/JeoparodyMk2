@@ -27,10 +27,12 @@ export default function QuestionModal({
   closeLabel = 'Skip',
 }) {
   const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
+  // Settings offers a Show timer switch that nothing was reading.
+  const showTimerSetting = useSettingsStore((s) => s.showTimer);
   /* No per clue countdown in typed mode. The board that uses it is timed as a
      whole, the way a crossword is, so a second clock ticking on each clue
      would be measuring the same thing twice and rushing the typing besides. */
-  const hasTimer = questionTimeLimit !== null && !typed;
+  const hasTimer = questionTimeLimit !== null && showTimerSetting && !typed;
   const [entry, setEntry] = useState('');
 
   // A new clue starts with an empty box, not the last one's text.

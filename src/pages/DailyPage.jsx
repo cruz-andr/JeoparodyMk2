@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
 import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
+import { useAudio } from '../hooks';
 import DailyResults from '../components/daily/DailyResults';
 import './DailyPage.css';
 
@@ -11,6 +12,7 @@ const FORMAT = 'sixer';
 
 export default function DailyPage() {
   const navigate = useNavigate();
+  const { playCorrect, playWrong } = useAudio();
   const [userInput, setUserInput] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [lastCheckResult, setLastCheckResult] = useState(null);
@@ -106,11 +108,14 @@ export default function DailyPage() {
     // Check the answer
     const result = checkAnswer(userInput.trim(), currentQuestion.answer);
     setLastCheckResult(result);
+    if (result.isCorrect) playCorrect();
+    else playWrong();
 
     // Reveal and grade
     revealAnswer(FORMAT, currentIndex, result.isCorrect, userInput.trim());
     setShowResult(true);
-  }, [userInput, currentQuestion, currentIndex, setUserAnswer, revealAnswer]);
+  }, [userInput, currentQuestion, currentIndex, setUserAnswer, revealAnswer,
+      playCorrect, playWrong]);
 
   const handleOverride = useCallback(() => {
     overrideAnswer(FORMAT, currentIndex);

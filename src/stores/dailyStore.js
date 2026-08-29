@@ -9,9 +9,12 @@ import {
   migrateToTwoFormats,
   elapsedMs,
   formatDuration,
+  markEmoji,
+  answerMark,
   boardGridRows,
   encodeAnswers,
 } from './dailyLogic';
+import { useSettingsStore } from './settingsStore';
 
 /**
  * Two daily formats, each with its own run and its own streak.
@@ -206,11 +209,12 @@ export const useDailyStore = create(
         if (!isFormat(format)) return '';
         const run = get()[format];
         const label = format === 'board' ? 'The Board' : 'The Sixer';
-        // A pass is neither a hit nor a miss, so it cannot share a colour with
-        // either without misreporting the board.
-        const grid = run.answers.map((a) =>
-          a.passed ? '\u{2B1C}' : a.correct ? '\u{1F7E9}' : '\u{1F7E5}'
-        );
+        /* A pass is neither a hit nor a miss, so it cannot share a colour with
+           either without misreporting the board. The palette follows the
+           player's own setting: a shared grid of red and green squares is
+           unreadable to the people who most need the alternative. */
+        const highContrast = useSettingsStore.getState().highContrast;
+        const grid = run.answers.map((a) => markEmoji(answerMark(a), highContrast));
         const correctCount = run.answers.filter((a) => a.correct).length;
 
         // The Board shares as the board looks: six across, five down.

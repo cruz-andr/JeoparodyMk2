@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { boardGridRows, decodeAnswers,
   answerMark,
+  markEmoji,
   elapsedMs,
   formatDuration,
 } from '../../stores/dailyLogic';
@@ -42,6 +44,7 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
     return boardGridRows(marks) ?? [marks];
   })();
 
+  const highContrast = useSettingsStore((s) => s.highContrast);
   const correctCount = answers.filter((a) => a.correct).length;
   const passedCount = answers.filter((a) => a.passed).length;
   // Only the Board is timed.
@@ -105,7 +108,7 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
                   // capped so a thirty cell board does not take three seconds
                   transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
                 >
-                  {mark === 'correct' ? '🟩' : mark === 'passed' ? '⬜' : '🟥'}
+                  {markEmoji(mark, highContrast)}
                 </motion.span>
               );
             })}

@@ -5,7 +5,6 @@ const initialState = {
   // Timer Settings
   questionTimeLimit: 30000, // milliseconds (null = unlimited)
   answerTimeLimit: 7000,    // time to answer once buzzed in, close to the show's five
-  dailyDoubleTimeLimit: 30000,
   finalJeopardyTimeLimit: 30000,
 
   // Round Settings
@@ -18,14 +17,42 @@ const initialState = {
   musicEnabled: true,
   volume: 0.7,
 
-  // Display Settings
+  // Display and access
   showTimer: true,
   showScore: true,
+  // Red and green squares are unreadable to the most common colour blindness,
+  // and the results grid is the part of the game that gets shared.
+  highContrast: false,
+  textScale: 'normal', // 'normal' | 'large' | 'larger'
+  reduceMotion: 'system', // 'system' | 'on' | 'off'
 
   // Game Settings
+  // Fed into question generation, so a genre can be asked for at a level.
   difficulty: 'mixed', // 'easy' | 'medium' | 'hard' | 'mixed'
-  categorySource: 'ai', // 'ai' | 'custom'
 };
+
+
+/**
+ * The part of a player's settings that is a room RULE rather than a personal
+ * preference.
+ *
+ * Audio and display choices stay local to whoever set them; timers and round
+ * structure have to be the same for everyone in the room, so they travel with
+ * the room when it is created. Kept here, and used by every screen that makes
+ * a room, because hand copying the fields at each call site is how host mode
+ * ended up sending four of them and multiplayer sending none.
+ */
+export function roomRulesFromSettings(settings, defaults = {}) {
+  return {
+    ...defaults,
+    questionTimeLimit: settings.questionTimeLimit,
+    answerTimeLimit: settings.answerTimeLimit,
+    finalJeopardyTimeLimit: settings.finalJeopardyTimeLimit,
+    enableDoubleJeopardy: settings.enableDoubleJeopardy,
+    enableDailyDouble: settings.enableDailyDouble,
+    enableFinalJeopardy: settings.enableFinalJeopardy,
+  };
+}
 
 export const useSettingsStore = create(
   persist(
@@ -44,8 +71,6 @@ export const useSettingsStore = create(
       setQuestionTimeLimit: (limit) => set({ questionTimeLimit: limit }),
 
       setAnswerTimeLimit: (limit) => set({ answerTimeLimit: limit }),
-
-      setDailyDoubleTimeLimit: (limit) => set({ dailyDoubleTimeLimit: limit }),
 
       setFinalJeopardyTimeLimit: (limit) => set({ finalJeopardyTimeLimit: limit }),
 
@@ -81,7 +106,11 @@ export const useSettingsStore = create(
 
       setDifficulty: (difficulty) => set({ difficulty }),
 
-      setCategorySource: (source) => set({ categorySource: source }),
+      toggleHighContrast: () => set((state) => ({ highContrast: !state.highContrast })),
+
+      setTextScale: (textScale) => set({ textScale }),
+
+      setReduceMotion: (reduceMotion) => set({ reduceMotion }),
 
       // Reset to defaults
       resetToDefaults: () => set(initialState),

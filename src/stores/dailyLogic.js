@@ -155,6 +155,21 @@ export function answerMark(answer) {
   return answer.correct ? 'correct' : 'wrong';
 }
 
+/* Red and green is the one pairing red green colourblindness cannot separate,
+   and it affects roughly one man in twelve. It is also the only part of the
+   game people share, so the grid has to work for them. Orange and blue is the
+   substitution Wordle settled on for the same problem. */
+const MARK_EMOJI = {
+  normal: { correct: '\u{1F7E9}', wrong: '\u{1F7E5}', passed: '\u{2B1C}' },
+  highContrast: { correct: '\u{1F7E7}', wrong: '\u{1F7E6}', passed: '\u{2B1C}' },
+};
+
+/** The square a played clue shows, in the palette the player can read. */
+export function markEmoji(mark, highContrast = false) {
+  const set = highContrast ? MARK_EMOJI.highContrast : MARK_EMOJI.normal;
+  return set[mark] ?? set.wrong;
+}
+
 /** mm:ss, or h:mm:ss once a board has taken an hour. */
 export function formatDuration(ms) {
   if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0) return null;

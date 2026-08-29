@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
-import { useRoomStore, useUserStore } from '../stores';
+import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
+import { roomRulesFromSettings } from '../stores/settingsStore';
 import { socketClient } from '../services/socket/socketClient';
 import SignatureCanvas from '../components/common/SignatureCanvas';
 import '../components/common/SignatureCanvas.css';
@@ -41,13 +42,16 @@ export default function MultiplayerPage() {
     setError(null);
 
     try {
-      // First create room on backend
-      // Send the room's rule settings up front. Creating with none left the
-      // server reading enableDailyDouble as undefined, so a private game never
-      // got a Daily Double while the lobby still showed it as enabled.
+      /* Send the room's rule settings up front. Creating with none left the
+         server reading enableDailyDouble as undefined, so a private game never
+         got a Daily Double while the lobby still showed it as enabled.
+         The rules come from the player's own settings, which this screen used
+         to ignore entirely: turning off Double Jeopardy in Settings changed
+         single player and host mode but silently did nothing here, because the
+         room was built from roomStore's hardcoded defaults instead. */
       const { roomCode: newRoomCode } = await socketClient.createRoom(
         'multiplayer',
-        useRoomStore.getState().settings
+        roomRulesFromSettings(useSettingsStore.getState(), useRoomStore.getState().settings)
       );
 
       // Update local store
