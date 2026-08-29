@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+
+    /* Distance from focus drives scale, opacity and blur. Nothing is hidden,
+       it is just further away. */
+    .band { transform-origin: center; transition: none; }
+    .tile {
+      background: linear-gradient(177deg, #232ca8 0%, #141d84 42%, #0d1466 100%);
+      display: flex; align-items: center; justify-content: center; position: relative;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.35);
+    }
+    /* a single light source across the wall, as on the set */
+    .tile::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(160deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0) 46%);
+      pointer-events: none;
+    }
+    .tile.done { background: #090e3a; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+    .tile.done::after { display: none; }
+
+    /* Liquid Glass, used the way Apple uses it: a floating CONTROL layer over
+       real content, never as decoration on a card. */
+    .glass {
+      background: rgba(12, 18, 62, 0.55);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 10px 34px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.28);
+      border-radius: 999px;
+    }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: radial-gradient(120% 70% at 50% 22%, #16207a 0%, #070c2e 58%, #03050f 100%); position: relative; overflow: hidden;">
+
+  <!-- the wall, drifting under the controls -->
+  <div style="position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 0 18px;">
+
+    <!-- two categories back -->
+    <div class="band" style="opacity: 0.22; transform: scale(0.86); filter: blur(1.2px);">
+      <div class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 1.4px; color: #F2ECE0; margin-bottom: 5px;">Unscripted TV</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+        <div class="tile done" style="height: 22px;"></div><div class="tile done" style="height: 22px;"></div>
+        <div class="tile" style="height: 22px;"></div><div class="tile" style="height: 22px;"></div><div class="tile" style="height: 22px;"></div>
+      </div>
+    </div>
+
+    <!-- one back -->
+    <div class="band" style="opacity: 0.45; transform: scale(0.93); filter: blur(0.5px);">
+      <div class="board" style="font-size: 16px; font-weight: 800; letter-spacing: 1px; color: #F2ECE0; margin-bottom: 6px;">Fruit, Not Fruit</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+        <div class="tile done" style="height: 34px;"></div><div class="tile done" style="height: 34px;"></div><div class="tile done" style="height: 34px;"></div>
+        <div class="tile" style="height: 34px;"><span class="board" style="font-size:12px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="tile" style="height: 34px;"><span class="board" style="font-size:11px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <!-- IN FOCUS: full size, full light, nothing competing with it -->
+    <div class="band" style="padding: 6px 0;">
+      <div class="board" style="font-size: 30px; font-weight: 900; letter-spacing: 0.2px; color: #FFFFFF; margin-bottom: 12px; text-shadow: 0 2px 18px rgba(120,150,255,0.4);">Innovations</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px;">
+        <div class="tile done" style="height: 78px;"><span class="board" style="font-size:16px;font-weight:900;color:#2f7a49;">&#10003;</span></div>
+        <div class="tile" style="height: 78px;"><span class="board" style="font-size:19px;font-weight:900;color:#E8B35A;">$400</span></div>
+        <div class="tile" style="height: 78px;"><span class="board" style="font-size:19px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <div class="tile" style="height: 78px;"><span class="board" style="font-size:19px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="tile" style="height: 78px;"><span class="board" style="font-size:16px;font-weight:900;color:#E8B35A;">$1000</span></div>
+      </div>
+    </div>
+
+    <!-- one forward -->
+    <div class="band" style="opacity: 0.45; transform: scale(0.93); filter: blur(0.5px);">
+      <div class="board" style="font-size: 16px; font-weight: 800; letter-spacing: 1px; color: #F2ECE0; margin-bottom: 6px;">French Dip</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+        <div class="tile done" style="height: 34px;"></div><div class="tile done" style="height: 34px;"></div>
+        <div class="tile" style="height: 34px;"><span class="board" style="font-size:12px;font-weight:900;color:#D69F4C;">$600</span></div>
+        <div class="tile" style="height: 34px;"><span class="board" style="font-size:12px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="tile" style="height: 34px;"><span class="board" style="font-size:11px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <!-- two forward -->
+    <div class="band" style="opacity: 0.22; transform: scale(0.86); filter: blur(1.2px);">
+      <div class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 1.4px; color: #F2ECE0; margin-bottom: 5px;">Democrats</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+        <div class="tile done" style="height: 22px;"></div><div class="tile" style="height: 22px;"></div>
+        <div class="tile" style="height: 22px;"></div><div class="tile" style="height: 22px;"></div><div class="tile" style="height: 22px;"></div>
+      </div>
+    </div>
+
+    <!-- three forward, barely there -->
+    <div class="band" style="opacity: 0.1; transform: scale(0.8); filter: blur(2px);">
+      <div class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.4px; color: #F2ECE0; margin-bottom: 4px;">Republic "-an"s</div>
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+        <div class="tile done" style="height: 16px;"></div><div class="tile done" style="height: 16px;"></div>
+        <div class="tile" style="height: 16px;"></div><div class="tile" style="height: 16px;"></div><div class="tile" style="height: 16px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating control layer -->
+  <div class="glass" style="position: absolute; top: 16px; left: 14px; right: 14px; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 18px;">
+    <div style="display: flex; flex-direction: column;">
+      <span class="board" style="font-size: 21px; font-weight: 900; color: #FFFFFF; line-height: 1;">$3,400</span>
+      <span class="board" style="font-size: 9px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.5);">11 OF 30 &middot; BEAT $9,800</span>
+    </div>
+    <div style="width: 40px; height: 40px; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center;">
+      <span class="board" style="font-size: 15px; font-weight: 800; color: rgba(242,236,224,0.75);">&times;</span>
+    </div>
+  </div>
+
+  <!-- the wall continues past the bottom edge; no rail, no bar, just falloff -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(180deg, rgba(3,5,15,0) 0%, rgba(3,5,15,0.92) 78%);"></div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 26px; text-align: center;">
+    <span class="board" style="font-size: 10px; font-weight: 700; letter-spacing: 2px; color: rgba(242,236,224,0.32);">SCROLL THE WALL</span>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

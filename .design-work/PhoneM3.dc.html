@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    /* the real board, shrunk to a map: read, not touched */
+    .mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+    .minicol { display: grid; grid-template-rows: repeat(5, 1fr); gap: 2px; }
+    .minicell { height: 8px; background: #1a2080; }
+    .minicell.done { background: #0a0f3a; }
+    .minicol.here .minicell { background: #D69F4C; }
+    .minicol.here .minicell.done { background: #7a5520; }
+    .val { flex: 1; background: #1a2080; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+    .val.done { background: #0a0f3a; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #05081c; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 14px 12px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(242,236,224,0.14); flex-shrink: 0;">
+    <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.6); border: 1px solid rgba(242,236,224,0.22); padding: 9px 12px;">&larr; MENU</span>
+    <div class="board" style="font-size: 24px; font-weight: 900; color: #D69F4C;">THE BOARD</div>
+    <div style="text-align: right;">
+      <div class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0; line-height: 1;">$3,400</div>
+      <div class="board" style="font-size: 9px; letter-spacing: 1.2px; color: rgba(242,236,224,0.38);">BEAT $9,800</div>
+    </div>
+  </div>
+
+  <!-- The whole board, kept as a map so nothing is lost by paging -->
+  <div style="padding: 12px 12px 10px; flex-shrink: 0;">
+    <div class="mini">
+      <div class="minicol"><div class="minicell done"></div><div class="minicell done"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div></div>
+      <div class="minicol"><div class="minicell done"></div><div class="minicell done"></div><div class="minicell done"></div><div class="minicell"></div><div class="minicell"></div></div>
+      <div class="minicol here"><div class="minicell done"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div></div>
+      <div class="minicol"><div class="minicell done"></div><div class="minicell done"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div></div>
+      <div class="minicol"><div class="minicell done"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div></div>
+      <div class="minicol"><div class="minicell done"></div><div class="minicell done"></div><div class="minicell"></div><div class="minicell"></div><div class="minicell"></div></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 7px;">
+      <span class="board" style="font-size: 10px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.35);">11 OF 30 PLAYED</span>
+      <span class="board" style="font-size: 10px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.35);">CATEGORY 3 OF 6</span>
+    </div>
+  </div>
+
+  <!-- The category you are on, at full width -->
+  <div style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0 12px 12px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0 14px; flex-shrink: 0;">
+      <span class="board" style="font-size: 22px; font-weight: 900; color: rgba(242,236,224,0.3);">&lsaquo;</span>
+      <span class="board" style="font-size: 32px; font-weight: 900; color: #F2ECE0; line-height: 1; text-align: center;">Innovations</span>
+      <span class="board" style="font-size: 22px; font-weight: 900; color: rgba(242,236,224,0.55);">&rsaquo;</span>
+    </div>
+
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; min-height: 0;">
+      <div class="val done">
+        <span class="board" style="font-size: 21px; font-weight: 900; color: rgba(242,236,224,0.3);">$200</span>
+        <span class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.2px; color: #4ade80;">&#10003; CORRECT</span>
+      </div>
+      <div class="val"><span class="board" style="font-size: 21px; font-weight: 900; color: #D69F4C;">$400</span><span class="board" style="font-size: 17px; color: rgba(242,236,224,0.35);">&rsaquo;</span></div>
+      <div class="val"><span class="board" style="font-size: 21px; font-weight: 900; color: #D69F4C;">$600</span><span class="board" style="font-size: 17px; color: rgba(242,236,224,0.35);">&rsaquo;</span></div>
+      <div class="val"><span class="board" style="font-size: 21px; font-weight: 900; color: #D69F4C;">$800</span><span class="board" style="font-size: 17px; color: rgba(242,236,224,0.35);">&rsaquo;</span></div>
+      <div class="val"><span class="board" style="font-size: 21px; font-weight: 900; color: #D69F4C;">$1000</span><span class="board" style="font-size: 17px; color: rgba(242,236,224,0.35);">&rsaquo;</span></div>
+    </div>
+
+    <div style="text-align: center; padding-top: 12px; flex-shrink: 0;">
+      <span class="board" style="font-size: 10px; font-weight: 700; letter-spacing: 1.6px; color: rgba(242,236,224,0.3);">SWIPE FOR THE NEXT CATEGORY</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

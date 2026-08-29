@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .catname { font-family: 'Big Shoulders Display', sans-serif; text-transform: uppercase; font-size: 17px; font-weight: 800; color: #F2ECE0; letter-spacing: 0.3px; }
+    /* 5 chips across 366px: 66px each, comfortably over the 44px minimum */
+    .chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+    .chip { height: 54px; background: #1a2080; display: flex; align-items: center; justify-content: center; }
+    .chip.done { background: #0a0f3a; }
+    .row { display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #05081c; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- Header -->
+  <div style="padding: 14px 12px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(242,236,224,0.14); flex-shrink: 0;">
+    <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.6); border: 1px solid rgba(242,236,224,0.22); padding: 9px 12px;">&larr; MENU</span>
+    <div style="text-align: center;">
+      <div class="board" style="font-size: 24px; font-weight: 900; color: #D69F4C; line-height: 1;">THE BOARD</div>
+      <div class="board" style="font-size: 10px; letter-spacing: 1.4px; color: rgba(242,236,224,0.38); margin-top: 2px;">FRI AUG 29</div>
+    </div>
+    <div style="text-align: right;">
+      <div class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0; line-height: 1;">$3,400</div>
+      <div class="board" style="font-size: 9px; letter-spacing: 1.2px; color: rgba(242,236,224,0.38);">BEAT $9,800</div>
+    </div>
+  </div>
+
+  <!-- Progress: the thing the squeezed grid used to convey by looking full -->
+  <div style="padding: 9px 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; border-bottom: 1px solid rgba(242,236,224,0.09);">
+    <span class="board" style="font-size: 10px; font-weight: 800; letter-spacing: 1.3px; color: rgba(242,236,224,0.45); flex-shrink: 0;">11 OF 30</span>
+    <div style="flex: 1; height: 4px; background: rgba(242,236,224,0.12);">
+      <div style="width: 37%; height: 100%; background: #D69F4C;"></div>
+    </div>
+  </div>
+
+  <!-- One row per category. The name gets the full 366px, so it is readable. -->
+  <div style="flex: 1; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 9px; min-height: 0;">
+
+    <div class="row">
+      <span class="catname">Unscripted TV</span>
+      <div class="chips">
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#ff6b6b;">&#10007;</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$600</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="chip"><span class="board" style="font-size:14px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="catname">Fruit, Not Fruit</span>
+      <div class="chips">
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="chip"><span class="board" style="font-size:14px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="catname">Innovations</span>
+      <div class="chips">
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$400</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$600</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="chip"><span class="board" style="font-size:14px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="catname">French Dip</span>
+      <div class="chips">
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#ff6b6b;">&#10007;</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$600</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="chip"><span class="board" style="font-size:14px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="catname">Democrats</span>
+      <div class="chips">
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$400</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$600</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="chip"><span class="board" style="font-size:14px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="catname">Republic "-an"s</span>
+      <div class="chips">
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#ff6b6b;">&#10007;</span></div>
+        <div class="chip done"><span class="board" style="font-size:17px;font-weight:900;color:#4ade80;">&#10003;</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$600</span></div>
+        <div class="chip"><span class="board" style="font-size:16px;font-weight:900;color:#D69F4C;">$800</span></div>
+        <div class="chip"><span class="board" style="font-size:14px;font-weight:900;color:#D69F4C;">$1000</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,183 @@
+/*
+ * The board, turned. One category per row, five on screen, middle three live.
+ *
+ * Distance from the centre drives scale, tilt and light. The three playable
+ * rows stay lit and carry their values; the two context rows carry neither, so
+ * nothing about them invites a tap they cannot honour.
+ */
+
+.wheel {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  perspective: 620px;
+  perspective-origin: 50% 50%;
+  touch-action: pan-y;
+}
+
+/* Uniform 150px slots, so a roll is always the same distance.
+   preserve-3d matters: perspective on .wheel only reaches its direct child,
+   and a flat track would flatten the bands' rotateX into a plain vertical
+   squash with no depth, which is the whole premise of the wheel. */
+.wheel-track {
+  transform-style: preserve-3d;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  margin-top: -75px;
+  transition: transform 380ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.wheel-band {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  transform-origin: 50% 50%;
+  transition:
+    transform 380ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 380ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.wheel-band.d0 { transform: rotateX(0deg) scale(1); opacity: 1; }
+/* 0.74, not less: scaling the band scales its WIDTH too, and below about 0.68
+   the neighbour tiles fall under the 44px minimum. At 0.74 the real target is
+   48 x 65 once the tilt has taken its cut. */
+.wheel-band.d1.above { transform: rotateX(20deg) scale(0.74); opacity: 0.72; }
+.wheel-band.d1.below { transform: rotateX(-20deg) scale(0.74); opacity: 0.72; }
+.wheel-band.d2.above { transform: rotateX(46deg) scale(0.48); opacity: 0.2; }
+.wheel-band.d2.below { transform: rotateX(-46deg) scale(0.48); opacity: 0.2; }
+
+.wheel-name {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0 0 12px;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 2px 18px rgba(120, 150, 255, 0.4);
+}
+
+.wheel-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.wheel-tile {
+  height: 94px;
+  border: none;
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+  background: linear-gradient(177deg, #232ca8 0%, #141d84 42%, #0d1466 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 120ms ease;
+}
+
+/* one light source across the wall, as on the set */
+.wheel-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.13) 0%,
+    rgba(255, 255, 255, 0) 46%
+  );
+  pointer-events: none;
+}
+
+.wheel-tile:active:not(:disabled) { filter: brightness(1.25); }
+
+.wheel-tile.done,
+.wheel-tile:disabled {
+  background: #090e3a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  cursor: default;
+}
+
+.wheel-tile.done::after,
+.wheel-tile:disabled::after { display: none; }
+
+.wheel-value {
+  font-family: var(--font-board);
+  font-size: 1.19rem;
+  font-weight: 900;
+  color: var(--jeopardy-gold-light);
+}
+
+.mark { font-family: var(--font-board); font-size: 1.13rem; font-weight: 900; }
+.mark.ok { color: #2f7a49; }
+.mark.miss { color: #8f3340; }
+
+/* Context rows: no values, no light, nothing to reach for. */
+.wheel-band.context .wheel-tile {
+  background: #101a5e;
+  box-shadow: none;
+  pointer-events: none;
+}
+.wheel-band.context .wheel-tile::after { display: none; }
+.wheel-band.context .wheel-value,
+.wheel-band.context .mark { visibility: hidden; }
+.wheel-band.context .wheel-name {
+  font-size: 1.13rem;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: rgba(242, 236, 224, 0.8);
+  text-shadow: none;
+  padding-bottom: 4px;
+}
+
+.wheel-band.d1 .wheel-name {
+  font-size: 2rem;
+  color: rgba(242, 236, 224, 0.95);
+  text-shadow: none;
+}
+
+.wheel-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 90px;
+  pointer-events: none;
+}
+.wheel-fade.top {
+  top: 0;
+  background: linear-gradient(180deg, rgba(7, 12, 46, 0.95) 0%, rgba(7, 12, 46, 0) 100%);
+}
+.wheel-fade.bottom {
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(3, 5, 15, 0) 0%, rgba(3, 5, 15, 0.92) 88%);
+}
+
+.wheel:focus-visible,
+.wheel-tile:focus-visible,
+.wheel-name:focus-visible {
+  outline: 3px solid var(--jeopardy-gold-light);
+  outline-offset: 2px;
+}
+
+/* A 134px roll plus a scale is exactly the motion some people cannot take. */
+.wheel.no-motion .wheel-track,
+.wheel.no-motion .wheel-band {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-track,
+  .wheel-band { transition: none; }
+}

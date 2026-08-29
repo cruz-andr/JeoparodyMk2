@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .cat { height: 58px; background: #16207e; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+    .catname { font-family: 'Big Shoulders Display', sans-serif; text-transform: uppercase; font-size: 19px; font-weight: 800; color: #F2ECE0; }
+    .count { font-family: 'Big Shoulders Display', sans-serif; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.42); }
+    .val { height: 52px; background: #1a2080; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+    .val.done { background: #0a0f3a; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #05081c; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 14px 12px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(242,236,224,0.14); flex-shrink: 0;">
+    <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.6); border: 1px solid rgba(242,236,224,0.22); padding: 9px 12px;">&larr; MENU</span>
+    <div style="text-align: center;">
+      <div class="board" style="font-size: 24px; font-weight: 900; color: #D69F4C; line-height: 1;">THE BOARD</div>
+      <div class="board" style="font-size: 10px; letter-spacing: 1.4px; color: rgba(242,236,224,0.38); margin-top: 2px;">11 OF 30 PLAYED</div>
+    </div>
+    <div style="text-align: right;">
+      <div class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0; line-height: 1;">$3,400</div>
+      <div class="board" style="font-size: 9px; letter-spacing: 1.2px; color: rgba(242,236,224,0.38);">BEAT $9,800</div>
+    </div>
+  </div>
+
+  <div style="flex: 1; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 7px; min-height: 0;">
+
+    <div class="cat">
+      <span class="catname">Unscripted TV</span>
+      <span class="count">2 of 5 &nbsp;&rsaquo;</span>
+    </div>
+
+    <div class="cat">
+      <span class="catname">Fruit, Not Fruit</span>
+      <span class="count">3 of 5 &nbsp;&rsaquo;</span>
+    </div>
+
+    <!-- The open category: full width buttons, nothing to squint at -->
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div class="cat" style="background: #D69F4C;">
+        <span class="catname" style="color: #14100a; font-weight: 900;">Innovations</span>
+        <span class="count" style="color: rgba(20,16,10,0.6);">1 of 5 &nbsp;&and;</span>
+      </div>
+      <div class="val done">
+        <span class="board" style="font-size: 19px; font-weight: 900; color: rgba(242,236,224,0.3);">$200</span>
+        <span class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.2px; color: #4ade80;">&#10003; CORRECT</span>
+      </div>
+      <div class="val">
+        <span class="board" style="font-size: 19px; font-weight: 900; color: #D69F4C;">$400</span>
+        <span class="board" style="font-size: 16px; font-weight: 900; color: rgba(242,236,224,0.35);">&rsaquo;</span>
+      </div>
+      <div class="val">
+        <span class="board" style="font-size: 19px; font-weight: 900; color: #D69F4C;">$600</span>
+        <span class="board" style="font-size: 16px; font-weight: 900; color: rgba(242,236,224,0.35);">&rsaquo;</span>
+      </div>
+      <div class="val">
+        <span class="board" style="font-size: 19px; font-weight: 900; color: #D69F4C;">$800</span>
+        <span class="board" style="font-size: 16px; font-weight: 900; color: rgba(242,236,224,0.35);">&rsaquo;</span>
+      </div>
+      <div class="val">
+        <span class="board" style="font-size: 19px; font-weight: 900; color: #D69F4C;">$1000</span>
+        <span class="board" style="font-size: 16px; font-weight: 900; color: rgba(242,236,224,0.35);">&rsaquo;</span>
+      </div>
+    </div>
+
+    <div class="cat">
+      <span class="catname">French Dip</span>
+      <span class="count">2 of 5 &nbsp;&rsaquo;</span>
+    </div>
+
+    <div class="cat">
+      <span class="catname">Democrats</span>
+      <span class="count">1 of 5 &nbsp;&rsaquo;</span>
+    </div>
+
+    <div class="cat">
+      <span class="catname">Republic "-an"s</span>
+      <span class="count">2 of 5 &nbsp;&rsaquo;</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

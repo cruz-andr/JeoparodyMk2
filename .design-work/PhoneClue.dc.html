@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #0E1467; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 14px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+    <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.55); border: 1px solid rgba(242,236,224,0.22); padding: 9px 12px;">&larr; BOARD</span>
+    <span class="board" style="font-size: 15px; font-weight: 800; letter-spacing: 1px; color: rgba(242,236,224,0.6);">INNOVATIONS</span>
+    <span class="board" style="font-size: 17px; font-weight: 900; color: #14100a; background: #D69F4C; padding: 6px 11px;">$600</span>
+  </div>
+
+  <!-- The clue owns the screen. Petrona at 27px is the readable end of the
+       range at arm's length, and the whole point of the twenty minutes. -->
+  <div style="flex: 1; display: flex; align-items: center; padding: 0 24px; min-height: 0;">
+    <p style="margin: 0; font-family: 'Petrona', Georgia, serif; font-size: 27px; line-height: 1.34; color: #F2ECE0; text-wrap: pretty;">
+      This Scottish engineer's 1769 patent for a separate condenser made the
+      steam engine efficient enough to power a factory.
+    </p>
+  </div>
+
+  <!-- Actions sit in the thumb zone, not under the notch -->
+  <div style="padding: 0 12px 28px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;">
+    <div style="height: 62px; background: #D69F4C; display: flex; align-items: center; justify-content: center;">
+      <span class="board" style="font-size: 23px; font-weight: 900; letter-spacing: 0.5px; color: #14100a;">Show the answer</span>
+    </div>
+    <div style="height: 50px; border: 1px solid rgba(242,236,224,0.22); display: flex; align-items: center; justify-content: center;">
+      <span class="board" style="font-size: 16px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.55);">Skip for now</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

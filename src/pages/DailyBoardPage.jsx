@@ -10,6 +10,8 @@ import {
 } from '../stores/dailyLogic';
 import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import GameBoard from '../components/game/GameBoard';
+import BoardWheel from '../components/game/BoardWheel';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyResults from '../components/daily/DailyResults';
 import './DailyBoardPage.css';
@@ -24,6 +26,9 @@ export default function DailyBoardPage() {
   const navigate = useNavigate();
   const [openCell, setOpenCell] = useState(null); // { categoryIndex, pointIndex }
   const [showAnswer, setShowAnswer] = useState(false);
+  // The two boards are different components, not one restyled, so this cannot
+  // be a media query in CSS.
+  const isPhone = useMediaQuery('(max-width: 768px)');
 
   const {
     board,
@@ -179,6 +184,65 @@ export default function DailyBoardPage() {
     );
   }
 
+  const playedCount = answers.filter((a) => a?.revealed).length;
+  const streak = stats[FORMAT].currentStreak;
+
+  const clueModal = (
+    <AnimatePresence>
+      {openQuestion && (
+        <QuestionModal
+          question={openQuestion}
+          points={POINT_VALUES[openCell.pointIndex]}
+          showAnswer={showAnswer}
+          onRevealAnswer={() => setShowAnswer(true)}
+          onCorrect={() => grade(true)}
+          onIncorrect={() => grade(false)}
+          onClose={() => {
+            setOpenCell(null);
+            setShowAnswer(false);
+          }}
+        />
+      )}
+    </AnimatePresence>
+  );
+
+  // Phone: the board turns. See BoardWheel for why.
+  if (isPhone) {
+    return (
+      <div className="daily-board-page phone">
+        <div className="wheel-header">
+          <span className="wheel-state">
+            {date} &middot; {playedCount} of {questions.length}
+          </span>
+          <button className="wheel-close" onClick={backToMenu} aria-label="Back to menu">
+            &times;
+          </button>
+        </div>
+
+        <BoardWheel
+          categories={board.categories ?? []}
+          answers={answers}
+          pointValues={POINT_VALUES}
+          onSelect={handleSelect}
+        />
+
+        <div className="wheel-podium">
+          <div className="wheel-podium-meta">
+            <span>The Board</span>
+            {streak > 0 && <span>{streak} day streak</span>}
+          </div>
+          <div className="wheel-podium-score">
+            <span className={score < 0 ? 'negative' : ''}>
+              {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {clueModal}
+      </div>
+    );
+  }
+
   return (
     <div className="daily-board-page">
       <header className="daily-board-header">
@@ -196,10 +260,8 @@ export default function DailyBoardPage() {
               Beat ${weekBest.toLocaleString()}
             </span>
           )}
-          {stats[FORMAT].currentStreak > 0 && (
-            <span className="daily-board-streak">
-              {stats[FORMAT].currentStreak} day streak
-            </span>
+          {streak > 0 && (
+            <span className="daily-board-streak">{streak} day streak</span>
           )}
         </div>
       </header>
@@ -212,22 +274,7 @@ export default function DailyBoardPage() {
         revealedQuestions={revealedQuestions}
       />
 
-      <AnimatePresence>
-        {openQuestion && (
-          <QuestionModal
-            question={openQuestion}
-            points={POINT_VALUES[openCell.pointIndex]}
-            showAnswer={showAnswer}
-            onRevealAnswer={() => setShowAnswer(true)}
-            onCorrect={() => grade(true)}
-            onIncorrect={() => grade(false)}
-            onClose={() => {
-              setOpenCell(null);
-              setShowAnswer(false);
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {clueModal}
     </div>
   );
 }

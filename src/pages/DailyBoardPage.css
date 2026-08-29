@@ -135,3 +135,98 @@
   padding: 4px 9px;
   white-space: nowrap;
 }
+
+/* ── Phone: the board turns into a wheel ─────────────────── */
+
+.daily-board-page.phone {
+  padding: 0;
+  gap: 0;
+  height: 100vh;
+  height: 100dvh;
+  /* The base rule sets min-height: 100vh, which clamps the used height back to
+     100vh and puts the podium under the browser chrome, which is the exact
+     thing the dvh above is for. */
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(120% 62% at 50% 16%, #16207a 0%, #070c2e 56%, #03050f 100%);
+}
+
+/* label and close share a row, so they share a vertical centre */
+.wheel-header {
+  flex-shrink: 0;
+  height: 66px;
+  padding: 0 14px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wheel-state {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.wheel-close {
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-board);
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(242, 236, 224, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wheel-close:hover { color: #f2ece0; }
+
+/* Scores where the contestants stand on the show, and where the thumb is. */
+.wheel-podium {
+  flex-shrink: 0;
+  padding: 0 12px 20px;
+}
+
+.wheel-podium-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 7px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.wheel-podium-score {
+  background: linear-gradient(180deg, #e8b35a 0%, #c98f3c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 -3px 22px rgba(232, 179, 90, 0.35);
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-board);
+  font-size: 2.13rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #14100a;
+}
+
+.wheel-podium-score .negative { color: #7a1f28; }
+
+.wheel-close:focus-visible {
+  outline: 3px solid var(--jeopardy-gold-light);
+  outline-offset: 2px;
+}

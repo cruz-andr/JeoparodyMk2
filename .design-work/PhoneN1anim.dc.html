@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .tile {
+      background: linear-gradient(177deg, #232ca8 0%, #141d84 42%, #0d1466 100%);
+      display: flex; align-items: center; justify-content: center; position: relative;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.35);
+    }
+    .tile::after { content: ''; position: absolute; inset: 0;
+      background: linear-gradient(160deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0) 46%); }
+    .tile.done { background: #090e3a; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+    .tile.done::after { display: none; }
+    .row { display: grid; grid-template-columns: repeat(5, 1fr); }
+    .band { position: absolute; left: 18px; right: 18px; transform-origin: 50% 50%; }
+
+    /* One tap, two beats. The row you picked rolls to the middle, and only
+       then does the tile open. By the time it opens it is flat and centred,
+       so you never watch a tilted face turn into a page. */
+    :root { --ease: cubic-bezier(0.32, 0.72, 0, 1); }
+
+    /* beat 1: the wheel rolls 134px so Fruit takes the centre */
+    @keyframes rollUp {
+      0%, 8%    { transform: translateY(0) rotateX(20deg) scale(0.93); opacity: 0.72; }
+      26%, 88%  { transform: translateY(134px) rotateX(0deg) scale(1.53); opacity: 1; }
+      100%      { transform: translateY(0) rotateX(20deg) scale(0.93); opacity: 0.72; }
+    }
+    @keyframes rollCentre {
+      0%, 8%    { transform: translateY(0) rotateX(0deg) scale(1); opacity: 1; }
+      26%, 88%  { transform: translateY(134px) rotateX(-20deg) scale(0.65); opacity: 0.72; }
+      100%      { transform: translateY(0) rotateX(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes rollDown {
+      0%, 8%    { transform: translateY(0) rotateX(-20deg) scale(0.93); opacity: 0.72; }
+      26%, 88%  { transform: translateY(150px) rotateX(-46deg) scale(0.8); opacity: 0.2; }
+      100%      { transform: translateY(0) rotateX(-20deg) scale(0.93); opacity: 0.72; }
+    }
+    @keyframes rollFarTop {
+      0%, 8%    { transform: translateY(0) rotateX(46deg) scale(0.8); opacity: 0.2; }
+      26%, 88%  { transform: translateY(120px) rotateX(46deg) scale(0.8); opacity: 0; }
+      100%      { transform: translateY(0) rotateX(46deg) scale(0.8); opacity: 0.2; }
+    }
+    @keyframes rollFarBottom {
+      0%, 8%    { transform: translateY(0) rotateX(-46deg) scale(0.8); opacity: 0.2; }
+      26%, 88%  { transform: translateY(150px) rotateX(-46deg) scale(0.8); opacity: 0; }
+      100%      { transform: translateY(0) rotateX(-46deg) scale(0.8); opacity: 0.2; }
+    }
+
+    /* beat 2: the tile itself becomes the clue */
+    @keyframes open {
+      0%, 30%   { top: 374px; left: 255px; width: 101px; height: 95px; opacity: 0; }
+      32%       { opacity: 1; }
+      46%, 78%  { top: 76px;  left: 12px;  width: 366px; height: 640px; opacity: 1; }
+      90%       { top: 374px; left: 255px; width: 101px; height: 95px; opacity: 1; }
+      92%, 100% { opacity: 0; }
+    }
+    @keyframes clueIn  { 0%,48% {opacity:0; transform: translateY(8px)} 56%,76% {opacity:1; transform:none} 84%,100% {opacity:0} }
+    @keyframes chromeIn{ 0%,44% {opacity:0} 52%,78% {opacity:1} 86%,100% {opacity:0} }
+    @keyframes valueOut{ 0%,34% {opacity:1} 44%,100% {opacity:0} }
+    @keyframes dimWheel{ 0%,32% {opacity:1} 46%,78% {opacity:0.18} 90%,100% {opacity:1} }
+
+    .b-fartop { animation: rollFarTop 11s var(--ease) infinite; }
+    .b-up     { animation: rollUp 11s var(--ease) infinite; }
+    .b-cen    { animation: rollCentre 11s var(--ease) infinite; }
+    .b-down   { animation: rollDown 11s var(--ease) infinite; }
+    .b-farbot { animation: rollFarBottom 11s var(--ease) infinite; }
+    .wheel    { animation: dimWheel 11s var(--ease) infinite; }
+    .hero     { animation: open 11s var(--ease) infinite; }
+    .heroClue { animation: clueIn 11s var(--ease) infinite; }
+    .heroChrome { animation: chromeIn 11s linear infinite; }
+    .heroValue{ animation: valueOut 11s linear infinite; }
+
+    .podium { flex: 1; min-width: 0; background: linear-gradient(180deg, #141d84 0%, #0b1160 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 9px 4px; }
+    .podium.active { background: linear-gradient(180deg, #E8B35A 0%, #C98F3C 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 -3px 22px rgba(232,179,90,0.4); }
+    .score { font-family: 'Big Shoulders Display', sans-serif; font-size: 20px; font-weight: 900; line-height: 1; color: #FFFFFF; }
+    .podium.active .score { color: #14100a; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: radial-gradient(120% 62% at 50% 16%, #16207a 0%, #070c2e 56%, #03050f 100%); position: relative; overflow: hidden;">
+
+  <!-- label and close on one row, so they share a vertical centre -->
+  <div style="position: absolute; top: 18px; left: 18px; right: 14px; height: 48px; display: flex; align-items: center; justify-content: space-between; z-index: 8;">
+    <span class="board" style="font-size: 11px; font-weight: 800; letter-spacing: 1.8px; color: rgba(242,236,224,0.4);">ROUND 1 &middot; 11 OF 30</span>
+    <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+      <span class="board" style="font-size: 36px; font-weight: 600; color: rgba(242,236,224,0.6); line-height: 1;">&times;</span>
+    </span>
+  </div>
+
+  <div class="wheel" style="position: absolute; inset: 0; perspective: 620px; perspective-origin: 50% 47%;">
+
+    <div class="band b-fartop" style="top: 159px;">
+      <div class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.8); margin-bottom: 4px;">Unscripted TV</div>
+      <div class="row" style="gap: 4px;">
+        <div class="tile done" style="height:22px;background:#101a5e;box-shadow:none;"></div><div class="tile done" style="height:22px;background:#101a5e;box-shadow:none;"></div>
+        <div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div><div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div><div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div>
+      </div>
+    </div>
+
+    <!-- the row that was tapped -->
+    <div class="band b-up" style="top: 216px;">
+      <div class="board" style="font-size: 21px; font-weight: 800; letter-spacing: 0.6px; color: rgba(242,236,224,0.95); margin-bottom: 7px;">Fruit, Not Fruit</div>
+      <div class="row" style="gap: 6px;">
+        <div class="tile done" style="height:62px;"><span class="board" style="font-size:14px;font-weight:900;color:#2f7a49;">&#10003;</span></div>
+        <div class="tile done" style="height:62px;"><span class="board" style="font-size:14px;font-weight:900;color:#2f7a49;">&#10003;</span></div>
+        <div class="tile done" style="height:62px;"><span class="board" style="font-size:14px;font-weight:900;color:#8f3340;">&#10007;</span></div>
+        <div class="tile" style="height:62px;"><span class="heroValue board" style="font-size:16px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="tile" style="height:62px;"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="band b-cen" style="top: 325px;">
+      <div class="board" style="font-size: 32px; font-weight: 900; color: #FFFFFF; margin-bottom: 12px; text-shadow: 0 2px 18px rgba(120,150,255,0.4);">Innovations</div>
+      <div class="row" style="gap: 7px;">
+        <div class="tile done" style="height:94px;"><span class="board" style="font-size:18px;font-weight:900;color:#2f7a49;">&#10003;</span></div>
+        <div class="tile" style="height:94px;"><span class="board" style="font-size:19px;font-weight:900;color:#E8B35A;">$400</span></div>
+        <div class="tile" style="height:94px;"><span class="board" style="font-size:19px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <div class="tile" style="height:94px;"><span class="board" style="font-size:19px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="tile" style="height:94px;"><span class="board" style="font-size:16px;font-weight:900;color:#E8B35A;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="band b-down" style="top: 484px;">
+      <div class="board" style="font-size: 21px; font-weight: 800; letter-spacing: 0.6px; color: rgba(242,236,224,0.9); margin-bottom: 7px;">French Dip</div>
+      <div class="row" style="gap: 6px;">
+        <div class="tile done" style="height:62px;"><span class="board" style="font-size:14px;font-weight:900;color:#2f7a49;">&#10003;</span></div>
+        <div class="tile done" style="height:62px;"><span class="board" style="font-size:14px;font-weight:900;color:#8f3340;">&#10007;</span></div>
+        <div class="tile" style="height:62px;"><span class="board" style="font-size:16px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <div class="tile" style="height:62px;"><span class="board" style="font-size:16px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="tile" style="height:62px;"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="band b-farbot" style="top: 593px;">
+      <div class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.8); margin-bottom: 4px;">Democrats</div>
+      <div class="row" style="gap: 4px;">
+        <div class="tile done" style="height:22px;background:#101a5e;box-shadow:none;"></div><div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div>
+        <div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div><div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div><div class="tile" style="height:22px;background:#101a5e;box-shadow:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- beat 2: that same tile, now centred, grows into the clue -->
+  <div class="hero" style="position: absolute; overflow: hidden; z-index: 6;
+       background: linear-gradient(176deg, #2b37c8 0%, #161f96 46%, #0e1570 100%);
+       box-shadow: 0 40px 80px rgba(0,0,0,0.66);">
+    <div class="heroChrome" style="position:absolute; top:18px; left:18px; right:18px; display:flex; align-items:center; justify-content:space-between;">
+      <span class="board" style="font-size:13px;font-weight:800;letter-spacing:1.4px;color:rgba(242,236,224,0.6);">Fruit, Not Fruit</span>
+      <span class="board" style="font-size:15px;font-weight:900;color:#14100a;background:#E8B35A;padding:5px 10px;">$800</span>
+    </div>
+    <p class="heroClue" style="position:absolute; top:104px; left:22px; right:22px; margin:0; font-family:'Petrona',Georgia,serif; font-size:26px; line-height:1.34; color:#F2ECE0;">
+      Botanically a berry, this staple of guacamole is a single seeded fruit
+      that most people file under vegetable.
+    </p>
+    <div class="heroChrome" style="position:absolute; left:18px; right:18px; bottom:22px; height:58px; background:#E8B35A; display:flex; align-items:center; justify-content:center;">
+      <span class="board" style="font-size:21px;font-weight:900;color:#14100a;">Show the answer</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 116px; height: 76px; background: linear-gradient(180deg, rgba(3,5,15,0) 0%, rgba(3,5,15,0.92) 88%); pointer-events: none; z-index: 7;"></div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 0 12px 20px; z-index: 7;">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2px 7px;">
+      <span class="board" style="font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: rgba(242,236,224,0.4);">MARISOL PICKS</span>
+      <span class="board" style="font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: rgba(242,236,224,0.4);">4 PLAYERS</span>
+    </div>
+    <div style="display: flex; gap: 5px;">
+      <div class="podium active">
+        <svg width="58" height="20" viewBox="0 0 66 22" fill="none"><path d="M3 16c6-14 9 5 13-5s6 12 9 1 5 5 8-3 5 8 8 2 6 3 9-3" stroke="#14100a" stroke-width="2.1" stroke-linecap="round"/></svg>
+        <span class="score">$2,600</span>
+      </div>
+      <div class="podium">
+        <svg width="58" height="20" viewBox="0 0 66 22" fill="none"><path d="M4 8c5 12 8-8 11 4s6-9 9 2 4-6 8 3 6-7 9 2 6 1 8-4" stroke="#E8B35A" stroke-width="2.1" stroke-linecap="round"/></svg>
+        <span class="score">$1,800</span>
+      </div>
+      <div class="podium">
+        <svg width="58" height="20" viewBox="0 0 66 22" fill="none"><path d="M3 12c7-10 5 8 10-2s3 10 8 0 5 7 9-2 5 6 9-1 5 4 7 0" stroke="#E8B35A" stroke-width="2.1" stroke-linecap="round"/></svg>
+        <span class="score" style="color:#ff8b8b;">-$400</span>
+      </div>
+      <div class="podium">
+        <svg width="58" height="20" viewBox="0 0 66 22" fill="none"><path d="M4 15c4-12 8 6 11-4s5 9 8-1 6 6 9-2 4 7 8 1 5 2 7-2" stroke="#E8B35A" stroke-width="2.1" stroke-linecap="round"/></svg>
+        <span class="score">$1,200</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
