@@ -12,8 +12,10 @@ import './SettingsModal.css';
  * nothing at all. One list, declared as data, means a setting cannot be added
  * to the screen without also being wired to something.
  *
- * Settings marked `room` are rules rather than preferences: they travel with a
- * room you create, so everyone plays the same game. See roomRulesFromSettings.
+ * Which of these travel to a room you create is decided by
+ * roomRulesFromSettings, and said out loud on the screen where you make one.
+ * It was marked here with a "shared" chip, which told you something you could
+ * not act on and never said shared with whom.
  */
 
 const DIFFICULTIES = [
@@ -81,7 +83,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
     return [
       {
-        id: 'rounds', title: 'Rounds', room: true,
+        id: 'rounds', title: 'Rounds',
         items: [
           toggle('dj', 'Double Jeopardy', 'round two second double',
             s.enableDoubleJeopardy, s.toggleDoubleJeopardy),
@@ -100,7 +102,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         ],
       },
       {
-        id: 'timing', title: 'Timing', room: true,
+        id: 'timing', title: 'Timing',
         items: [
           radios('questionTimeLimit', 'Time to answer', 'timer clock seconds time limit',
             QUESTION_TIME_LIMITS, s.questionTimeLimit, s.setQuestionTimeLimit),
@@ -214,14 +216,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
             {shown.map((g) => (
               <section className="settings-section" key={g.id}>
-                <h3>
-                  {g.title}
-                  {g.room && (
-                    <span className="room-badge" title="Everyone in a room you create plays by this">
-                      shared
-                    </span>
-                  )}
-                </h3>
+                <h3>{g.title}</h3>
                 <div className="toggle-group">
                   {g.items.map((i) => (
                     <div className="setting-row" key={i.id}>

@@ -327,18 +327,6 @@
   color: var(--text-muted);
 }
 
-/* Marks a rule that is not personal: it travels with a room you create. */
-.room-badge {
-  margin-left: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(242, 236, 224, 0.3);
-  font-size: 0.62rem;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  vertical-align: middle;
-}
 
 .settings-empty {
   padding: 8px 24px 24px;
