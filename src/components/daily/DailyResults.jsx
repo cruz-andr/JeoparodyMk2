@@ -3,19 +3,17 @@ import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
 import './DailyResults.css';
 
-export default function DailyResults({ onBackToMenu, verifyCode }) {
+// Clues per run, used to turn a running total into an accuracy percentage.
+const CLUES_PER_RUN = { board: 30, sixer: 6 };
+
+export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer' }) {
   const [copied, setCopied] = useState(false);
   const [showTheirAnswers, setShowTheirAnswers] = useState(false);
   const [theirAnswers, setTheirAnswers] = useState(null);
 
-  const {
-    todayDate,
-    questions,
-    answers,
-    stats,
-    shareResults,
-    getShareText,
-  } = useDailyStore();
+  const { stats, shareResults, getShareText, ...store } = useDailyStore();
+  const { date: todayDate, questions, answers } = store[format];
+  const formatStats = stats[format];
 
   // Decode verification answers when user clicks to reveal
   const handleRevealTheirAnswers = () => {
@@ -34,14 +32,14 @@ export default function DailyResults({ onBackToMenu, verifyCode }) {
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   const handleShare = async () => {
-    const success = await shareResults();
+    const success = await shareResults(format);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } else {
       // Fallback: try to copy manually
       try {
-        await navigator.clipboard.writeText(getShareText());
+        await navigator.clipboard.writeText(getShareText(format));
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
@@ -133,23 +131,26 @@ export default function DailyResults({ onBackToMenu, verifyCode }) {
         <h3>Your Stats</h3>
         <div className="stats-grid">
           <div className="stat-item">
-            <span className="stat-value">{stats.gamesPlayed}</span>
+            <span className="stat-value">{formatStats.gamesPlayed}</span>
             <span className="stat-label">Played</span>
           </div>
           <div className="stat-item">
             <span className="stat-value">
-              {stats.gamesPlayed > 0
-                ? Math.round((stats.totalCorrect / (stats.gamesPlayed * 6)) * 100)
+              {formatStats.gamesPlayed > 0
+                ? Math.round(
+                    (formatStats.totalCorrect /
+                      (formatStats.gamesPlayed * CLUES_PER_RUN[format])) * 100
+                  )
                 : 0}%
             </span>
             <span className="stat-label">Accuracy</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{stats.currentStreak}</span>
+            <span className="stat-value">{formatStats.currentStreak}</span>
             <span className="stat-label">Streak</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{stats.maxStreak}</span>
+            <span className="stat-value">{formatStats.maxStreak}</span>
             <span className="stat-label">Max Streak</span>
           </div>
         </div>

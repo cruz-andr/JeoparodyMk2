@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .clue { font-family: 'Petrona', Georgia, serif; }
+    .row { display: flex; align-items: center; gap: 20px; padding: 17px 0; border-top: 1px solid rgba(242,236,224,0.15); }
+    .num { font-family: 'Big Shoulders Display', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #D69F4C; width: 26px; flex-shrink: 0; }
+    .name { font-family: 'Big Shoulders Display', sans-serif; text-transform: uppercase; font-size: 40px; font-weight: 800; line-height: 0.86; color: #F2ECE0; flex: 1; }
+    .meta { font-family: 'Petrona', Georgia, serif; font-size: 13.5px; color: rgba(242,236,224,0.4); text-align: right; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #05081c; position: relative; overflow: hidden;">
+
+  <!-- the working grid, left faintly visible: a studio tell, not a decoration -->
+  <div style="position: absolute; inset: 0; display: grid; grid-template-columns: repeat(12, 1fr); padding: 0 56px;">
+    <div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035);"></div><div style="border-left: 1px solid rgba(242,236,224,0.035); border-right: 1px solid rgba(242,236,224,0.035);"></div>
+  </div>
+
+  <!-- a single gold field, bled to the edge, holding the streak -->
+  <div style="position: absolute; right: 0; top: 132px; background: #D69F4C; padding: 13px 56px 13px 26px; display: flex; align-items: baseline; gap: 12px;">
+    <span class="board" style="font-size: 34px; font-weight: 900; color: #14100a; line-height: 1;">4</span>
+    <span class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 1.6px; color: rgba(20,16,10,0.66);">DAY STREAK</span>
+  </div>
+
+  <div style="position: relative; height: 100%; padding: 42px 56px 46px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 452px; grid-column-gap: 72px;">
+
+    <!-- ── Left: the title card ─────────────────────────── -->
+    <div style="display: flex; flex-direction: column; justify-content: space-between; min-width: 0;">
+
+      <div style="display: flex; flex-direction: column;">
+        <span class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 3.4px; color: rgba(242,236,224,0.38);">AMERICA'S FAVOURITE ANSWER-AND-QUESTION GAME&sup2;</span>
+
+        <!-- wordmark, bled past the left margin so it reads as printed, not centred -->
+        <div style="margin: 30px 0 0 -8px; display: flex; flex-direction: column;">
+          <span class="board" style="font-size: 168px; font-weight: 900; line-height: 0.76; letter-spacing: -2px; color: #D69F4C;">JEOPA&shy;</span>
+          <span class="board" style="font-size: 168px; font-weight: 900; line-height: 0.76; letter-spacing: -2px; color: #D69F4C;">RODY<span style="color:#F2ECE0;">!</span></span>
+        </div>
+
+        <div style="width: 96px; height: 5px; background: #F2ECE0; margin: 30px 0 22px;"></div>
+
+        <p class="clue" style="margin: 0; font-size: 25px; line-height: 1.4; font-style: italic; color: rgba(242,236,224,0.78); max-width: 480px;">Six categories, thirty clues, and one friend who will not stop shouting the answer before the buzzer.</p>
+      </div>
+
+      <!-- ── Room code, given the width it deserves ─────── -->
+      <div style="display: flex; flex-direction: column; gap: 13px;">
+        <span class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 2.6px; color: rgba(242,236,224,0.38);">SOMEBODY SENT YOU A CODE</span>
+        <div style="display: flex; align-items: flex-end; gap: 26px;">
+          <div style="display: flex; gap: 10px;">
+            <div style="width:60px;height:70px;border-bottom:4px solid #D69F4C;display:flex;align-items:flex-end;justify-content:center;"><span class="board" style="font-size:56px;font-weight:900;line-height:0.9;color:#D69F4C;">K</span></div>
+            <div style="width:60px;height:70px;border-bottom:4px solid #D69F4C;display:flex;align-items:flex-end;justify-content:center;"><span class="board" style="font-size:56px;font-weight:900;line-height:0.9;color:#D69F4C;">7</span></div>
+            <div style="width:60px;height:70px;border-bottom:4px solid #D69F4C;display:flex;align-items:flex-end;justify-content:center;"><span class="board" style="font-size:56px;font-weight:900;line-height:0.9;color:#D69F4C;">M</span></div>
+            <div style="width:60px;height:70px;border-bottom:4px solid rgba(242,236,224,0.28);"></div>
+            <div style="width:60px;height:70px;border-bottom:4px solid rgba(242,236,224,0.28);"></div>
+            <div style="width:60px;height:70px;border-bottom:4px solid rgba(242,236,224,0.28);"></div>
+          </div>
+          <div style="background: #F2ECE0; padding: 15px 30px;">
+            <span class="board" style="font-size: 25px; font-weight: 900; letter-spacing: 0.5px; color: #05081c;">JOIN &rarr;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right: the rundown ───────────────────────────── -->
+    <div style="display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 4px;">
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px;">
+        <span class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 2.6px; color: rgba(242,236,224,0.38);">TONIGHT'S RUNDOWN</span>
+        <span class="board" style="font-size: 13px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.3);">ANDRES &middot; 17&ndash;11</span>
+      </div>
+
+      <!-- the one you're on takes the gold and bleeds right -->
+      <div class="row" style="border-top-color: #D69F4C; background: #D69F4C; margin-right: -56px; padding-right: 56px; padding-left: 16px; margin-left: -16px;">
+        <span class="num" style="color: rgba(20,16,10,0.55);">01</span>
+        <span class="name" style="color: #14100a;">Daily Challenge</span>
+        <span class="meta" style="color: rgba(20,16,10,0.6);">not played<br>today</span>
+      </div>
+
+      <div class="row">
+        <span class="num">02</span>
+        <span class="name">Host a Game</span>
+        <span class="meta">you read<br>up to 30</span>
+      </div>
+
+      <div class="row">
+        <span class="num">03</span>
+        <span class="name">Multiplayer</span>
+        <span class="meta">private room<br>up to 6</span>
+      </div>
+
+      <div class="row">
+        <span class="num">04</span>
+        <span class="name">Quickplay</span>
+        <span class="meta" style="color: #4ade80;">12 waiting<br>right now</span>
+      </div>
+
+      <div class="row">
+        <span class="num">05</span>
+        <span class="name">Single Player</span>
+        <span class="meta">solo<br>any topic</span>
+      </div>
+
+      <div class="row" style="border-bottom: 1px solid rgba(242,236,224,0.15);">
+        <span class="num">06</span>
+        <span class="name">Leaderboard</span>
+        <span class="meta">7th<br>this week</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

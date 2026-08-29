@@ -35,6 +35,7 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5000',
   'http://localhost:5001',
+  'http://localhost:4173', // vite preview, i.e. testing a production build locally
   'https://jeoparody-mk2.vercel.app',
   'https://jeoparody.app',
 ].filter(Boolean);

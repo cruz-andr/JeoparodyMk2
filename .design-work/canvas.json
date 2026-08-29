@@ -1,0 +1,147 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Round 2: designed, not defaulted"
+    },
+    {
+      "id": "page-2",
+      "name": "Back pocket: Direction A"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "DirectionD.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "D · The Board (fixed hero)",
+      "page": "page-1"
+    },
+    {
+      "file": "DSelected.dc.html",
+      "x": 0,
+      "y": 1130,
+      "w": 1440,
+      "h": 900,
+      "title": "D · if the hero followed selection",
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionE.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "E · Cold Open",
+      "page": "page-1"
+    },
+    {
+      "file": "DirectionF.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "F · Pick a Lane",
+      "page": "page-1"
+    },
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today: what ships now",
+      "page": "page-2"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Direction A · Broadcast",
+      "page": "page-2"
+    },
+    {
+      "file": "MobileA.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Direction A · Phone",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "rules",
+      "x": 0,
+      "y": -330,
+      "w": 760,
+      "page": "page-1",
+      "text": "ROUND 2: WHAT CHANGED AND WHY\n\nThe published tells of AI-generated UI: purple/indigo gradients, Inter, three rounded cards in a row, glassmorphism, gradient numbers, identical card grids, icon-in-a-rounded-square, rounded-2xl + soft shadow on every surface, thin interchangeable line icons. Direction A commits four of them.\n\nSo all three below are built under hard constraints: ZERO border radius. No gradients. No shadows. No glass. No cards. No generic line icons. Type, rules, numerals and flat colour do the work.\n\nThe type is the real find. Since 1984 the show has set board categories and dollar values in Swiss 911 Ultra Compressed, and clues in ITC Korinna, a warm 70s serif. Your variables.css already declares --font-jeopardy: \"Korinna\" and never uses it. Big Shoulders Display and Petrona stand in for the two here. That tension, ultra-compressed grotesk against a warm serif, is a system no template hands you."
+    },
+    {
+      "id": "naming",
+      "x": 800,
+      "y": -330,
+      "w": 640,
+      "page": "page-1",
+      "text": "THE TWO DAILIES\n\nTHE BOARD. 6 categories x 5 clues, ~20 min.\nThe most iconic noun in the game, it takes a definite article, and it is what D's whole layout already is. \"Did you do the Board yet?\"\n\nTHE SIXER. Six clues, six categories of its own, 90 sec.\nExactly what you ship today (jarchiveScraper slices 6). Colloquial, unmistakably the smaller one, and the format is in the name.\n\nRejected: The Double / The Single (native vocabulary, but The Single collides with Single Player). The Board / The Buzzer (nice contrast, but you have a literal buzzer mechanic).\n\nTWO SEPARATE BOARDS, not a subset. If the Sixer drew from the Board's categories, either one would spoil the other: the Sixer would hand you six of the Board's thirty clues and all six of its categories, and doing the Board first would leave the Sixer redundant.\n\nKeep the streaks SEPARATE too. It is why the Mini has its own retention curve. People who will never commit 20 minutes will defend a 90-second streak for years."
+    },
+    {
+      "id": "d-note",
+      "x": 0,
+      "y": -150,
+      "w": 620,
+      "page": "page-1",
+      "text": "D · THE BOARD. The menu is the game.\n\nSix category headers ARE the six modes. Hard rectangles, 8px black gutters, exactly the board's geometry.\n\nFIXED HERO. The Board owns the panel permanently, so it is not also in the row. That was the redundancy. The Sixer takes the daily column instead: 90 seconds wants one tap, not a panel. Each format carries its own streak where it lives (Sixer 31 in the column, Board 4 in the hero).\n\nWhy: no other product could use this layout, and one click reaches any mode.\n\nTradeoff: five of the six columns are only a name until you click them."
+    },
+    {
+      "id": "dsel-note",
+      "x": 0,
+      "y": 980,
+      "w": 620,
+      "page": "page-1",
+      "text": "THE ALTERNATIVE: hero follows selection\n\nMULTIPLAYER picked, so the panel and the right rail both swap: who you last played, your record in private rooms, your best buzz. Genuinely richer, and every mode earns a real detail view.\n\nBut look at the top row. The Board has to come back into it or it becomes unreachable, so the board is SEVEN columns wide and the six-category convention, the whole reason D works, is gone.\n\nIt also costs two clicks to start anything, and there is no hover on a phone, so it degrades to tap-then-tap.\n\nThat is why I moved to the fixed hero above. Worth a look before you agree."
+    },
+    {
+      "id": "e-note",
+      "x": 1560,
+      "y": -150,
+      "w": 620,
+      "page": "page-1",
+      "text": "E · COLD OPEN. The title card.\n\nA broadcast open, not a dashboard. Wordmark at 168px bled past the left margin, the working grid left faintly visible, modes as a numbered rundown down the right, room code given real width.\n\nWhy: most confident of the three, and the copy earns its place. A line only this product could write.\n\nTradeoff: carries almost no live data. Beautiful the first time; check it still feels right on the four-hundredth visit."
+    },
+    {
+      "id": "f-note",
+      "x": 3120,
+      "y": -150,
+      "w": 620,
+      "page": "page-1",
+      "text": "F · PICK A LANE. Vertical bands.\n\nNo grid at all. Full-height panels, names running up their spines, the one you're on swings open to 520px in gold. Blue deepens across the row so the bands read as ordered, not repeated.\n\nWhy: the most physical and the best fit for adding modes. A lane costs nothing.\n\nTradeoff: rotated type is slower to scan, and five closed bands show very little until you commit to one."
+    },
+    {
+      "id": "reco2",
+      "x": 4680,
+      "y": -150,
+      "w": 520,
+      "page": "page-1",
+      "text": "MY READ\n\nD. It is the only one whose layout could not be lifted onto another product, and it holds the most live data without a single card.\n\nE is the best-looking still frame here. Worth stealing its wordmark treatment and its room-code field whichever way you go.\n\nSay which and I'll build it into MainMenu.jsx. Colour, spacing and copy are all still open."
+    },
+    {
+      "id": "pocket-note",
+      "x": 1560,
+      "y": -150,
+      "w": 620,
+      "page": "page-2",
+      "text": "DIRECTION A, kept as asked.\n\nStill the most information-dense option and the safest to build. Its weakness is now visible next to Round 2: rounded cards, soft shadows and icons-in-rounded-squares are the current house style of every AI-built interface.\n\nIf you want A, the fix is small. Take its layout, drop the radii to 0, kill the shadows, and move it onto the Big Shoulders / Petrona pairing."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

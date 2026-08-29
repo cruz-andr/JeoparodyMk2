@@ -1,255 +1,613 @@
-.main-menu {
+/*
+ * The board is the menu.
+ *
+ * Deliberately hard-edged: no border radius, no gradients, no shadows, no
+ * glass. The Jeopardy board is flat rectangles separated by black gutters, and
+ * copying that geometry is what keeps this from looking like every other
+ * dashboard.
+ */
+
+.menu {
+  --ground: #05081c;
+  --tile: #1a2080;
+  --tile-deep: #0e1467;
+  --bone: #f2ece0;
+  --ink: #14100a;
+
   min-height: 100vh;
-  background: linear-gradient(160deg, #020820 0%, #0a1250 40%, #0E1467 100%);
+  background: var(--ground);
+  padding: 26px 30px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  box-sizing: border-box;
+}
+
+/* ── Rail ───────────────────────────────────────────────── */
+
+.menu-rail {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+  padding-bottom: 12px;
+}
+
+.menu-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.menu-wordmark {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 0.9;
+  color: var(--jeopardy-gold);
+}
+
+.menu-tagline {
+  font-family: var(--font-clue);
+  font-style: italic;
+  font-size: 0.94rem;
+  color: rgba(242, 236, 224, 0.42);
+}
+
+.menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.menu-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.menu-stat-label,
+.menu-player {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.81rem;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.menu-player {
+  font-size: 0.94rem;
+  color: var(--bone);
+  letter-spacing: 1px;
+}
+
+.menu-stat-value {
+  font-family: var(--font-board);
+  font-size: 1.19rem;
+  font-weight: 800;
+  color: var(--bone);
+}
+
+.menu-stat-value.gold,
+.gold {
+  color: var(--jeopardy-gold);
+}
+
+.menu-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(242, 236, 224, 0.16);
+}
+
+.menu-text-btn {
+  background: none;
+  border: none;
+  /* 44px minimum hit target, even though the label is small */
+  min-height: 44px;
+  padding: 8px 6px;
+  cursor: pointer;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.81rem;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: rgba(242, 236, 224, 0.4);
+  transition: color 0.15s ease;
+}
+
+.menu-text-btn:hover {
+  color: var(--bone);
+}
+
+.menu-icon-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tile-deep);
+  border: 1px solid rgba(214, 159, 76, 0.5);
+  color: rgba(242, 236, 224, 0.6);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.menu-icon-btn:hover {
+  color: var(--jeopardy-gold);
+  border-color: var(--jeopardy-gold);
+}
+
+/* ── The category row ───────────────────────────────────── */
+
+.menu-categories {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 118px;
+}
+
+.menu-category {
+  background: var(--tile);
+  border: none;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60px 24px 40px;
-  gap: 32px;
-}
-
-/* Logo */
-.menu-logo {
-  max-width: 480px;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 0 30px rgba(214, 159, 76, 0.25));
-  margin-bottom: 8px;
-}
-
-/* Daily Challenge - Featured Card */
-.daily-card {
-  width: 100%;
-  max-width: 520px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 28px;
-  background: rgba(214, 159, 76, 0.08);
-  border: 1px solid rgba(214, 159, 76, 0.2);
-  border-radius: 16px;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
-  text-align: left;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  transition: background-color 0.15s ease;
 }
 
-.daily-card:hover {
-  border-color: rgba(214, 159, 76, 0.4);
+.menu-category:hover {
+  background: #232bb0;
 }
 
-.daily-card-content {
+.menu-category.daily {
+  background: var(--jeopardy-gold);
+}
+
+.menu-category.daily:hover {
+  background: var(--jeopardy-gold-light);
+}
+
+.menu-category-name {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.88rem;
+  font-weight: 800;
+  line-height: 0.88;
+  color: var(--bone);
+  text-align: center;
+  /* the labels carry their own line breaks */
+  white-space: pre-line;
+}
+
+.menu-category.daily .menu-category-name {
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.menu-category-meta,
+.menu-category-streak {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  color: rgba(20, 16, 10, 0.6);
+  text-align: center;
+}
+
+.menu-category-streak {
+  font-weight: 800;
+  color: rgba(20, 16, 10, 0.82);
+}
+
+/* ── The revealed clue ──────────────────────────────────── */
+
+.menu-hero {
+  flex: 1;
+  display: flex;
+  background: var(--tile-deep);
+  border-top: 8px solid var(--ground);
+  min-height: 0;
+}
+
+.menu-hero-main {
+  flex: 1;
+  min-width: 0;
+  padding: 34px 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 26px;
+}
+
+.menu-hero-top {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.menu-hero-eyebrow {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.daily-card-content > div {
+.menu-date {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.81rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--ink);
+  background: var(--jeopardy-gold);
+  padding: 4px 10px;
+}
+
+.menu-edition {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.81rem;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  color: rgba(242, 236, 224, 0.45);
+}
+
+.menu-hero-title {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 4.4rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--jeopardy-gold);
+}
+
+.menu-hero-copy {
+  margin: 0;
+  font-family: var(--font-clue);
+  font-size: 1.5rem;
+  line-height: 1.3;
+  color: var(--bone);
+  max-width: 40ch;
+  text-wrap: pretty;
+}
+
+.menu-hero-kicker {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.menu-hero-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.menu-cta {
+  background: var(--jeopardy-gold);
+  border: none;
+  padding: 17px 34px;
+  cursor: pointer;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.56rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--ink);
+  transition: background-color 0.15s ease;
+}
+
+.menu-cta:hover {
+  background: var(--jeopardy-gold-light);
+}
+
+.menu-hero-stats {
+  display: flex;
+  align-items: flex-end;
+  gap: 32px;
+}
+
+.menu-bigstat {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-bigstat-value {
+  font-family: var(--font-board);
+  font-size: 2.75rem;
+  font-weight: 900;
+  /* a single-line number needs its full box or it clips into the label */
+  line-height: 1;
+  padding-bottom: 4px;
+  color: var(--bone);
+}
+
+.menu-bigstat-label {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+/* ── Today's categories ─────────────────────────────────── */
+
+.menu-hero-rail {
+  width: 386px;
+  flex-shrink: 0;
+  background: var(--ground);
+  padding: 8px 0 8px 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.daily-card-label {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--jeopardy-gold);
-  font-family: var(--font-display);
-  letter-spacing: 0.5px;
-}
-
-.daily-card-desc {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.daily-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.streak-pill {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 4px 10px;
-  border-radius: 20px;
-}
-
-.daily-status {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.daily-status.new {
-  background: linear-gradient(135deg, var(--jeopardy-gold), #c9a227);
-  color: #1a1000;
-}
-
-.daily-status.done {
-  background: rgba(34, 197, 94, 0.15);
-color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-/* 4-pointed star icon */
-.star-icon {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
+.menu-rail-head {
+  height: 40px;
   flex-shrink: 0;
-  background: #7eb8ff;
-  clip-path: polygon(
-    50% 0%, 62% 38%, 100% 50%, 62% 62%,
-    50% 100%, 38% 62%, 0% 50%, 38% 38%
-  );
-  filter: drop-shadow(0 0 6px rgba(126, 184, 255, 0.5));
-}
-
-.star-icon.gold {
-  width: 22px;
-  height: 22px;
-  background: #D69F4C;
-  filter: drop-shadow(0 0 8px rgba(214, 159, 76, 0.6));
-}
-
-/* Game Mode Grid */
-.mode-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  width: 100%;
-  max-width: 520px;
-}
-
-.mode-card {
+  background: var(--tile-deep);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.81rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: rgba(242, 236, 224, 0.5);
+}
+
+.menu-rail-row {
+  flex: 1;
+  min-height: 44px;
+  background: var(--tile);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.menu-rail-row.empty {
+  background: rgba(26, 32, 128, 0.35);
+}
+
+.menu-rail-name {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.31rem;
+  font-weight: 800;
+  color: var(--bone);
+  line-height: 1.05;
+}
+
+.menu-rail-count {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: rgba(242, 236, 224, 0.35);
+  flex-shrink: 0;
+}
+
+/* ── Join ───────────────────────────────────────────────── */
+
+.menu-join {
+  display: flex;
+  align-items: stretch;
   gap: 8px;
-  padding: 22px 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
+  min-height: 74px;
+}
+
+.menu-join-field {
+  flex: 1;
+  background: var(--tile-deep);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 28px;
+  flex-wrap: wrap;
+}
+
+.menu-join-label {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.06rem;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: rgba(242, 236, 224, 0.5);
   cursor: pointer;
-  text-align: left;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
-.mode-card:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.12);
+/* A real input sits invisibly over the boxes, so typing, paste, autofill and
+   screen readers all behave normally while the boxes stay purely visual. */
+.menu-code {
+  position: relative;
+  display: inline-flex;
+  padding: 6px 0;
 }
 
-.mode-label {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.3px;
-}
-
-.mode-desc {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
-  line-height: 1.4;
-}
-
-/* Join Room Link */
-.join-link {
-  background: none;
+.menu-code-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
   border: none;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 0.95rem;
-  cursor: pointer;
-  padding: 8px 16px;
-  transition: color 0.2s;
-  letter-spacing: 0.3px;
+  background: none;
+  font-size: 16px; /* keeps iOS from zooming on focus */
+  cursor: text;
 }
 
-.join-link:hover {
+.menu-code-boxes {
+  display: flex;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.menu-code-box {
+  width: 44px;
+  height: 44px;
+  background: var(--ground);
+  border-bottom: 3px solid rgba(242, 236, 224, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-board);
+  font-size: 1.63rem;
+  font-weight: 900;
   color: var(--jeopardy-gold);
 }
 
-/* Footer */
-.menu-footer {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 24px;
+.menu-code-box.filled {
+  border-bottom-color: var(--jeopardy-gold);
 }
 
-.footer-link {
-  background: none;
+.menu-code-input:focus + .menu-code-boxes .menu-code-box.active {
+  border-bottom-color: rgba(242, 236, 224, 0.65);
+}
+
+.menu-join-btn {
+  width: 168px;
+  flex-shrink: 0;
+  background: var(--tile);
   border: none;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 0.8rem;
   cursor: pointer;
-  padding: 8px;
-  transition: color 0.2s;
-  letter-spacing: 0.5px;
+  font-family: var(--font-board);
   text-transform: uppercase;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  color: var(--bone);
+  transition: background-color 0.15s ease;
 }
 
-.footer-link:hover {
-  color: rgba(255, 255, 255, 0.7);
+.menu-join-btn:hover:not(:disabled) {
+  background: #232bb0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .main-menu {
-    padding: 40px 20px 30px;
-    gap: 24px;
-  }
-
-  .menu-logo {
-    max-width: 280px;
-  }
-
-  .daily-card {
-    padding: 20px 22px;
-  }
-
-  .daily-card-label {
-    font-size: 1.1rem;
-  }
+.menu-join-btn:disabled {
+  color: rgba(242, 236, 224, 0.3);
+  cursor: not-allowed;
 }
 
-@media (max-width: 480px) {
-  .main-menu {
-    padding: 30px 16px 24px;
-    gap: 20px;
-  }
+/* Keyboard focus has to stay visible on a board with no rounded affordances. */
+.menu-category:focus-visible,
+.menu-cta:focus-visible,
+.menu-join-btn:focus-visible,
+.menu-icon-btn:focus-visible,
+.menu-text-btn:focus-visible,
+.menu-code-input:focus-visible {
+  outline: 3px solid var(--jeopardy-gold-light);
+  outline-offset: 2px;
+}
 
-  .menu-logo {
-    max-width: 220px;
-  }
+/* ── Narrower ───────────────────────────────────────────── */
 
-  .mode-grid {
-    gap: 10px;
-  }
-
-  .mode-card {
-    padding: 18px 16px;
-  }
-
-  .mode-label {
-    font-size: 0.95rem;
-  }
-
-  .daily-card {
+@media (max-width: 1100px) {
+  .menu-hero {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
   }
 
-  .daily-card-meta {
-    align-self: flex-end;
+  .menu-hero-rail {
+    width: auto;
+    padding: 8px 8px 8px 8px;
+  }
+
+  .menu-rail-row {
+    min-height: 46px;
+  }
+
+  .menu-hero-title {
+    font-size: 3.5rem;
+  }
+}
+
+@media (max-width: 780px) {
+  .menu {
+    padding: 16px 14px 20px;
+    gap: 16px;
+  }
+
+  .menu-categories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+  }
+
+  .menu-category {
+    min-height: 88px;
+  }
+
+  .menu-category-name {
+    font-size: 1.5rem;
+  }
+
+  .menu-wordmark {
+    font-size: 2rem;
+  }
+
+  .menu-tagline {
+    display: none;
+  }
+
+  .menu-hero-main {
+    padding: 24px 20px;
+  }
+
+  .menu-hero-title {
+    font-size: 2.75rem;
+  }
+
+  .menu-hero-copy {
+    font-size: 1.19rem;
+  }
+
+  .menu-join {
+    flex-direction: column;
+  }
+
+  .menu-join-field {
+    padding: 14px 16px;
+    justify-content: center;
+  }
+
+  .menu-join-btn {
+    width: 100%;
+    min-height: 52px;
+  }
+
+  .menu-code-box {
+    width: 40px;
+    height: 46px;
+  }
+}
+
+@media (max-width: 420px) {
+  .menu-code-box {
+    width: 34px;
+    height: 44px;
+    font-size: 1.38rem;
+  }
+
+  .menu-join-field {
+    gap: 10px;
   }
 }
