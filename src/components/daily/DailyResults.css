@@ -322,3 +322,31 @@
     font-size: 1.5rem;
   }
 }
+
+/* The Board's results are a grid, not a row: thirty cells side by side would
+   run about 1400px wide and burst the card. */
+.emoji-grid.board {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.emoji-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.emoji-grid.board .emoji-block {
+  font-size: 1.6rem;
+}
+
+@media (max-width: 520px) {
+  .emoji-grid.board .emoji-block {
+    font-size: 1.1rem;
+  }
+
+  .emoji-row {
+    gap: 5px;
+  }
+}

@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { buildDailyChallenge } from './dailyBuilder.js';
 
 const JARCHIVE_BASE = 'https://www.j-archive.com';
 
@@ -192,86 +193,79 @@ function cleanAnswer(answer) {
     .trim();
 }
 
-// Get a deterministic game for today's daily challenge
-export async function getDailyChallenge() {
+// How many J-Archive games to try before giving up. Many ids in the range are
+// missing or non-standard, and a game that cannot produce a complete pair is
+// skipped rather than served short.
+const CANDIDATE_ATTEMPTS = 6;
+
+// A deterministic spread of game ids for a given day. The stride is coprime
+// with the range so the candidates never repeat within an attempt.
+export function candidateGameIds(seed, attempts = CANDIDATE_ATTEMPTS) {
+  const ids = [];
+  for (let i = 0; i < attempts; i++) {
+    ids.push(((seed + i * 977) % 8000) + 1000);
+  }
+  return ids;
+}
+
+// The challenge is identical for everybody all day, so it is built once and
+// held in memory. Without this, every visitor would re-scrape J-Archive up to
+// CANDIDATE_ATTEMPTS times for a board that never changes, which is both
+// pointless and a good way to get the server blocked.
+let dailyCache = null; // { date, challenge }
+let dailyInFlight = null; // { date, promise }
+
+// Exposed for tests; there is no reason to call this in normal operation.
+export function _clearDailyCache() {
+  dailyCache = null;
+  dailyInFlight = null;
+}
+
+async function buildTodaysChallenge(fetchGame, dateString) {
   const seed = getDailySeed();
-  const dateString = getTodayDateString();
+  const problems = [];
 
-  // Use seed to pick a game ID (games range roughly from 1 to 9000+)
-  // We'll use a subset of known good game IDs
-  const gameId = (seed % 8000) + 1000; // Games 1000-9000
-
-  try {
-    const gameData = await fetchGameById(gameId);
-
-    // Filter to only clues that have both clue text and answer
-    const validClues = gameData.clues.filter(c => c.clue && c.answer);
-
-    if (validClues.length < 6) {
-      throw new Error('Not enough valid clues in this game');
-    }
-
-    // Pick 6 clues deterministically (one per category if possible)
-    const selectedClues = [];
-    const usedCategories = new Set();
-
-    // First, try to get one clue per unique category
-    for (const clue of validClues) {
-      if (!usedCategories.has(clue.category) && selectedClues.length < 6) {
-        selectedClues.push(clue);
-        usedCategories.add(clue.category);
-      }
-    }
-
-    // If we don't have 6 yet, add more from any category
-    for (const clue of validClues) {
-      if (selectedClues.length >= 6) break;
-      if (!selectedClues.includes(clue)) {
-        selectedClues.push(clue);
-      }
-    }
-
-    // Shuffle deterministically using the seed
-    const shuffled = selectedClues.sort((a, b) => {
-      const hashA = (seed + a.clue.length) % 100;
-      const hashB = (seed + b.clue.length) % 100;
-      return hashA - hashB;
-    });
-
-    return {
-      date: dateString,
-      seed,
-      gameId,
-      questions: shuffled.slice(0, 6).map(clue => ({
-        category: clue.category.toUpperCase(),
-        clue: clue.clue,
-        answer: clue.answer,
-        value: clue.value,
-      })),
-    };
-  } catch (error) {
-    console.error(`Failed to fetch game ${gameId}:`, error);
-
-    // Try a fallback game ID
-    const fallbackId = ((seed + 500) % 8000) + 1000;
+  for (const gameId of candidateGameIds(seed)) {
     try {
-      const gameData = await fetchGameById(fallbackId);
-      const validClues = gameData.clues.filter(c => c.clue && c.answer);
-
-      return {
-        date: dateString,
+      const gameData = await fetchGame(gameId);
+      const challenge = buildDailyChallenge(gameData.clues, {
         seed,
-        gameId: fallbackId,
-        questions: validClues.slice(0, 6).map(clue => ({
-          category: clue.category.toUpperCase(),
-          clue: clue.clue,
-          answer: clue.answer,
-          value: clue.value,
-        })),
-      };
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      throw new Error('Failed to fetch daily challenge from J-Archive');
+        date: dateString,
+        gameId,
+      });
+
+      if (challenge) return challenge;
+      problems.push(`${gameId}: incomplete rounds`);
+    } catch (error) {
+      problems.push(`${gameId}: ${error.message}`);
     }
   }
+
+  // Returning a short or empty board would be cached by the client for the
+  // rest of the day, so fail loudly instead.
+  throw new Error(`Could not build a daily challenge. Tried ${problems.join('; ')}`);
+}
+
+// Get a deterministic pair of boards for today's daily challenge
+export async function getDailyChallenge({ fetchGame = fetchGameById } = {}) {
+  const dateString = getTodayDateString();
+
+  if (dailyCache?.date === dateString) return dailyCache.challenge;
+
+  // Share one build across everyone who asks while it is still running, so a
+  // burst of visitors does not become a burst of scrapes.
+  if (dailyInFlight?.date === dateString) return dailyInFlight.promise;
+
+  const promise = buildTodaysChallenge(fetchGame, dateString)
+    .then((challenge) => {
+      dailyCache = { date: dateString, challenge };
+      return challenge;
+    })
+    .finally(() => {
+      // A failure must not be cached: the next request should try again.
+      if (dailyInFlight?.promise === promise) dailyInFlight = null;
+    });
+
+  dailyInFlight = { date: dateString, promise };
+  return promise;
 }

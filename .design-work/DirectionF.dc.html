@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .clue { font-family: 'Petrona', Georgia, serif; }
+    /* a band you haven't picked: name runs up the panel, like a spine */
+    .spine { writing-mode: vertical-rl; transform: rotate(180deg); font-family: 'Big Shoulders Display', sans-serif; text-transform: uppercase; font-size: 42px; font-weight: 800; letter-spacing: 0.5px; color: #F2ECE0; line-height: 1; }
+    .band { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 26px 0 30px; box-sizing: border-box; border-left: 1px solid rgba(242,236,224,0.13); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #05081c; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- ── Rail ─────────────────────────────────────────────── -->
+  <div style="height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; border-bottom: 1px solid rgba(242,236,224,0.13);">
+    <span class="board" style="font-size: 29px; font-weight: 900; letter-spacing: -0.3px; color: #D69F4C;">JEOPARODY!</span>
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <span class="clue" style="font-size: 14px; font-style: italic; color: rgba(242,236,224,0.36);">Pick a lane.</span>
+      <div style="width: 1px; height: 16px; background: rgba(242,236,224,0.18);"></div>
+      <span class="board" style="font-size: 14px; font-weight: 700; letter-spacing: 1.3px; color: rgba(242,236,224,0.55);">17&ndash;11 &middot; BEST $4,800</span>
+      <span class="board" style="font-size: 15px; font-weight: 800; letter-spacing: 1px; color: #F2ECE0;">ANDRES</span>
+      <div style="width: 28px; height: 28px; background: #0E1467; border: 1px solid rgba(214,159,76,0.5); display: flex; align-items: center; justify-content: center;">
+        <svg width="20" height="12" viewBox="0 0 26 16" fill="none"><path d="M2 12c3-9 5 3 7-4s4 8 6 1 3 3 5-2" stroke="#D69F4C" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Bands ────────────────────────────────────────────── -->
+  <div style="flex: 1; display: flex; min-height: 0;">
+
+    <!-- The open band -->
+    <div style="width: 520px; flex-shrink: 0; background: #D69F4C; padding: 40px 40px 36px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span class="board" style="font-size: 14px; font-weight: 800; letter-spacing: 1.6px; color: #14100a; background: rgba(20,16,10,0.14); padding: 4px 9px;">01</span>
+          <span class="board" style="font-size: 13px; font-weight: 800; letter-spacing: 2.2px; color: rgba(20,16,10,0.62);">FRI AUG 29 &middot; EXPIRES MIDNIGHT</span>
+        </div>
+        <span class="board" style="font-size: 82px; font-weight: 900; line-height: 0.8; color: #14100a;">DAILY<br>CHALL&shy;ENGE</span>
+        <p class="clue" style="margin: 0; font-size: 21px; line-height: 1.42; color: rgba(20,16,10,0.78);">The same six categories for every player on earth until midnight. Miss a day and the streak goes back to nothing.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 26px;">
+        <div style="display: flex; align-items: flex-end; gap: 34px; border-top: 2px solid rgba(20,16,10,0.22); padding-top: 18px;">
+          <div style="display: flex; flex-direction: column;">
+            <span class="board" style="font-size: 50px; font-weight: 900; line-height: 1; padding-bottom: 4px; color: #14100a;">4</span>
+            <span class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: rgba(20,16,10,0.6);">DAY STREAK</span>
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <span class="board" style="font-size: 50px; font-weight: 900; line-height: 1; padding-bottom: 4px; color: #14100a;">$4,800</span>
+            <span class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: rgba(20,16,10,0.6);">YOUR BEST</span>
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <span class="board" style="font-size: 50px; font-weight: 900; line-height: 1; padding-bottom: 4px; color: #14100a;">14:02</span>
+            <span class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: rgba(20,16,10,0.6);">REMAINING</span>
+          </div>
+        </div>
+        <div style="background: #05081c; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between;">
+          <span class="board" style="font-size: 27px; font-weight: 900; letter-spacing: 0.5px; color: #D69F4C;">PLAY TODAY'S BOARD</span>
+          <span class="board" style="font-size: 27px; font-weight: 900; color: #D69F4C;">&rarr;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The closed bands -->
+    <div class="band" style="flex: 1; background: #0E1467;">
+      <span class="board" style="font-size: 14px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.4);">02</span>
+      <span class="spine">Host a Game</span>
+      <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.4); text-align: center; line-height: 1.35;">UP TO<br>30</span>
+    </div>
+
+    <div class="band" style="flex: 1; background: #131b73;">
+      <span class="board" style="font-size: 14px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.4);">03</span>
+      <span class="spine">Multiplayer</span>
+      <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.4); text-align: center; line-height: 1.35;">UP TO<br>6</span>
+    </div>
+
+    <div class="band" style="flex: 1; background: #1a2080;">
+      <span class="board" style="font-size: 14px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.4);">04</span>
+      <span class="spine">Quickplay</span>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <span style="width: 8px; height: 8px; background: #4ade80;"></span>
+        <span class="board" style="font-size: 12px; font-weight: 800; letter-spacing: 1.2px; color: #4ade80; text-align: center; line-height: 1.35;">12<br>WAITING</span>
+      </div>
+    </div>
+
+    <div class="band" style="flex: 1; background: #1e2590;">
+      <span class="board" style="font-size: 14px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.4);">05</span>
+      <span class="spine">Single Player</span>
+      <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.4); text-align: center; line-height: 1.35;">ANY<br>TOPIC</span>
+    </div>
+
+    <div class="band" style="flex: 1; background: #232b9f;">
+      <span class="board" style="font-size: 14px; font-weight: 800; letter-spacing: 1.4px; color: rgba(242,236,224,0.4);">06</span>
+      <span class="spine">Leaderboard</span>
+      <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.4); text-align: center; line-height: 1.35;">YOU'RE<br>7TH</span>
+    </div>
+  </div>
+
+  <!-- ── Join strip, running the full width ───────────────── -->
+  <div style="height: 72px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; background: #05081c; border-top: 1px solid rgba(242,236,224,0.13);">
+    <div style="display: flex; align-items: center; gap: 22px;">
+      <span class="board" style="font-size: 17px; font-weight: 800; letter-spacing: 1.8px; color: rgba(242,236,224,0.5);">SOMEBODY SENT YOU A CODE</span>
+      <div style="display: flex; gap: 6px;">
+        <div style="width:42px;height:44px;border-bottom:3px solid #D69F4C;display:flex;align-items:flex-end;justify-content:center;"><span class="board" style="font-size:34px;font-weight:900;line-height:0.94;color:#D69F4C;">K</span></div>
+        <div style="width:42px;height:44px;border-bottom:3px solid #D69F4C;display:flex;align-items:flex-end;justify-content:center;"><span class="board" style="font-size:34px;font-weight:900;line-height:0.94;color:#D69F4C;">7</span></div>
+        <div style="width:42px;height:44px;border-bottom:3px solid rgba(242,236,224,0.26);"></div>
+        <div style="width:42px;height:44px;border-bottom:3px solid rgba(242,236,224,0.26);"></div>
+        <div style="width:42px;height:44px;border-bottom:3px solid rgba(242,236,224,0.26);"></div>
+        <div style="width:42px;height:44px;border-bottom:3px solid rgba(242,236,224,0.26);"></div>
+      </div>
+    </div>
+    <div style="background: #F2ECE0; padding: 12px 30px;">
+      <span class="board" style="font-size: 22px; font-weight: 900; letter-spacing: 0.5px; color: #05081c;">JOIN &rarr;</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

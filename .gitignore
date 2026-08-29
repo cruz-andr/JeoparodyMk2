@@ -21,3 +21,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 CLAUDE.md
+
+# Design canvas working files (the seeded page is ~2MB)
+.design-work/*.html
+!.design-work/*.dc.html

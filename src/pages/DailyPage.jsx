@@ -7,6 +7,8 @@ import { checkAnswer } from '../services/answerChecker';
 import DailyResults from '../components/daily/DailyResults';
 import './DailyPage.css';
 
+const FORMAT = 'sixer';
+
 export default function DailyPage() {
   const navigate = useNavigate();
   const [userInput, setUserInput] = useState('');
@@ -22,12 +24,8 @@ export default function DailyPage() {
   }, []);
 
   const {
-    todayDate,
-    questions,
-    currentIndex,
-    answers,
+    sixer,
     isLoading,
-    isComplete,
     error,
     stats,
     hasPlayedToday,
@@ -41,6 +39,9 @@ export default function DailyPage() {
     nextQuestion,
     completeGame,
   } = useDailyStore();
+
+  const { date: todayDate, questions, currentIndex, answers, isComplete } = sixer;
+  const formatStats = stats[FORMAT];
 
   // Format today's date for display
   const formatDisplayDate = (dateString) => {
@@ -57,17 +58,22 @@ export default function DailyPage() {
   // Load daily challenge on mount
   useEffect(() => {
     const loadChallenge = async () => {
+      // `error` is shared by both daily pages and outlives a route change, so
+      // a failure on The Board would otherwise strand this screen on "Oops!".
+      setError(null);
+
       // If already played today, show results
-      if (hasPlayedToday()) {
+      if (hasPlayedToday(FORMAT)) {
+        setLoading(false);
         return;
       }
 
       // If new day or no data, fetch fresh
-      if (isNewDay() || questions.length === 0) {
+      if (isNewDay(FORMAT) || questions.length === 0) {
         setLoading(true);
         try {
           const challenge = await getOrFetchDailyChallenge();
-          setDailyChallenge(challenge);
+          setDailyChallenge(FORMAT, challenge.sixer);
         } catch (err) {
           console.error('Failed to load daily challenge:', err);
           setError('Failed to load today\'s challenge. Please try again.');
@@ -95,35 +101,35 @@ export default function DailyPage() {
     if (!userInput.trim() || !currentQuestion) return;
 
     // Store the user's answer
-    setUserAnswer(currentIndex, userInput.trim());
+    setUserAnswer(FORMAT, currentIndex, userInput.trim());
 
     // Check the answer
     const result = checkAnswer(userInput.trim(), currentQuestion.answer);
     setLastCheckResult(result);
 
     // Reveal and grade
-    revealAnswer(currentIndex, result.isCorrect, userInput.trim());
+    revealAnswer(FORMAT, currentIndex, result.isCorrect, userInput.trim());
     setShowResult(true);
   }, [userInput, currentQuestion, currentIndex, setUserAnswer, revealAnswer]);
 
   const handleOverride = useCallback(() => {
-    overrideAnswer(currentIndex);
+    overrideAnswer(FORMAT, currentIndex);
     setLastCheckResult({ ...lastCheckResult, isCorrect: true, reason: 'Overridden' });
   }, [currentIndex, lastCheckResult, overrideAnswer]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < questions.length - 1) {
-      nextQuestion();
+      nextQuestion(FORMAT);
     } else {
       // All questions answered, complete the game
-      completeGame();
+      completeGame(FORMAT);
     }
   }, [currentIndex, questions.length, nextQuestion, completeGame]);
 
   const handleSkip = useCallback(() => {
     // Skip counts as wrong
-    setUserAnswer(currentIndex, '');
-    revealAnswer(currentIndex, false, '');
+    setUserAnswer(FORMAT, currentIndex, '');
+    revealAnswer(FORMAT, currentIndex, false, '');
     setShowResult(true);
     setLastCheckResult({ isCorrect: false, confidence: 0, reason: 'Skipped' });
   }, [currentIndex, setUserAnswer, revealAnswer]);
@@ -163,10 +169,10 @@ export default function DailyPage() {
   }
 
   // Already played today - show results
-  if (hasPlayedToday() || isComplete) {
+  if (hasPlayedToday(FORMAT) || isComplete) {
     return (
       <div className="daily-page">
-        <DailyResults onBackToMenu={handleBackToMenu} verifyCode={verifyCode} />
+        <DailyResults onBackToMenu={handleBackToMenu} verifyCode={verifyCode} format={FORMAT} />
       </div>
     );
   }
@@ -191,12 +197,12 @@ export default function DailyPage() {
           &larr; Menu
         </button>
         <div className="daily-title">
-          <h1>Daily Jeoparody</h1>
+          <h1>The Sixer</h1>
           <p className="daily-date">{formatDisplayDate(todayDate)}</p>
         </div>
         <div className="daily-stats-mini">
           <span className="streak-badge" title="Current streak">
-            {stats.currentStreak > 0 ? `${stats.currentStreak} day streak` : ''}
+            {formatStats.currentStreak > 0 ? `${formatStats.currentStreak} day streak` : ''}
           </span>
         </div>
       </header>

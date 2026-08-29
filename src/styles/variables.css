@@ -21,6 +21,11 @@
   --text-muted: #666666;
 
   /* Fonts */
+  /* The show sets board categories and dollar values in Swiss 911 Ultra
+     Compressed, and clues in ITC Korinna. Big Shoulders and Petrona stand in
+     for those two roles. */
+  --font-board: 'Big Shoulders Display', Impact, 'Haettenschweiler', 'Arial Narrow', sans-serif;
+  --font-clue: 'Petrona', Georgia, 'Times New Roman', serif;
   --font-display: Impact, "Arial Narrow", sans-serif;
   --font-body: 'Arial', sans-serif;
   --font-jeopardy: "Korinna", Georgia, serif;

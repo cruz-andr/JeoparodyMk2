@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;500;600;700&display=swap');
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .display { font-family: 'Anton', Impact, 'Arial Narrow', sans-serif; font-weight: 400; letter-spacing: 0.5px; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: rgba(255,255,255,0.42); }
+    .railcard { background: linear-gradient(180deg, #16207e 0%, #0b1352 100%); border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 10px 26px rgba(0,0,0,0.35); box-sizing: border-box; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; }
+    .navlink { font-size: 13.5px; font-weight: 600; letter-spacing: 0.3px; color: rgba(255,255,255,0.5); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #04081f; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- ── Nav ──────────────────────────────────────────────── -->
+  <div style="height: 68px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 44px; border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(4,8,31,0.7); position: relative; z-index: 3;">
+    <div style="display: flex; align-items: center; gap: 34px;">
+      <span class="display" style="font-size: 26px; color: #D69F4C; text-shadow: 0 2px 0 #7a5520;">JEOPARODY!</span>
+      <div style="display: flex; align-items: center; gap: 26px;">
+        <span class="navlink" style="color: #fff;">Play</span>
+        <span class="navlink">Leaderboard</span>
+        <span class="navlink">My stats</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <!-- persistent join field, always one field away -->
+      <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 6px 0 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10); border-radius: 999px;">
+        <span style="font-size: 12.5px; color: rgba(255,255,255,0.4); letter-spacing: 2px;">ROOM CODE</span>
+        <div style="height: 28px; padding: 0 14px; border-radius: 999px; background: rgba(214,159,76,0.16); border: 1px solid rgba(214,159,76,0.35); display: flex; align-items: center;">
+          <span style="font-size: 12px; font-weight: 700; color: #D69F4C; letter-spacing: 0.4px;">Join</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; border-radius: 999px; background: #0a0f4a; border: 1px solid rgba(214,159,76,0.4); display: flex; align-items: center; justify-content: center;">
+          <svg width="26" height="16" viewBox="0 0 26 16" fill="none"><path d="M2 12c3-9 5 3 7-4s4 8 6 1 3 3 5-2" stroke="#D69F4C" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <span style="font-size: 13px; font-weight: 600; color: #fff;">Andres</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Cinematic hero ───────────────────────────────────── -->
+  <div style="height: 520px; flex-shrink: 0; position: relative; overflow: hidden; background: linear-gradient(105deg, #0a1250 0%, #101c74 42%, #16227f 100%);">
+
+    <!-- board-of-tiles as the hero art -->
+    <div style="position: absolute; right: -40px; top: -30px; width: 760px; height: 580px; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(5, 1fr); gap: 9px; transform: perspective(1300px) rotateY(-22deg) rotateX(6deg); opacity: 0.5;">
+      <div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div>
+      <div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#D69F4C;border-radius:5px;box-shadow:0 0 40px rgba(214,159,76,.7)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div>
+      <div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div>
+      <div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div>
+      <div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#131d7a;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#0E1467;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div><div style="background:#111a72;border-radius:5px;border:1px solid rgba(255,255,255,.07)"></div>
+    </div>
+
+    <!-- scrim so the type always wins -->
+    <div style="position: absolute; inset: 0; background: linear-gradient(90deg, #060b2b 0%, rgba(6,11,43,0.94) 34%, rgba(6,11,43,0.2) 62%, rgba(6,11,43,0) 78%);"></div>
+
+    <div style="position: relative; padding: 62px 44px 0; display: flex; flex-direction: column; gap: 22px; max-width: 700px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: #14100a; background: #D69F4C; padding: 5px 11px; border-radius: 5px;">Today only</span>
+        <span class="eyebrow">Friday, August 29 · 6 categories</span>
+      </div>
+      <div class="display" style="font-size: 92px; line-height: 0.88; color: #fff;">THE DAILY<br>CHALLENGE</div>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.5; color: rgba(255,255,255,0.62); max-width: 480px;">One board. Same six categories for everyone, everywhere, until midnight. Keep the streak alive.</p>
+      <div style="display: flex; align-items: center; gap: 18px; margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 11px; background: linear-gradient(135deg, #E8B35A, #D69F4C); color: #14100a; padding: 18px 34px; border-radius: 12px; font-size: 16px; font-weight: 700; box-shadow: 0 10px 28px rgba(214,159,76,0.34);">
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="#14100a"><path d="M2 1.5v15l13-7.5-13-7.5z"/></svg>
+          Play now
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; padding: 18px 26px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); font-size: 15px; font-weight: 600; color: #fff;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.8"/><path d="M12 7.5v5l3 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+          14h left
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; margin-left: 4px;">
+          <span class="display" style="font-size: 30px; color: #D69F4C;">4</span>
+          <span class="eyebrow" style="line-height: 1.25;">Day<br>streak</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Mode rail ────────────────────────────────────────── -->
+  <div style="flex: 1; padding: 26px 44px 0; display: flex; flex-direction: column; gap: 16px; min-height: 0;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <span class="display" style="font-size: 21px; color: #fff;">PLAY WITH OTHERS</span>
+      <span class="eyebrow">4 ways to play</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; height: 178px;">
+
+      <div class="railcard" style="border-color: rgba(126,184,255,0.3);">
+        <div style="width: 42px; height: 42px; border-radius: 11px; background: rgba(126,184,255,0.13); border: 1px solid rgba(126,184,255,0.28); display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#7eb8ff" stroke-width="1.7"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="#7eb8ff" stroke-width="1.7" stroke-linecap="round"/><path d="M16 5.5a3.2 3.2 0 0 1 0 6M17.5 14.4c2 .7 3.2 2.4 3.2 4.6" stroke="#7eb8ff" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <span class="display" style="font-size: 21px; color: #fff;">MULTIPLAYER</span>
+          <span style="font-size: 12.5px; color: rgba(255,255,255,0.45);">Private room, up to 6</span>
+        </div>
+      </div>
+
+      <div class="railcard" style="border-color: rgba(214,159,76,0.3);">
+        <div style="width: 42px; height: 42px; border-radius: 11px; background: rgba(214,159,76,0.13); border: 1px solid rgba(214,159,76,0.28); display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="2.5" width="6" height="11" rx="3" stroke="#D69F4C" stroke-width="1.7"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" stroke="#D69F4C" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <span class="display" style="font-size: 21px; color: #fff;">HOST A GAME</span>
+          <span style="font-size: 12.5px; color: rgba(255,255,255,0.45);">You read, up to 30 play</span>
+        </div>
+      </div>
+
+      <div class="railcard">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+          <div style="width: 42px; height: 42px; border-radius: 11px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13); display: flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12l1-7.5z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 6px; height: 6px; border-radius: 999px; background: #4ade80;"></span>
+            <span style="font-size: 11px; font-weight: 600; color: #4ade80;">12 waiting</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <span class="display" style="font-size: 21px; color: #fff;">QUICKPLAY</span>
+          <span style="font-size: 12.5px; color: rgba(255,255,255,0.45);">Matched in seconds</span>
+        </div>
+      </div>
+
+      <div class="railcard">
+        <div style="width: 42px; height: 42px; border-radius: 11px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13); display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="#fff" stroke-width="1.7"/><path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <span class="display" style="font-size: 21px; color: #fff;">SINGLE PLAYER</span>
+          <span style="font-size: 12.5px; color: rgba(255,255,255,0.45);">Solo, any topic</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

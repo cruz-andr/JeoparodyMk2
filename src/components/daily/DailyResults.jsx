@@ -1,27 +1,27 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
+import { boardGridRows, decodeAnswers } from '../../stores/dailyLogic';
 import './DailyResults.css';
 
-export default function DailyResults({ onBackToMenu, verifyCode }) {
+// Clues per run, used to turn a running total into an accuracy percentage.
+const CLUES_PER_RUN = { board: 30, sixer: 6 };
+
+export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer' }) {
   const [copied, setCopied] = useState(false);
   const [showTheirAnswers, setShowTheirAnswers] = useState(false);
   const [theirAnswers, setTheirAnswers] = useState(null);
 
-  const {
-    todayDate,
-    questions,
-    answers,
-    stats,
-    shareResults,
-    getShareText,
-  } = useDailyStore();
+  const { stats, shareResults, getShareText, ...store } = useDailyStore();
+  const { date: todayDate, questions, answers } = store[format];
+  const formatStats = stats[format];
 
   // Decode verification answers when user clicks to reveal
   const handleRevealTheirAnswers = () => {
     if (!verifyCode) return;
     try {
-      const decoded = JSON.parse(atob(verifyCode));
+      const decoded = decodeAnswers(verifyCode);
+      if (!decoded) return;
       setTheirAnswers(decoded);
       setShowTheirAnswers(true);
     } catch (e) {
@@ -29,19 +29,27 @@ export default function DailyResults({ onBackToMenu, verifyCode }) {
     }
   };
 
+  // Transposed for the Board so each row is a value tier, as on the board
+  // itself; a single row for the Sixer.
+  const emojiRows = (() => {
+    const flags = answers.map((a) => Boolean(a.correct));
+    if (format !== 'board') return [flags];
+    return boardGridRows(flags) ?? [flags];
+  })();
+
   const correctCount = answers.filter((a) => a.correct).length;
   const totalQuestions = questions.length;
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   const handleShare = async () => {
-    const success = await shareResults();
+    const success = await shareResults(format);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } else {
       // Fallback: try to copy manually
       try {
-        await navigator.clipboard.writeText(getShareText());
+        await navigator.clipboard.writeText(getShareText(format));
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
@@ -71,18 +79,28 @@ export default function DailyResults({ onBackToMenu, verifyCode }) {
       <h2>Today's Results</h2>
       <p className="results-date">{formatDisplayDate(todayDate)}</p>
 
-      {/* Emoji Grid */}
-      <div className="emoji-grid">
-        {answers.map((answer, index) => (
-          <motion.span
-            key={index}
-            className={`emoji-block ${answer.correct ? 'correct' : 'incorrect'}`}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1, type: 'spring' }}
-          >
-            {answer.correct ? '🟩' : '🟥'}
-          </motion.span>
+      {/* Results grid. The Board is laid out the way the board reads, six
+          categories across and five values down, matching the shared text.
+          The Sixer stays a single row. */}
+      <div className={`emoji-grid ${format === 'board' ? 'board' : ''}`}>
+        {emojiRows.map((row, rowIndex) => (
+          <div className="emoji-row" key={rowIndex}>
+            {row.map((correct, colIndex) => {
+              const n = rowIndex * row.length + colIndex;
+              return (
+                <motion.span
+                  key={colIndex}
+                  className={`emoji-block ${correct ? 'correct' : 'incorrect'}`}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  // capped so a thirty cell board does not take three seconds
+                  transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
+                >
+                  {correct ? '🟩' : '🟥'}
+                </motion.span>
+              );
+            })}
+          </div>
         ))}
       </div>
 
@@ -133,23 +151,26 @@ export default function DailyResults({ onBackToMenu, verifyCode }) {
         <h3>Your Stats</h3>
         <div className="stats-grid">
           <div className="stat-item">
-            <span className="stat-value">{stats.gamesPlayed}</span>
+            <span className="stat-value">{formatStats.gamesPlayed}</span>
             <span className="stat-label">Played</span>
           </div>
           <div className="stat-item">
             <span className="stat-value">
-              {stats.gamesPlayed > 0
-                ? Math.round((stats.totalCorrect / (stats.gamesPlayed * 6)) * 100)
+              {formatStats.gamesPlayed > 0
+                ? Math.round(
+                    (formatStats.totalCorrect /
+                      (formatStats.gamesPlayed * CLUES_PER_RUN[format])) * 100
+                  )
                 : 0}%
             </span>
             <span className="stat-label">Accuracy</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{stats.currentStreak}</span>
+            <span className="stat-value">{formatStats.currentStreak}</span>
             <span className="stat-label">Streak</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{stats.maxStreak}</span>
+            <span className="stat-value">{formatStats.maxStreak}</span>
             <span className="stat-label">Max Streak</span>
           </div>
         </div>

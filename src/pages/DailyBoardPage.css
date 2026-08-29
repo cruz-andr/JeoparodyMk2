@@ -1,0 +1,125 @@
+.daily-board-page {
+  min-height: 100vh;
+  background: #05081c;
+  padding: 20px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.daily-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+}
+
+.daily-board-title {
+  text-align: center;
+}
+
+.daily-board-title h1 {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--jeopardy-gold);
+  line-height: 1;
+}
+
+.daily-board-date {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.daily-board-score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-board);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #f2ece0;
+  min-width: 150px;
+  justify-content: flex-end;
+}
+
+.daily-board-score .negative {
+  color: var(--color-error);
+}
+
+.daily-board-streak {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--jeopardy-gold);
+  border: 1px solid rgba(214, 159, 76, 0.4);
+  padding: 4px 9px;
+}
+
+.daily-board-status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: rgba(242, 236, 224, 0.65);
+  text-align: center;
+}
+
+.daily-board-status h2 {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  color: var(--jeopardy-gold);
+  margin: 0;
+}
+
+.btn-back {
+  background: none;
+  border: 1px solid rgba(242, 236, 224, 0.22);
+  color: rgba(242, 236, 224, 0.65);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  min-width: 110px;
+  text-align: left;
+}
+
+.btn-back:hover {
+  color: #f2ece0;
+  border-color: rgba(242, 236, 224, 0.5);
+}
+
+@media (max-width: 680px) {
+  .daily-board-page {
+    padding: 14px 12px 28px;
+  }
+
+  .daily-board-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .daily-board-title h1 {
+    font-size: 1.6rem;
+  }
+
+  .btn-back,
+  .daily-board-score {
+    min-width: 0;
+  }
+}
