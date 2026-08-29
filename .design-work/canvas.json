@@ -1,6 +1,14 @@
 {
   "pages": [
     {
+      "id": "page-4",
+      "name": "Phone: the premium pass"
+    },
+    {
+      "id": "page-3",
+      "name": "Phone: back pocket (M1, M3)"
+    },
+    {
       "id": "page-1",
       "name": "Round 2: designed, not defaulted"
     },
@@ -10,6 +18,114 @@
     }
   ],
   "artboards": [
+    {
+      "file": "PhoneN1anim.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "N1 · Roll, then open (animated)",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneN1c.dc.html",
+      "x": 1020,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "N1 · Solo, same rail",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneN1b.dc.html",
+      "x": 510,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "N1 · The Wall, with podiums",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneGrade.dc.html",
+      "x": 3060,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Grading, stacked",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneN3.dc.html",
+      "x": 2550,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "N3 · Tile becomes the clue (animated)",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneN2.dc.html",
+      "x": 2040,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "N2 · The Loupe",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneN1.dc.html",
+      "x": 1530,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "N1 · first pass (top bar)",
+      "page": "page-4"
+    },
+    {
+      "file": "PhoneClue.dc.html",
+      "x": 2040,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "The clue",
+      "page": "page-3"
+    },
+    {
+      "file": "PhoneM3.dc.html",
+      "x": 1530,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "M3 · One at a time, with a map",
+      "page": "page-3"
+    },
+    {
+      "file": "PhoneM2.dc.html",
+      "x": 1020,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "M2 · Open one category",
+      "page": "page-3"
+    },
+    {
+      "file": "PhoneM1.dc.html",
+      "x": 510,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "M1 · Turn the board",
+      "page": "page-3"
+    },
+    {
+      "file": "PhoneToday.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "What ships now",
+      "page": "page-3"
+    },
     {
       "file": "DirectionD.dc.html",
       "x": 0,
@@ -75,6 +191,134 @@
     }
   ],
   "annotations": [
+    {
+      "id": "anim-note",
+      "x": 0,
+      "y": -180,
+      "w": 470,
+      "page": "page-4",
+      "text": "ROLL, THEN OPEN. (Animated, watch it.)\n\nOne tap on the $800 in the row above, and it plays out in two beats. The wheel rolls 134px so that row takes the centre and flattens out, growing 1.53x as it comes. Only once it has settled does the tile itself expand into the clue.\n\nWhy two beats rather than opening straight away: you never watch a tilted face turn into a page. By the time the clue opens, the thing you tapped is flat, centred and full size, so the motion explains where you are instead of teleporting you. It also means the tilted rows can stay tappable without the open feeling careless.\n\nTapping the centre row skips the first beat and opens immediately, which is the common case and stays fast.\n\nTiming here is about 0.4s for the roll and 0.35s for the open, with a slight overlap so it reads as one gesture rather than two. Whatever gets built should collapse to a plain cross fade under reduced motion."
+    },
+    {
+      "id": "apple-reco2",
+      "x": 3570,
+      "y": -180,
+      "w": 470,
+      "text": "MY READ\n\nN1 with podiums, plus N3's transition layered on it.\n\nMoving the scores down solved two problems at once: it answered the thing you did not like about the top, and it put the game state where the show puts it.\n\nOne thing I want to flag rather than bury: everyone's score only exists in multiplayer, and multiplayer on a phone also needs a buzzer, which is a large thumb target that has to live somewhere. On this layout the obvious home is the podium rail expanding into it when the clue is live. That is a real screen I have not designed yet.",
+      "page": "page-4"
+    },
+    {
+      "id": "n1c-note",
+      "x": 1020,
+      "y": -180,
+      "w": 470,
+      "text": "N1. SOLO, SAME RAIL.\n\nOne podium across the full width. No target, no ghost, just your score.\n\nSame wheel, same three playable rows, so solo and multiplayer read as one game rather than two different products.",
+      "page": "page-4"
+    },
+    {
+      "id": "n1b-note",
+      "x": 510,
+      "y": -180,
+      "w": 470,
+      "text": "N1. THE WALL, WITH PODIUMS.\n\nFive categories are on screen. The middle THREE are playable: every tile in them can be tapped straight away, no scrolling to centre first. They tilt away on the cylinder but stay crisp and lit, because distance is the only thing that changes about them, not whether they work.\n\nThe outer two are context. They carry no values, no light and no gold, so nothing about them invites a tap. Their job is to prove the wheel keeps going rather than being a stack of three.\n\nThe top bar is gone. What floats up there is a bare glyph and a line of state.\n\nScores sit at the bottom, where contestants stand on the show and where your thumb already is. Each podium carries the player's own drawn signature, which the app already collects at join. Whoever picks next takes the gold.\n\nOpen question: at six players each podium is about 57px. The score survives that, the signature does not. I would fall back to score plus initial at five or more, but that wants testing with real names.\n\nTAP MODEL, since it is the obvious question:\nTap a TILE in any of the three live rows and it plays that clue. Not centre it first. If a neighbour only centred, the neighbours would not be clickable, they would be scroll targets, and every clue would cost two taps again.\nTap a CATEGORY NAME and that row rolls to the centre. That gives you the deliberate move without stealing the fast one.\nThe outer two rows have no live tiles, so a tap anywhere on them just rolls them into range.",
+      "page": "page-4"
+    },
+    {
+      "id": "grade-note-2",
+      "x": 3060,
+      "y": -180,
+      "w": 470,
+      "text": "GRADING, UNCHANGED FROM THE FIRST PASS.\n\nStacked and full width, never side by side. Self-reported grading moves the score both ways and cannot be undone, so the wrong answer must not sit a thumb-width from the right one.",
+      "page": "page-4"
+    },
+    {
+      "id": "n3-note",
+      "x": 2550,
+      "y": -180,
+      "w": 470,
+      "text": "N3. THE TILE BECOMES THE CLUE. (This one is animated, watch it.)\n\nNo modal, no page, no navigation for an entire game. The tile you press grows into the clue, its value shrinking into a corner badge, and the wall dims behind rather than disappearing. Answer and it collapses back into its slot, now dark.\n\nWhy: this is what the show actually does, and it is the single change that would make the whole thing feel expensive. It is a layer, not a layout, so it composes with N1, N2, M1 or M3.\n\nTradeoff: the web View Transitions API makes this cheap in a modern browser and awkward in an old one. Needs a plain fade fallback, and it must respect reduced motion.",
+      "page": "page-4"
+    },
+    {
+      "id": "n2-note",
+      "x": 2040,
+      "y": -180,
+      "w": 470,
+      "text": "N2. THE LOUPE.\n\nThe wall stays whole and small, seen from a podium in real perspective. It is a map you sense rather than type you read. Whatever your thumb is over lifts off the wall and becomes fully legible, then you release to play it. Borrowed from the tvOS focus engine and the old iOS text loupe.\n\nWhy: it refuses the premise. The board never has to shrink words into 56px because reading is a separate gesture from surveying.\n\nTradeoff: a press-drag-release gesture has to be taught, and the first ten seconds will confuse someone. Needs a tap fallback.",
+      "page": "page-4"
+    },
+    {
+      "id": "apple-brief",
+      "x": 0,
+      "y": -430,
+      "w": 820,
+      "text": "THE PREMIUM PASS\n\nApple's current language is Liquid Glass, shipped in iOS 26 and now on about 1.5 billion phones. Its three principles are hierarchy, harmony and consistency, and it communicates through light, shadow and motion: real-time lensing, specular highlights that answer the gyroscope, adaptive shadows, elements that lift into view rather than appearing.\n\nThe important restraint: Apple uses glass as a floating CONTROL layer over real content. It is not a frosted card sitting on a gradient, which is the thing the anti-slop rules ban. So here glass appears exactly once per screen, on the score bar, with the board moving underneath it. Everything else is solid, lit, and physical.\n\nTHE IDEA THAT TIES IT TOGETHER: on the show, the clue is revealed ON the board. The tile does not navigate anywhere, it becomes the clue. That is a shared element transition, which is the most premium move in mobile UI and, here, also the most faithful one. N3 animates it. It should apply whichever layout wins.\n\nAlso worth noting what got dropped: the fix for a grid too small to read is not always to shrink the type. N2 magnifies instead.",
+      "page": "page-4"
+    },
+    {
+      "id": "phone-reco",
+      "x": 3060,
+      "y": -170,
+      "w": 470,
+      "text": "MY READ\n\nM1. It fixes the real defect, keeps every clue one tap away, and keeps the whole board visible, which is what makes choosing feel like a choice.\n\nSteal M3's mini map for the header of whichever wins. It is a better progress indicator than a bar and it is the only piece here that still looks like the board.\n\nM2 is the one to pick if you would rather optimise for reading comfort than for speed.\n\nNot shown, worth saying: landscape. The board fits properly at 844x390. Offering it when the phone is turned sideways is cheap; requiring it is not, and most people play one handed.",
+      "page": "page-3"
+    },
+    {
+      "id": "grade-note",
+      "x": 2550,
+      "y": -170,
+      "w": 460,
+      "text": "GRADING YOURSELF\n\nThe clue shrinks but stays, so you can check yourself against it rather than from memory.\n\nThe two buttons are stacked and full width, not side by side. Grading is self-reported and moves your score in both directions, so a mis-tap costs real points and there is no undo. Side by side halves the target and puts the wrong answer a thumb-width from the right one.",
+      "page": "page-3"
+    },
+    {
+      "id": "clue-note",
+      "x": 2040,
+      "y": -170,
+      "w": 460,
+      "text": "THE CLUE\n\nWhere the twenty minutes actually go, and it works under all three options.\n\nThe clue owns the screen at 27px Petrona. Actions sit in the thumb zone at the bottom rather than the middle. Skip is present but quiet.",
+      "page": "page-3"
+    },
+    {
+      "id": "m3-note",
+      "x": 1530,
+      "y": -170,
+      "w": 460,
+      "text": "M3. ONE AT A TIME, WITH A MAP.\n\nSwipe between categories. The strip at the top is the real board shrunk to a map: six columns, five rows, read rather than touched, so paging costs you no overview.\n\nWhy: the most room per clue, and the map is the one idea here I would keep regardless of which option wins.\n\nTradeoff: jumping from category 1 to category 5 is four swipes. Paging suits reading, not the darting around that picking clues involves.",
+      "page": "page-3"
+    },
+    {
+      "id": "m2-note",
+      "x": 1020,
+      "y": -170,
+      "w": 460,
+      "text": "M2. OPEN ONE CATEGORY.\n\nSix stacked rows, each showing how far through it you are. Tap one and it opens in place with five full width buttons.\n\nWhy: the biggest targets and the clearest type of the three, and progressive disclosure is what the pattern research actually recommends for this shape of problem.\n\nTradeoff: two taps to every clue, thirty clues a game. That is thirty extra taps, and you can only see one category's values at a time, which is where the strategy lives.",
+      "page": "page-3"
+    },
+    {
+      "id": "m1-note",
+      "x": 510,
+      "y": -170,
+      "w": 460,
+      "text": "M1. TURN THE BOARD.\n\nSix category ROWS instead of six columns. The name gets the full 366px and becomes properly readable; the five values become 66px chips, comfortably over the 44px minimum.\n\nWhy: the smallest change that fixes the actual problem. All 30 cells stay on one screen, one tap to any clue, and the grid still reads as a grid.\n\nTradeoff: it is no longer the board's shape. Someone who knows the show will notice it has been rotated.",
+      "page": "page-3"
+    },
+    {
+      "id": "today-note",
+      "x": 0,
+      "y": -170,
+      "w": 460,
+      "text": "WHAT SHIPS NOW\n\n1. Category names are 8px and wrap to four lines. They are the only thing that tells you what a clue is about.\n2. Cells are 57px wide. Fine for $200, hopeless for words.\n3. About a third of the screen below the board does nothing.\n4. Nothing shows progress except the board looking emptier.",
+      "page": "page-3"
+    },
+    {
+      "id": "phone-brief",
+      "x": 0,
+      "y": -400,
+      "w": 780,
+      "text": "PHONE: MAKING THE BOARD FIT\n\nThe root problem is not styling. A Jeopardy board is a LANDSCAPE object being rendered portrait. Six columns need roughly 600px to be legible; a phone gives about 360, so each cell is 57px wide and the category names collapse into unreadable stacks. REPUBLIC \"-AN\"S is currently four lines of 8px type.\n\nWhat the board is actually for, in order:\n1. show what is left (progress)\n2. let you choose category and difficulty (strategy)\n3. look like Jeopardy (brand)\n\nEvery option below keeps 1 and 2. They differ in how much of 3 they trade away.\n\nPattern research says: avoid horizontal scroll, prefer progressive disclosure, convert dense rows into cards, use vertical space because that is the axis people already scroll. Generic table advice, but it points the same way.",
+      "page": "page-3"
+    },
     {
       "id": "rules",
       "x": 0,
@@ -142,6 +386,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-1"
+    "page": "page-4"
   }
 }

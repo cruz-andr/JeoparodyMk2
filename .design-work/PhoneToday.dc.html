@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .cell { background: #16207e; display: flex; align-items: center; justify-content: center; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #05081c; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 14px 12px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(242,236,224,0.14); flex-shrink: 0;">
+    <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.6); border: 1px solid rgba(242,236,224,0.22); padding: 8px 12px;">&larr; MENU</span>
+    <div style="text-align: center;">
+      <div class="board" style="font-size: 26px; font-weight: 900; color: #D69F4C; line-height: 1;">THE BOARD</div>
+      <div class="board" style="font-size: 11px; letter-spacing: 1.4px; color: rgba(242,236,224,0.38); margin-top: 3px;">2026-08-29</div>
+    </div>
+    <span class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0;">$0</span>
+  </div>
+
+  <!-- Six columns on a 366px canvas: about 57px each -->
+  <div style="padding: 12px; flex-shrink: 0;">
+    <div style="border: 2px solid #05081c; background: #05081c; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
+      <div class="cell" style="height: 62px; padding: 0 2px;"><span class="board" style="font-size: 8.5px; font-weight: 800; color: #F2ECE0; text-align: center; line-height: 1.1;">UNSCRIPTED TV</span></div>
+      <div class="cell" style="height: 62px; padding: 0 2px;"><span class="board" style="font-size: 8.5px; font-weight: 800; color: #F2ECE0; text-align: center; line-height: 1.1;">FRUIT, NOT FRUIT</span></div>
+      <div class="cell" style="height: 62px; padding: 0 2px;"><span class="board" style="font-size: 8.5px; font-weight: 800; color: #F2ECE0; text-align: center; line-height: 1.1;">INNOVA&shy;TIONS</span></div>
+      <div class="cell" style="height: 62px; padding: 0 2px;"><span class="board" style="font-size: 8.5px; font-weight: 800; color: #F2ECE0; text-align: center; line-height: 1.1;">FRENCH DIP</span></div>
+      <div class="cell" style="height: 62px; padding: 0 2px;"><span class="board" style="font-size: 8.5px; font-weight: 800; color: #F2ECE0; text-align: center; line-height: 1.1;">DEMO&shy;CRATS</span></div>
+      <div class="cell" style="height: 62px; padding: 0 2px;"><span class="board" style="font-size: 8.5px; font-weight: 800; color: #F2ECE0; text-align: center; line-height: 1.1;">REPUBLIC "-AN"S</span></div>
+
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$200</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$200</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$200</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$200</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$200</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$200</span></div>
+
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$400</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$400</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$400</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$400</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$400</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$400</span></div>
+
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$600</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$600</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$600</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$600</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$600</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$600</span></div>
+
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$800</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$800</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$800</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$800</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$800</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 17px; font-weight: 900; color: #D69F4C;">$800</span></div>
+
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 15px; font-weight: 900; color: #D69F4C;">$1000</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 15px; font-weight: 900; color: #D69F4C;">$1000</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 15px; font-weight: 900; color: #D69F4C;">$1000</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 15px; font-weight: 900; color: #D69F4C;">$1000</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 15px; font-weight: 900; color: #D69F4C;">$1000</span></div>
+      <div class="cell" style="height: 58px;"><span class="board" style="font-size: 15px; font-weight: 900; color: #D69F4C;">$1000</span></div>
+    </div>
+  </div>
+
+  <!-- roughly a third of the screen, doing nothing -->
+  <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+    <span class="clue" style="font-family: 'Petrona', serif; font-style: italic; font-size: 13px; color: rgba(242,236,224,0.18);">(dead space)</span>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

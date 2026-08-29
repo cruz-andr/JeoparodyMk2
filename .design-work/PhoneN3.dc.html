@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .t {
+      background: linear-gradient(178deg, #1e28a0 0%, #131c80 45%, #0c1260 100%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.4);
+    }
+    .t.done { background: #080d33; box-shadow: none; }
+
+    /* The tile IS the clue. It never navigates, it grows. On the show the clue
+       is revealed on the board itself, so the most premium transition
+       available is also the most faithful one. */
+    @keyframes grow {
+      0%,   5%  { top: 263px; left: 136px; width: 57px;  height: 56px; }
+      19%, 71%  { top: 84px;  left: 12px;  width: 366px; height: 716px; }
+      85%, 100% { top: 263px; left: 136px; width: 57px;  height: 56px; }
+    }
+    @keyframes valueOut { 0%,7% {opacity:1} 15%,100% {opacity:0} }
+    @keyframes badgeIn  { 0%,16% {opacity:0} 24%,68% {opacity:1} 78%,100% {opacity:0} }
+    @keyframes clueIn   { 0%,20% {opacity:0; transform: translateY(10px)} 30%,66% {opacity:1; transform:none} 76%,100% {opacity:0; transform: translateY(6px)} }
+    @keyframes dim      { 0%,8% {opacity:1} 20%,70% {opacity:0.22} 84%,100% {opacity:1} }
+    @keyframes lift     { 0%,6% {box-shadow: 0 0 0 rgba(0,0,0,0)} 20%,70% {box-shadow: 0 40px 80px rgba(0,0,0,0.7)} 86%,100% {box-shadow: 0 0 0 rgba(0,0,0,0)} }
+
+    .hero {
+      position: absolute; overflow: hidden;
+      background: linear-gradient(176deg, #2b37c8 0%, #161f96 46%, #0e1570 100%);
+      animation: grow 9s cubic-bezier(0.32, 0.72, 0, 1) infinite,
+                 lift 9s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+    }
+    .wall { animation: dim 9s cubic-bezier(0.32, 0.72, 0, 1) infinite; }
+    .heroValue { animation: valueOut 9s linear infinite; }
+    .heroBadge { animation: badgeIn 9s linear infinite; }
+    .heroClue  { animation: clueIn 9s cubic-bezier(0.32,0.72,0,1) infinite; }
+
+    .glass {
+      background: rgba(12, 18, 62, 0.55);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 10px 34px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.28);
+      border-radius: 999px;
+    }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #03050f; position: relative; overflow: hidden;">
+
+  <div style="position: absolute; inset: 0; background: radial-gradient(95% 44% at 50% 8%, rgba(80,110,250,0.24) 0%, rgba(8,14,55,0) 62%);"></div>
+
+  <!-- the wall, which recedes rather than disappearing -->
+  <div class="wall" style="position: absolute; top: 96px; left: 12px; right: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 5px;">
+      <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.7);text-align:center;line-height:1.05;">UNSCR TV</span></div>
+      <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.7);text-align:center;line-height:1.05;">FRUIT</span></div>
+      <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.7);text-align:center;line-height:1.05;">INNOV</span></div>
+      <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.7);text-align:center;line-height:1.05;">FRENCH</span></div>
+      <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.7);text-align:center;line-height:1.05;">DEMS</span></div>
+      <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.7);text-align:center;line-height:1.05;">REPUB</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 56px; gap: 5px;">
+      <div class="t done"></div><div class="t done"></div><div class="t done"></div><div class="t done"></div><div class="t done"></div><div class="t done"></div>
+      <div class="t done"></div><div class="t done"></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$400</span></div><div class="t done"></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$400</span></div><div class="t done"></div>
+      <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div><div class="t" style="background:#050a2e;"></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div>
+      <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div><div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+      <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div><div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div><div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div><div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div><div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div><div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+    </div>
+  </div>
+
+  <!-- the one tile, growing -->
+  <div class="hero">
+    <span class="heroValue board" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#E8B35A;">$600</span>
+
+    <div class="heroBadge" style="position:absolute; top:18px; left:18px; right:18px; display:flex; align-items:center; justify-content:space-between;">
+      <span class="board" style="font-size:13px;font-weight:800;letter-spacing:1.4px;color:rgba(242,236,224,0.6);">Innovations</span>
+      <span class="board" style="font-size:15px;font-weight:900;color:#14100a;background:#E8B35A;padding:5px 10px;">$600</span>
+    </div>
+
+    <p class="heroClue" style="position:absolute; top:96px; left:22px; right:22px; margin:0; font-family:'Petrona',Georgia,serif; font-size:26px; line-height:1.34; color:#F2ECE0;">
+      This Scottish engineer's 1769 patent for a separate condenser made the
+      steam engine efficient enough to power a factory.
+    </p>
+
+    <div class="heroBadge" style="position:absolute; left:18px; right:18px; bottom:22px; height:58px; background:#E8B35A; display:flex; align-items:center; justify-content:center;">
+      <span class="board" style="font-size:21px;font-weight:900;color:#14100a;">Show the answer</span>
+    </div>
+  </div>
+
+  <div class="glass" style="position: absolute; top: 16px; left: 14px; right: 14px; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 18px; z-index: 5;">
+    <div style="display: flex; flex-direction: column;">
+      <span class="board" style="font-size: 21px; font-weight: 900; color: #FFFFFF; line-height: 1;">$3,400</span>
+      <span class="board" style="font-size: 9px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.5);">11 OF 30 &middot; BEAT $9,800</span>
+    </div>
+    <div style="width: 40px; height: 40px; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center;">
+      <span class="board" style="font-size: 15px; font-weight: 800; color: rgba(242,236,224,0.75);">&times;</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

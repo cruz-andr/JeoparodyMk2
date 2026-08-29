@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+    .t {
+      background: linear-gradient(178deg, #1e28a0 0%, #131c80 45%, #0c1260 100%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.4);
+    }
+    .t.done { background: #080d33; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+    .glass {
+      background: rgba(12, 18, 62, 0.55);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 10px 34px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.28);
+      border-radius: 999px;
+    }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #03050f; position: relative; overflow: hidden;">
+
+  <!-- studio light falling from above the wall -->
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 46% at 50% 6%, rgba(90,120,255,0.30) 0%, rgba(10,16,60,0) 62%);"></div>
+
+  <!-- The wall, seen from a podium. It is a map you sense, not type you read. -->
+  <div style="position: absolute; top: 108px; left: 0; right: 0; perspective: 820px; perspective-origin: 50% 0%;">
+    <div style="transform: rotateX(17deg); transform-style: preserve-3d; padding: 0 16px;">
+
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 5px;">
+        <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.75);text-align:center;line-height:1.1;">UNSCR TV</span></div>
+        <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.75);text-align:center;line-height:1.1;">FRUIT</span></div>
+        <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.75);text-align:center;line-height:1.1;">INNOV</span></div>
+        <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.75);text-align:center;line-height:1.1;">FRENCH</span></div>
+        <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.75);text-align:center;line-height:1.1;">DEMS</span></div>
+        <div class="t" style="height:40px;background:#0a0f47;"><span class="board" style="font-size:7px;font-weight:800;color:rgba(242,236,224,0.75);text-align:center;line-height:1.1;">REPUB</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 52px; gap: 5px;">
+        <div class="t done"></div><div class="t done"></div><div class="t done"></div><div class="t done"></div><div class="t done"></div><div class="t done"></div>
+
+        <div class="t done"></div><div class="t done"></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$400</span></div>
+        <div class="t done"></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$400</span></div>
+        <div class="t done"></div>
+
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <!-- the tile under the thumb: it is not drawn here, it is lifted below -->
+        <div class="t" style="background:#050a2e;box-shadow:inset 0 0 0 1px rgba(232,179,90,0.35);"></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$600</span></div>
+
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+        <div class="t"><span class="board" style="font-size:13px;font-weight:900;color:#E8B35A;">$800</span></div>
+
+        <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+        <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+        <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+        <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+        <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+        <div class="t"><span class="board" style="font-size:11px;font-weight:900;color:#E8B35A;">$1000</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE LOUPE. Whatever your thumb is over lifts off the wall and becomes
+       readable. The wall never has to shrink to fit words into 56px. -->
+  <div style="position: absolute; top: 268px; left: 92px; width: 206px; height: 132px;
+              background: linear-gradient(176deg, #2b37c8 0%, #1a24a0 48%, #101873 100%);
+              box-shadow: 0 34px 60px rgba(0,0,0,0.66), 0 0 0 1px rgba(232,179,90,0.55),
+                          inset 0 2px 0 rgba(255,255,255,0.3);
+              display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+    <span class="board" style="font-size: 15px; font-weight: 800; letter-spacing: 1.3px; color: rgba(242,236,224,0.72);">Innovations</span>
+    <span class="board" style="font-size: 46px; font-weight: 900; color: #E8B35A; line-height: 1; text-shadow: 0 3px 0 rgba(0,0,0,0.35);">$600</span>
+  </div>
+  <!-- the thumb that is holding it -->
+  <div style="position: absolute; top: 386px; left: 168px; width: 54px; height: 54px; border-radius: 999px;
+              background: rgba(242,236,224,0.14); border: 1px solid rgba(242,236,224,0.3);"></div>
+
+  <!-- floating control layer -->
+  <div class="glass" style="position: absolute; top: 16px; left: 14px; right: 14px; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 18px;">
+    <div style="display: flex; flex-direction: column;">
+      <span class="board" style="font-size: 21px; font-weight: 900; color: #FFFFFF; line-height: 1;">$3,400</span>
+      <span class="board" style="font-size: 9px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.5);">11 OF 30 &middot; BEAT $9,800</span>
+    </div>
+    <div style="width: 40px; height: 40px; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center;">
+      <span class="board" style="font-size: 15px; font-weight: 800; color: rgba(242,236,224,0.75);">&times;</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 30px; text-align: center;">
+    <span class="board" style="font-size: 11px; font-weight: 700; letter-spacing: 2px; color: rgba(242,236,224,0.4);">DRAG TO BROWSE &middot; LIFT TO PLAY</span>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

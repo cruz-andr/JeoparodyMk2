@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Petrona:ital,wght@0,400;0,600;1,400&display=swap');
+    body { margin: 0; font-family: 'Petrona', Georgia, serif; }
+    a { color: #D69F4C; } a:hover { color: #E8B35A; }
+    .board { font-family: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #0E1467; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 14px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+    <span class="board" style="font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: rgba(242,236,224,0.55); border: 1px solid rgba(242,236,224,0.22); padding: 9px 12px;">&larr; BOARD</span>
+    <span class="board" style="font-size: 15px; font-weight: 800; letter-spacing: 1px; color: rgba(242,236,224,0.6);">INNOVATIONS</span>
+    <span class="board" style="font-size: 17px; font-weight: 900; color: #14100a; background: #D69F4C; padding: 6px 11px;">$600</span>
+  </div>
+
+  <!-- the clue shrinks but stays, so you can check yourself against it -->
+  <div style="padding: 6px 20px 0; flex-shrink: 0;">
+    <p style="margin: 0; font-family: 'Petrona', Georgia, serif; font-size: 17px; line-height: 1.35; color: rgba(242,236,224,0.5); text-wrap: pretty;">
+      This Scottish engineer's 1769 patent for a separate condenser made the
+      steam engine efficient enough to power a factory.
+    </p>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 20px; min-height: 0;">
+    <span class="board" style="font-size: 11px; font-weight: 800; letter-spacing: 2px; color: rgba(242,236,224,0.4); margin-bottom: 10px;">CORRECT RESPONSE</span>
+    <p style="margin: 0; font-family: 'Petrona', Georgia, serif; font-style: italic; font-size: 34px; line-height: 1.2; color: #D69F4C;">
+      Who is James Watt?
+    </p>
+  </div>
+
+  <!-- Stacked and full width. Grading is destructive and self-reported, so
+       the two answers must not sit side by side where a thumb can miss. -->
+  <div style="padding: 0 12px 28px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;">
+    <div style="height: 66px; background: #1f7a3d; display: flex; align-items: center; justify-content: space-between; padding: 0 22px;">
+      <span class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0;">I got it</span>
+      <span class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0;">+$600</span>
+    </div>
+    <div style="height: 66px; background: #8f2733; display: flex; align-items: center; justify-content: space-between; padding: 0 22px;">
+      <span class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0;">I missed it</span>
+      <span class="board" style="font-size: 22px; font-weight: 900; color: #F2ECE0;">&minus;$600</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
