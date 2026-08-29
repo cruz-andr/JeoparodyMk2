@@ -42,8 +42,8 @@
 
 .wheel-band.d0 { transform: rotateX(0deg) scale(1); opacity: 1; }
 /* 0.74, not less: scaling the band scales its WIDTH too, and below about 0.68
-   the neighbour tiles fall under the 44px minimum. At 0.74 the real target is
-   48 x 65 once the tilt has taken its cut. */
+   the neighbour tiles fall under the 44px minimum. Measured at 0.74 under the
+   real perspective, the neighbour target is 52 x 59. */
 .wheel-band.d1.above { transform: rotateX(20deg) scale(0.74); opacity: 0.72; }
 .wheel-band.d1.below { transform: rotateX(-20deg) scale(0.74); opacity: 0.72; }
 .wheel-band.d2.above { transform: rotateX(46deg) scale(0.48); opacity: 0.2; }
