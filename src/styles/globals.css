@@ -69,9 +69,14 @@ button {
   color: var(--jeopardy-black);
 }
 
-button:hover:not(:disabled) {
-  background-color: var(--jeopardy-gold-light);
-  transform: scale(1.02);
+/* Guarded: a touch device has no hover, but it does leave :hover stuck on the
+   last thing tapped, which left tapped buttons sitting in their hover colour
+   until something else was touched. */
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    background-color: var(--jeopardy-gold-light);
+    transform: scale(1.02);
+  }
 }
 
 button:disabled {
