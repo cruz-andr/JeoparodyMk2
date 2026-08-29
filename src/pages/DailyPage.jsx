@@ -2,10 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
-import { useSettingsStore } from '../stores/settingsStore';
 import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
-import { speakText, stopSpeaking } from '../services/ttsService';
 import DailyResults from '../components/daily/DailyResults';
 import './DailyPage.css';
 
@@ -81,34 +79,12 @@ export default function DailyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Get TTS setting
-  const textToSpeechEnabled = useSettingsStore((state) => state.textToSpeechEnabled);
-
   // Reset input when moving to next question
   useEffect(() => {
     setUserInput('');
     setShowResult(false);
     setLastCheckResult(null);
   }, [currentIndex]);
-
-  // Speak the clue when question changes
-  useEffect(() => {
-    if (textToSpeechEnabled && questions[currentIndex]?.clue && !showResult) {
-      // Small delay to let the animation play
-      const timer = setTimeout(() => {
-        speakText(questions[currentIndex].clue);
-      }, 400);
-      return () => {
-        clearTimeout(timer);
-        stopSpeaking();
-      };
-    }
-  }, [currentIndex, questions, textToSpeechEnabled, showResult]);
-
-  // Stop speaking on unmount
-  useEffect(() => {
-    return () => stopSpeaking();
-  }, []);
 
   const currentQuestion = questions[currentIndex];
   const currentAnswer = answers[currentIndex];
@@ -117,9 +93,6 @@ export default function DailyPage() {
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
     if (!userInput.trim() || !currentQuestion) return;
-
-    // Stop TTS when answering
-    stopSpeaking();
 
     // Store the user's answer
     setUserAnswer(currentIndex, userInput.trim());
@@ -148,8 +121,6 @@ export default function DailyPage() {
   }, [currentIndex, questions.length, nextQuestion, completeGame]);
 
   const handleSkip = useCallback(() => {
-    // Stop TTS when skipping
-    stopSpeaking();
     // Skip counts as wrong
     setUserAnswer(currentIndex, '');
     revealAnswer(currentIndex, false, '');

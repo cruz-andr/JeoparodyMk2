@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 const initialState = {
   // Timer Settings
   questionTimeLimit: 30000, // milliseconds (null = unlimited)
+  answerTimeLimit: 7000,    // time to answer once buzzed in, close to the show's five
   dailyDoubleTimeLimit: 30000,
   finalJeopardyTimeLimit: 30000,
 
@@ -15,8 +16,6 @@ const initialState = {
   // Audio Settings
   soundEnabled: true,
   musicEnabled: true,
-  textToSpeechEnabled: true,
-  ttsVoice: null, // null = auto-select best available
   volume: 0.7,
 
   // Display Settings
@@ -44,6 +43,8 @@ export const useSettingsStore = create(
 
       setQuestionTimeLimit: (limit) => set({ questionTimeLimit: limit }),
 
+      setAnswerTimeLimit: (limit) => set({ answerTimeLimit: limit }),
+
       setDailyDoubleTimeLimit: (limit) => set({ dailyDoubleTimeLimit: limit }),
 
       setFinalJeopardyTimeLimit: (limit) => set({ finalJeopardyTimeLimit: limit }),
@@ -68,12 +69,6 @@ export const useSettingsStore = create(
         musicEnabled: !state.musicEnabled
       })),
 
-      toggleTextToSpeech: () => set(state => ({
-        textToSpeechEnabled: !state.textToSpeechEnabled
-      })),
-
-      setTTSVoice: (voice) => set({ ttsVoice: voice }),
-
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
 
       toggleTimer: () => set(state => ({
@@ -96,6 +91,7 @@ export const useSettingsStore = create(
         const presets = {
           casual: {
             questionTimeLimit: null, // Unlimited
+            answerTimeLimit: 10000,
             enableDoubleJeopardy: false,
             enableDailyDouble: false,
             enableFinalJeopardy: false,
@@ -103,6 +99,7 @@ export const useSettingsStore = create(
           },
           standard: {
             questionTimeLimit: 30000,
+            answerTimeLimit: 7000,
             enableDoubleJeopardy: true,
             enableDailyDouble: true,
             enableFinalJeopardy: true,
@@ -110,6 +107,7 @@ export const useSettingsStore = create(
           },
           challenging: {
             questionTimeLimit: 15000,
+            answerTimeLimit: 5000,
             enableDoubleJeopardy: true,
             enableDailyDouble: true,
             enableFinalJeopardy: true,
@@ -117,6 +115,7 @@ export const useSettingsStore = create(
           },
           speed: {
             questionTimeLimit: 10000,
+            answerTimeLimit: 5000,
             enableDoubleJeopardy: true,
             enableDailyDouble: true,
             enableFinalJeopardy: false,

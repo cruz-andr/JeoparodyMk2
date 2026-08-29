@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Timer from '../common/Timer';
+import { useAudio } from '../../hooks';
 import './FinalJeopardyModal.css';
 
 const WAGER_TIME = 30000; // 30 seconds for wager
@@ -18,8 +19,22 @@ export default function FinalJeopardyModal({
   const [playerAnswer, setPlayerAnswer] = useState('');
   const [result, setResult] = useState(null);
   const [showTimer, setShowTimer] = useState(false);
+  const { playFinalJeopardy, stopFinalJeopardy, playCorrect, playWrong } = useAudio();
 
   const maxWager = currentScore > 0 ? currentScore : 1000;
+
+  // The think music runs while the answer is being written, and stops the
+  // moment the answer is locked in — as it does on the show.
+  useEffect(() => {
+    if (phase === 'answer') {
+      playFinalJeopardy();
+    } else {
+      stopFinalJeopardy();
+    }
+  }, [phase, playFinalJeopardy, stopFinalJeopardy]);
+
+  // Never leave the music running if the modal unmounts mid-answer.
+  useEffect(() => stopFinalJeopardy, [stopFinalJeopardy]);
 
   // Handle category reveal (auto-advance after 3 seconds)
   useEffect(() => {
@@ -64,6 +79,12 @@ export default function FinalJeopardyModal({
   const handleJudgment = (isCorrect) => {
     const pointsChange = isCorrect ? wager : -wager;
     const newScore = currentScore + pointsChange;
+
+    if (isCorrect) {
+      playCorrect();
+    } else {
+      playWrong();
+    }
 
     setResult({
       isCorrect,

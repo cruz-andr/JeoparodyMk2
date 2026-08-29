@@ -7,6 +7,7 @@ class SocketClient {
     this.socket = null;
     this.listeners = new Map();
     this.connectionPromise = null;
+    this.authKey = null;
   }
 
   // Connect to the socket server
@@ -19,54 +20,84 @@ class SocketClient {
       return this.connectionPromise;
     }
 
-    this.connectionPromise = new Promise((resolve, reject) => {
-      this.socket = io(SOCKET_URL, {
-        auth: {
-          token: authToken,
-          sessionId: sessionId,
-        },
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: 5,
-      });
+    const auth = { token: authToken, sessionId };
+    const authKey = JSON.stringify(auth);
 
-      this.socket.on('connect', () => {
+    // A socket built for a different identity can never become the right one,
+    // so tear it down. Previously a disconnected socket was simply abandoned:
+    // its listeners and retry timers lived on and, once it reconnected, every
+    // event arrived twice.
+    if (this.socket && this.authKey !== authKey) {
+      this.destroySocket();
+    }
+    this.authKey = authKey;
+
+    this.connectionPromise = new Promise((resolve, reject) => {
+      if (!this.socket) {
+        this.socket = io(SOCKET_URL, {
+          auth,
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 10000,
+          // A game in progress should keep trying rather than stranding the
+          // player after a handful of attempts.
+          reconnectionAttempts: Infinity,
+        });
+
+        this.socket.on('disconnect', (reason) => {
+          console.log('Socket disconnected:', reason);
+        });
+
+        this.socket.on('reconnect', (attemptNumber) => {
+          console.log('Socket reconnected after', attemptNumber, 'attempts');
+        });
+
+        this.socket.on('reconnect_error', (error) => {
+          console.error('Socket reconnection error:', error.message);
+        });
+      } else if (this.socket.disconnected) {
+        // Reuse the existing socket so subscribers keep their listeners.
+        // (If it is merely mid-handshake, wait for the outcome below.)
+        this.socket.connect();
+      }
+
+      // `once` so repeated connect() calls cannot stack up settle handlers.
+      const onConnect = () => {
+        this.socket.off('connect_error', onError);
         console.log('Socket connected:', this.socket.id);
         this.connectionPromise = null;
         resolve(this.socket);
-      });
-
-      this.socket.on('connect_error', (error) => {
+      };
+      const onError = (error) => {
+        this.socket.off('connect', onConnect);
         console.error('Socket connection error:', error.message);
         this.connectionPromise = null;
         reject(error);
-      });
+      };
 
-      this.socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
-      });
-
-      this.socket.on('reconnect', (attemptNumber) => {
-        console.log('Socket reconnected after', attemptNumber, 'attempts');
-      });
-
-      this.socket.on('reconnect_error', (error) => {
-        console.error('Socket reconnection error:', error.message);
-      });
+      this.socket.once('connect', onConnect);
+      this.socket.once('connect_error', onError);
     });
 
     return this.connectionPromise;
   }
 
+  // Drop the underlying socket and every listener attached to it.
+  destroySocket() {
+    if (!this.socket) return;
+
+    this.socket.removeAllListeners();
+    this.socket.disconnect();
+    this.socket = null;
+    this.listeners.clear();
+    this.connectionPromise = null;
+  }
+
   // Disconnect from the socket server
   disconnect() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-      this.connectionPromise = null;
-    }
+    this.destroySocket();
+    this.authKey = null;
   }
 
   // Check if connected

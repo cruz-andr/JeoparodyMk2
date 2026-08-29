@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRoom } from '../hooks';
-import { useRoomStore, useGameStore, useUserStore, useSettingsStore } from '../stores';
+import { useRoom, useAudio } from '../hooks';
+import { useRoomStore, useGameStore, useUserStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
-import { speakText, stopSpeaking } from '../services/ttsService';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameSettingsPanel from '../components/setup/GameSettingsPanel';
@@ -15,6 +14,9 @@ import GameResults from '../components/game/GameResults';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
+import MediaClueDisplay from '../components/media/MediaClueDisplay';
+import ControllerView from '../components/player/ControllerView';
+import AnswerFeedback from '../components/player/AnswerFeedback';
 import PlayerBuzzer from '../components/player/PlayerBuzzer';
 import AnswerInput from '../components/player/AnswerInput';
 import MultipleChoiceSelector from '../components/player/MultipleChoiceSelector';
@@ -39,7 +41,17 @@ export default function GamePage() {
   const { setCategories, setQuestions, setPhase: setGamePhase } = useGameStore();
   const sessionId = useUserStore((s) => s.sessionId);
   const currentPlayerId = sessionId || socketClient.getSocketId();
-  const textToSpeechEnabled = useSettingsStore((s) => s.textToSpeechEnabled);
+
+  // Held in a ref so toggling sound does not tear down and rebuild every
+  // socket subscription in the effect below.
+  const audio = useAudio();
+  const audioRef = useRef(audio);
+  audioRef.current = audio;
+
+  // Same trick for the board: the socket effect needs the latest questions to
+  // merge media fields onto an incoming clue, but adding `questions` to its
+  // dependency list would tear down and rebuild ~30 listeners every round.
+  const questionsRef = useRef([]);
 
   // Game phases: 'lobby' | 'setup' | 'categoryEdit' | 'generating' | 'playing' | 'finished'
   const [phase, setPhase] = useState('lobby');
@@ -53,6 +65,7 @@ export default function GamePage() {
   const [categories, setLocalCategories] = useState([]);
   const [questions, setLocalQuestions] = useState([]);
   const [questionsReady, setQuestionsReady] = useState(false); // True when host mode questions are pre-loaded
+  questionsRef.current = questions;
 
   // Game state (shared)
   const [currentPickerId, setCurrentPickerId] = useState(null);
@@ -101,9 +114,12 @@ export default function GamePage() {
   const [playerHasSubmitted, setPlayerHasSubmitted] = useState(false);
   const [mcCorrectIndex, setMcCorrectIndex] = useState(null);
   const [typedAnswersForHost, setTypedAnswersForHost] = useState([]);
+  const [submittedPlayerIds, setSubmittedPlayerIds] = useState([]); // who has answered this clue
+  const [answerFeedbackResult, setAnswerFeedbackResult] = useState(null); // true=correct, false=incorrect, null=hidden
 
   const isHostMode = roomType === 'host';
   const answerMode = settings?.answerMode || 'verbal';
+  const projectorMode = settings?.projectorMode || false;
 
   // Handle settings change (host only)
   const handleSettingsChange = (newSettings) => {
@@ -321,7 +337,9 @@ export default function GamePage() {
 
     // Question selected by picker
     const unsubQuestionSelected = subscribe('game:question-selected', ({ categoryIndex, pointIndex, question, isDailyDouble: isDD }) => {
-      setCurrentQuestion({ ...question, categoryIndex, pointIndex });
+      // Merge with local question data to preserve media fields if server didn't send them
+      const localQuestion = questionsRef.current[categoryIndex]?.[pointIndex];
+      setCurrentQuestion({ ...localQuestion, ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
       setShowAnswer(false);
       setSuggestions({});
@@ -332,6 +350,10 @@ export default function GamePage() {
       setHasSkipped(false);
       setHasAlreadyBuzzed(false);
       hasAlreadyBuzzedRef.current = false;
+      setTypedAnswersForHost([]);
+      setSubmittedPlayerIds([]);
+      setPlayerHasSubmitted(false);
+      setMcCorrectIndex(null);
 
       if (isDD) {
         // Daily Double - show wager modal to picker, announcement to others
@@ -349,10 +371,7 @@ export default function GamePage() {
         setBuzzerWinnerId(null);
         // Reset timer for new question
         setBuzzTimerKey(prev => prev + 1);
-        // Read the clue aloud
-        if (textToSpeechEnabled && question?.answer) {
-          speakText(question.answer);
-        }
+
       }
     });
 
@@ -371,6 +390,13 @@ export default function GamePage() {
       // Update player score in room store
       if (playerId) {
         useRoomStore.getState().updatePlayerScore(playerId, newScore);
+      }
+
+      // Everyone hears the outcome, the way the studio does.
+      if (correct) {
+        audioRef.current.playCorrect();
+      } else {
+        audioRef.current.playWrong();
       }
 
       if (correct) {
@@ -447,14 +473,16 @@ export default function GamePage() {
     const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ wager, question }) => {
       setDailyDoubleWager(wager);
       setDailyDoublePhase('question');
-      // Read the Daily Double clue aloud
-      if (textToSpeechEnabled && question?.answer) {
-        speakText(question.answer);
-      }
+
     });
 
     // Daily Double result - update scores and reset
     const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, wager, newScore, nextPickerId }) => {
+      if (correct) {
+        audioRef.current.playCorrect();
+      } else {
+        audioRef.current.playWrong();
+      }
       // Update player score
       useRoomStore.getState().updatePlayerScore(playerId, newScore);
       // Reset Daily Double state
@@ -544,15 +572,27 @@ export default function GamePage() {
     });
 
     // Host judged an answer
-    const unsubHostAnswerJudged = subscribe('host:answer-judged', ({ playerId, correct, points, newScore, nextPickerId }) => {
+    const unsubHostAnswerJudged = subscribe('host:answer-judged', ({ playerId, correct, newScore, nextPickerId, questionClosed }) => {
       useRoomStore.getState().updatePlayerScore(playerId, newScore);
-      // Clear question state after host judges - but keep buzzer open (host controls when to close)
-      setCurrentQuestion(null);
-      setBuzzerWinnerId(null);
-      setBuzzerWinnerReactionTime(null);  // Reset reaction time for next question
-      setPlayerHasSubmitted(false);  // Reset player's "you buzzed" state for next question
-      setHostAnswerWindowOpen(false);
-      clearHostModeAnswers();
+      // Show full-screen feedback if this judgment is about the current player
+      if (playerId === currentPlayerId) {
+        setAnswerFeedbackResult(correct);
+      }
+      // Drop the judged player from the host's pending list.
+      setTypedAnswersForHost(prev => prev.filter(a => a.playerId !== playerId));
+
+      // In typed/MC modes the host judges each submission in turn, so the clue
+      // stays up until the server says every answer has been handled.
+      if (questionClosed) {
+        setCurrentQuestion(null);
+        setBuzzerWinnerId(null);
+        setBuzzerWinnerReactionTime(null);  // Reset reaction time for next question
+        setPlayerHasSubmitted(false);  // Reset player's "you buzzed" state for next question
+        setHostAnswerWindowOpen(false);
+        setTypedAnswersForHost([]);
+        setSubmittedPlayerIds([]);
+        clearHostModeAnswers();
+      }
       if (correct && nextPickerId) {
         setCurrentPickerId(nextPickerId);
       }
@@ -566,6 +606,8 @@ export default function GamePage() {
       setBuzzerWinnerReactionTime(null);  // Reset reaction time for next question
       setPlayerHasSubmitted(false);  // Reset player's "you buzzed" state for next question
       setHostAnswerWindowOpen(false);
+      setTypedAnswersForHost([]);
+      setSubmittedPlayerIds([]);
       clearHostModeAnswers();
     });
 
@@ -574,12 +616,23 @@ export default function GamePage() {
       setTypedAnswersForHost(answers);
     });
 
+    // A player locked in an answer. The answer itself stays private; this is
+    // only so the host can see who is still outstanding.
+    const markSubmitted = ({ playerId }) => {
+      setSubmittedPlayerIds(prev => (prev.includes(playerId) ? prev : [...prev, playerId]));
+    };
+    const unsubAnswerSubmitted = subscribe('player:answer-submitted', markSubmitted);
+    const unsubMCSelected = subscribe('player:mc-selected', markSubmitted);
+
     // MC results (auto-scored)
     const unsubMCResults = subscribe('game:mc-results', ({ results, correctIndex, nextPickerId }) => {
       setMcCorrectIndex(correctIndex);
-      // Update all player scores
+      // Update all player scores and show feedback for current player
       results.forEach(result => {
         useRoomStore.getState().updatePlayerScore(result.playerId, result.newScore);
+        if (result.playerId === currentPlayerId) {
+          setAnswerFeedbackResult(result.correct);
+        }
       });
       // After a delay, clear and move on
       setTimeout(() => {
@@ -603,6 +656,12 @@ export default function GamePage() {
     });
 
     // Player was kicked
+    // Host media playback control (synced to players)
+    const unsubMediaControl = subscribe('host:media-control', ({ action }) => {
+      // Dispatch a custom DOM event that MediaClueDisplay/YouTubePlayer can listen to
+      window.dispatchEvent(new CustomEvent('media-control', { detail: { action } }));
+    });
+
     const unsubPlayerKicked = subscribe('host:player-kicked', ({ playerId }) => {
       useRoomStore.getState().removePlayer(playerId);
       // If current player was kicked, redirect to menu
@@ -642,11 +701,14 @@ export default function GamePage() {
       unsubHostAnswerJudged();
       unsubHostQuestionSkipped();
       unsubTypedAnswersUpdate();
+      unsubAnswerSubmitted();
+      unsubMCSelected();
       unsubMCResults();
       unsubAutoGradeResults();
       unsubPlayerKicked();
+      unsubMediaControl();
     };
-  }, [isConnected, roomCode, isHost, subscribe, updateSettings, answerMode, currentPlayerId, navigate, clearHostModeAnswers]);
+  }, [isConnected, roomCode, subscribe, updateSettings, currentPlayerId, navigate, clearHostModeAnswers]);
 
   // Check if all questions revealed - handle round transition
   // Only check when no question is currently active (so last question can be played)
@@ -669,13 +731,6 @@ export default function GamePage() {
       }
     }
   }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion]);
-
-  // Read Final Jeopardy clue when it's shown
-  useEffect(() => {
-    if (fjPhase === 'clue' && finalJeopardyData?.clue && textToSpeechEnabled) {
-      speakText(finalJeopardyData.clue);
-    }
-  }, [fjPhase, finalJeopardyData, textToSpeechEnabled]);
 
   const handleLeave = () => {
     // Clear stored room so we don't try to reconnect
@@ -1067,8 +1122,48 @@ export default function GamePage() {
     return <span className={className}>{player?.displayName || player?.name}</span>;
   };
 
+  // Projector Mode: non-host players get controller-only UI
+  if (isHostMode && projectorMode && !isHost) {
+    const myPlayer = players.find(p => p.id === currentPlayerId);
+    const myScore = myPlayer?.score || 0;
+    return (
+      <>
+      <AnswerFeedback
+        result={answerFeedbackResult}
+        onDismiss={() => setAnswerFeedbackResult(null)}
+      />
+      <ControllerView
+        answerMode={answerMode}
+        currentQuestion={currentQuestion}
+        canBuzz={canBuzz}
+        buzzerWinnerId={buzzerWinnerId}
+        iAmBuzzerWinner={buzzerWinnerId === currentPlayerId}
+        buzzTimedOut={buzzTimedOut}
+        showAnswer={showAnswer}
+        hasSkipped={hasSkipped}
+        hasAlreadyBuzzed={hasAlreadyBuzzed}
+        hostBuzzerOpen={hostBuzzerOpen}
+        hostAnswerWindowOpen={hostAnswerWindowOpen}
+        mcOptions={currentQuestion?.options}
+        onBuzz={handleBuzz}
+        onSkip={() => socketClient.emit('game:skip-question', { roomCode })}
+        onSubmitTypedAnswer={(answer) => socketClient.emit('player:submit-typed-answer', { roomCode, answer })}
+        onSelectMCOption={(idx) => socketClient.emit('player:select-mc-option', { roomCode, optionIndex: idx })}
+        currentPlayerId={currentPlayerId}
+        score={myScore}
+      />
+      </>
+    );
+  }
+
   return (
     <div className="game-page">
+      {/* Full-screen answer feedback (correct/incorrect flash) */}
+      <AnswerFeedback
+        result={answerFeedbackResult}
+        onDismiss={() => setAnswerFeedbackResult(null)}
+      />
+
       {/* Loading Overlay */}
       <AnimatePresence>
         {(loading || isReconnecting) && (
@@ -1154,11 +1249,13 @@ export default function GamePage() {
               <button
                 className="btn-primary btn-large"
                 onClick={isHostMode && questionsReady ? handleStartHostGame : handleStartSetup}
-                disabled={!allPlayersReady}
+                disabled={isHostMode ? !isHost : !allPlayersReady}
               >
-                {allPlayersReady
-                  ? (isHostMode && questionsReady ? 'Start Game' : 'Start Game Setup')
-                  : 'Waiting for players...'}
+                {isHostMode
+                  ? (questionsReady ? 'Start Game' : 'Start Game Setup')
+                  : (allPlayersReady
+                    ? 'Start Game Setup'
+                    : 'Waiting for players...')}
               </button>
             ) : (
               <button
@@ -1346,6 +1443,7 @@ export default function GamePage() {
                 <div className="question-header">
                   <span className="question-category">{currentQuestion.category}</span>
                 </div>
+                {currentQuestion.mediaType && <MediaClueDisplay question={currentQuestion} />}
                 <p className="clue-text">{currentQuestion.answer}</p>
 
                 {isMyTurn && !showAnswer && (
@@ -1405,12 +1503,12 @@ export default function GamePage() {
                     </div>
                   )}
 
-                  {/* Answer Timer for buzzer winner */}
-                  {buzzerWinnerId && iAmBuzzerWinner && !showAnswer && settings?.questionTimeLimit && (
-                    <div className="question-timer">
+                  {/* Answer Timer for buzzer winner — a short clock, as on the show */}
+                  {buzzerWinnerId && iAmBuzzerWinner && !showAnswer && settings?.answerTimeLimit && (
+                    <div className="question-timer answer-timer">
                       <Timer
                         key={`answer-${answerTimerKey}`}
-                        duration={settings.questionTimeLimit}
+                        duration={settings.answerTimeLimit}
                         onTimeUp={handleAnswerTimeUp}
                         autoStart={true}
                         size="small"
@@ -1424,6 +1522,7 @@ export default function GamePage() {
                   </div>
 
                   <div className="question-content">
+                    {currentQuestion.mediaType && <MediaClueDisplay question={currentQuestion} />}
                     <p className="clue-text">{currentQuestion.answer}</p>
                   </div>
 
@@ -1538,11 +1637,34 @@ export default function GamePage() {
 
           {/* HOST MODE - Question Display (Both Host and Players see this) */}
           {isHostMode && currentQuestion && !isDailyDouble && (
-            <div className="question-view">
-              <div className="question-card">
-                <div className="question-category">{currentQuestion.category}</div>
-                <div className="question-points">${currentQuestion.points}</div>
-                <div className="question-answer">{currentQuestion.answer}</div>
+            <motion.div
+              className="mp-question-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="mp-question-content"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              >
+                <div className="question-header">
+                  <span className="question-category">{currentQuestion.category}</span>
+                  <span className="question-points">${currentQuestion.points}</span>
+                </div>
+
+                <div className="question-content">
+                  {currentQuestion.mediaType && (
+                    <MediaClueDisplay
+                      question={currentQuestion}
+                      hostControls={isHost}
+                      roomCode={roomCode}
+                    />
+                  )}
+                  <p className="clue-text">{currentQuestion.answer}</p>
+                </div>
 
                 {/* Show buzzer status for players */}
                 {!isHost && hostBuzzerOpen && !buzzerWinnerId && (
@@ -1558,8 +1680,8 @@ export default function GamePage() {
                     )}
                   </p>
                 )}
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           )}
 
           {/* HOST MODE - Control Panel (Host Only) */}
@@ -1572,6 +1694,7 @@ export default function GamePage() {
                 reactionTime: buzzerWinnerReactionTime
               } : null}
               typedAnswers={typedAnswersForHost}
+              submittedPlayerIds={submittedPlayerIds}
               players={players}
               answerMode={answerMode}
               buzzerOpen={hostBuzzerOpen}

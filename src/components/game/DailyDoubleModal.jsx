@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useAudio } from '../../hooks';
 import './DailyDoubleModal.css';
 
 export default function DailyDoubleModal({
@@ -12,6 +13,16 @@ export default function DailyDoubleModal({
   const maxWager = Math.max(currentScore, maxBoardValue, 5);
   const [wager, setWager] = useState(5);
   const [showWagerInput, setShowWagerInput] = useState(false);
+  const { playDailyDouble } = useAudio();
+  const stingPlayed = useRef(false);
+
+  // The sting fires once, with the reveal — not again if the player happens to
+  // toggle sound while deciding their wager.
+  useEffect(() => {
+    if (stingPlayed.current) return;
+    stingPlayed.current = true;
+    playDailyDouble();
+  }, [playDailyDouble]);
 
   const handleWagerChange = (e) => {
     const value = parseInt(e.target.value, 10) || 0;
@@ -61,6 +72,13 @@ export default function DailyDoubleModal({
           >
             DAILY DOUBLE!
           </motion.h1>
+          <button
+            className="daily-double-skip"
+            onClick={() => setShowWagerInput(true)}
+            type="button"
+          >
+            Skip
+          </button>
         </motion.div>
       ) : (
         <motion.div

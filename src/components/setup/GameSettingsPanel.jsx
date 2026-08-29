@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '../../stores';
-import { getAvailableVoices, previewVoice, setVoice } from '../../services/ttsService';
 import './GameSettingsPanel.css';
 
 export default function GameSettingsPanel({
@@ -11,59 +10,37 @@ export default function GameSettingsPanel({
   defaultExpanded = false
 }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [availableVoices, setAvailableVoices] = useState([]);
-
-  // Load available voices
-  useEffect(() => {
-    const loadVoices = () => {
-      const voices = getAvailableVoices();
-      setAvailableVoices(voices);
-    };
-
-    // Voices may load asynchronously
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
-    };
-  }, []);
-
   // Use provided settings or fall back to global store
   const globalSettings = useSettingsStore();
   const {
     questionTimeLimit,
+    answerTimeLimit,
     enableDoubleJeopardy,
     enableDailyDouble,
     enableFinalJeopardy,
     setQuestionTimeLimit,
+    setAnswerTimeLimit,
     toggleDoubleJeopardy,
     toggleDailyDouble,
     toggleFinalJeopardy,
     loadPreset,
   } = settings ? { ...settings, ...createSettingsHandlers(settings, onSettingsChange) } : globalSettings;
 
-  // TTS settings are always from global store (user preference, not room setting)
-  const { textToSpeechEnabled, ttsVoice, toggleTextToSpeech, setTTSVoice } = globalSettings;
-
-  // Sync voice selection with TTS service
-  useEffect(() => {
-    setVoice(ttsVoice);
-  }, [ttsVoice]);
-
-  const handleVoiceChange = (voiceName) => {
-    setTTSVoice(voiceName);
-  };
-
-  const handlePreviewVoice = (voiceName) => {
-    previewVoice(voiceName || availableVoices[0]?.name);
-  };
-
   const timeLimitOptions = [
     { value: null, label: 'Off' },
     { value: 15000, label: '15s' },
     { value: 30000, label: '30s' },
     { value: 60000, label: '60s' },
+  ];
+
+  // How long you get to answer once you have buzzed in. The show allows about
+  // five seconds, which is where most of the pressure comes from.
+  const answerLimitOptions = [
+    { value: 5000, label: '5s' },
+    { value: 7000, label: '7s' },
+    { value: 10000, label: '10s' },
+    { value: 15000, label: '15s' },
+    { value: 30000, label: '30s' },
   ];
 
   const presets = [
@@ -88,6 +65,7 @@ export default function GameSettingsPanel({
     } else {
       parts.push('No timer');
     }
+    if (answerTimeLimit) parts.push(`${answerTimeLimit / 1000}s to answer`);
     if (enableDoubleJeopardy) parts.push('Double Jeopardy');
     if (enableDailyDouble) parts.push('Daily Double');
     if (enableFinalJeopardy) parts.push('Final Jeopardy');
@@ -158,6 +136,29 @@ export default function GameSettingsPanel({
               </div>
             </div>
 
+            {/* Answer clock */}
+            <div className="panel-section">
+              <label className="section-label">Answer Clock</label>
+              <div className="timer-options">
+                {answerLimitOptions.map((option) => (
+                  <label
+                    key={option.label}
+                    className={`timer-option ${answerTimeLimit === option.value ? 'selected' : ''} ${readOnly ? 'disabled' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="gameSettingsAnswerTimer"
+                      checked={answerTimeLimit === option.value}
+                      onChange={() => !readOnly && setAnswerTimeLimit(option.value)}
+                      disabled={readOnly}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="section-hint">Time to answer after buzzing in.</p>
+            </div>
+
             {/* Game Rules */}
             <div className="panel-section">
               <label className="section-label">Rules</label>
@@ -197,46 +198,6 @@ export default function GameSettingsPanel({
               </div>
             </div>
 
-            {/* Audio / TTS - always editable (personal preference) */}
-            <div className="panel-section">
-              <label className="section-label">Audio</label>
-              <div className="rules-grid">
-                <label className="rule-toggle">
-                  <input
-                    type="checkbox"
-                    checked={textToSpeechEnabled}
-                    onChange={toggleTextToSpeech}
-                  />
-                  <span className="toggle-indicator" />
-                  <span className="rule-name">Read Clues Aloud</span>
-                </label>
-              </div>
-
-              {textToSpeechEnabled && availableVoices.length > 0 && (
-                <div className="voice-selector">
-                  <select
-                    value={ttsVoice || ''}
-                    onChange={(e) => handleVoiceChange(e.target.value || null)}
-                    className="voice-dropdown"
-                  >
-                    <option value="">Auto (Best Available)</option>
-                    {availableVoices.map((voice) => (
-                      <option key={voice.name} value={voice.name}>
-                        {voice.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="preview-btn"
-                    onClick={() => handlePreviewVoice(ttsVoice)}
-                  >
-                    Preview
-                  </button>
-                </div>
-              )}
-            </div>
-
             {readOnly && (
               <div className="read-only-notice">
                 Only the host can change settings
@@ -259,6 +220,7 @@ function createSettingsHandlers(settings, onSettingsChange) {
   if (!onSettingsChange) {
     return {
       setQuestionTimeLimit: () => {},
+      setAnswerTimeLimit: () => {},
       toggleDoubleJeopardy: () => {},
       toggleDailyDouble: () => {},
       toggleFinalJeopardy: () => {},
@@ -269,18 +231,21 @@ function createSettingsHandlers(settings, onSettingsChange) {
   const presetConfigs = {
     casual: {
       questionTimeLimit: null,
+      answerTimeLimit: 10000,
       enableDoubleJeopardy: false,
       enableDailyDouble: false,
       enableFinalJeopardy: false,
     },
     standard: {
       questionTimeLimit: 30000,
+      answerTimeLimit: 7000,
       enableDoubleJeopardy: true,
       enableDailyDouble: true,
       enableFinalJeopardy: true,
     },
     challenging: {
       questionTimeLimit: 15000,
+      answerTimeLimit: 5000,
       enableDoubleJeopardy: true,
       enableDailyDouble: true,
       enableFinalJeopardy: true,
@@ -289,6 +254,7 @@ function createSettingsHandlers(settings, onSettingsChange) {
 
   return {
     setQuestionTimeLimit: (value) => onSettingsChange({ ...settings, questionTimeLimit: value }),
+    setAnswerTimeLimit: (value) => onSettingsChange({ ...settings, answerTimeLimit: value }),
     toggleDoubleJeopardy: () => onSettingsChange({ ...settings, enableDoubleJeopardy: !settings.enableDoubleJeopardy }),
     toggleDailyDouble: () => onSettingsChange({ ...settings, enableDailyDouble: !settings.enableDailyDouble }),
     toggleFinalJeopardy: () => onSettingsChange({ ...settings, enableFinalJeopardy: !settings.enableFinalJeopardy }),

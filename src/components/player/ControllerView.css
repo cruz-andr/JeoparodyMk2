@@ -1,0 +1,232 @@
+/* Controller View — Full-screen mobile-first UI */
+.controller-view {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #020820 0%, #0a1250 40%, #0E1467 100%);
+  z-index: 100;
+  padding: 20px;
+  gap: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Score display */
+.controller-score {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--jeopardy-gold, #D69F4C);
+  font-family: var(--font-display, serif);
+}
+
+/* Status text */
+.controller-status {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.controller-status-large {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+}
+
+/* ---- GIANT BUZZER ---- */
+.controller-buzzer {
+  width: 80vmin;
+  height: 80vmin;
+  max-width: 400px;
+  max-height: 400px;
+  border-radius: 50%;
+  border: 6px solid rgba(239, 68, 68, 0.6);
+  background: radial-gradient(circle at 40% 35%, #ef4444 0%, #b91c1c 70%, #7f1d1d 100%);
+  color: white;
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 40px rgba(239, 68, 68, 0.4),
+    inset 0 -6px 20px rgba(0, 0, 0, 0.3),
+    inset 0 6px 20px rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.15s;
+}
+
+.controller-buzzer:active {
+  box-shadow:
+    0 4px 20px rgba(239, 68, 68, 0.3),
+    inset 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.controller-skip {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 16px;
+  margin-top: 12px;
+}
+
+.controller-skip:hover {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ---- BUZZED STATE ---- */
+.controller-buzzed {
+  background: linear-gradient(160deg, #042f2e 0%, #0d3b38 40%, #115e59 100%);
+}
+
+/* ---- TYPED ANSWER ---- */
+.controller-typed {
+  justify-content: flex-start;
+  padding-top: 30vh;
+}
+
+.controller-typed-form {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.controller-typed-input {
+  width: 100%;
+  padding: 20px 24px;
+  font-size: 1.3rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  color: white;
+  outline: none;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.controller-typed-input:focus {
+  border-color: var(--jeopardy-gold, #D69F4C);
+}
+
+.controller-typed-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.controller-submit-btn {
+  padding: 18px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: var(--jeopardy-gold, #D69F4C);
+  color: #1a1000;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.controller-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- MULTIPLE CHOICE ---- */
+.controller-mc {
+  padding: 12px;
+}
+
+.controller-mc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  max-height: 80vh;
+}
+
+.controller-mc-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  min-height: 120px;
+  padding: 16px;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.controller-mc-btn:disabled {
+  cursor: default;
+}
+
+.controller-mc-btn.selected {
+  outline: 4px solid white;
+  outline-offset: -4px;
+}
+
+.controller-mc-btn:not(.selected):disabled {
+  opacity: 0.35;
+}
+
+/* Kahoot-style colors */
+.mc-red { background: #e74c3c; color: white; }
+.mc-blue { background: #3498db; color: white; }
+.mc-green { background: #2ecc71; color: white; }
+.mc-yellow { background: #f39c12; color: white; }
+
+.mc-letter {
+  font-size: 2rem;
+  font-weight: 900;
+  opacity: 0.8;
+}
+
+.mc-text {
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ---- TIMEOUT ---- */
+.controller-timeout {
+  background: linear-gradient(160deg, #1a0505 0%, #3b0a0a 40%, #4a1010 100%);
+}
+
+/* ---- WAITING ---- */
+.controller-waiting .controller-status {
+  animation: controller-pulse 2s ease-in-out infinite;
+}
+
+@keyframes controller-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 480px) {
+  .controller-buzzer {
+    width: 70vmin;
+    height: 70vmin;
+    font-size: 2.5rem;
+  }
+
+  .controller-mc-btn {
+    min-height: 100px;
+  }
+
+  .mc-letter {
+    font-size: 1.5rem;
+  }
+
+  .mc-text {
+    font-size: 0.85rem;
+  }
+}
