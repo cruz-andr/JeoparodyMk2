@@ -223,6 +223,24 @@ async function run() {
     assert.ok(payload, 'the buzz window still times out and the game moves on');
   });
 
+  await test('a clue skipped mid-buzz does not announce a winner', async (open) => {
+    // The winner is announced 500ms after the first buzz, to collect near-ties.
+    // Nothing used to check that the clue still existed by then.
+    const { host, guest, roomCode } = await startGame();
+    open.push(host, guest);
+
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await once(guest, 'game:question-selected');
+
+    guest.emit('game:buzz-in', { roomCode, reactionTime: 40 });
+    host.emit('host:skip-question', { roomCode });
+
+    assert.ok(
+      await notEmitted(guest, 'game:buzzer-winner', 900),
+      'the clue is gone, so there is nobody to award it to'
+    );
+  });
+
   await test('the answer clock is shorter than the buzz clock', async (open) => {
     const { host, guest, roomCode } = await startGame({ buzzMs: 5000, answerMs: 400 });
     open.push(host, guest);

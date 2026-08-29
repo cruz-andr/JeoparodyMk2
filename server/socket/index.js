@@ -222,9 +222,15 @@ export function initializeSocketHandlers(io) {
       if (room && room.gameState.buzzes && Object.keys(room.gameState.buzzes).length === 1) {
         // First buzzer - announce them as winner after a brief delay
         setTimeout(() => {
+          // Half a second is long enough for the clue to be skipped, answered,
+          // or the room to be torn down. Re-read the live state rather than
+          // trusting the room captured when the buzz arrived.
+          const currentRoom = gameManager.rooms.get(roomCode);
+          if (!currentRoom?.gameState?.currentQuestion) return;
+
           const winner = gameManager.determineBuzzerWinner(roomCode);
           if (winner) {
-            const player = room.players.get(winner.playerId);
+            const player = currentRoom.players.get(winner.playerId);
             io.to(roomCode).emit('game:buzzer-winner', {
               playerId: winner.playerId,
               playerName: player?.displayName || 'Unknown',
@@ -233,10 +239,10 @@ export function initializeSocketHandlers(io) {
 
             // Start answer window and server-side answer timeout
             gameManager.startAnswerWindow(roomCode);
-            const answerDuration = answerWindowMs(room);
+            const answerDuration = answerWindowMs(currentRoom);
 
             gameManager.clearAnswerTimeout(roomCode);
-            room.answerTimeout = setTimeout(() => {
+            currentRoom.answerTimeout = setTimeout(() => {
               // Answer timeout - mark as incorrect automatically
               const timeoutResult = gameManager.handleAnswer(roomCode, winner.playerId, false);
               if (timeoutResult) {
@@ -248,9 +254,9 @@ export function initializeSocketHandlers(io) {
                 // If others can still buzz, restart buzz window with fresh timeout
                 if (timeoutResult.canBuzzAgain) {
                   gameManager.startBuzzWindow(roomCode);
-                  const buzzDuration = buzzWindowMs(room);
+                  const buzzDuration = buzzWindowMs(currentRoom);
                   gameManager.clearBuzzTimeout(roomCode);
-                  room.buzzTimeout = setTimeout(() => {
+                  currentRoom.buzzTimeout = setTimeout(() => {
                     const currentRoom = gameManager.rooms.get(roomCode);
                     if (currentRoom?.gameState?.buzzReceived) return;
                     const btResult = gameManager.handleBuzzTimeout(roomCode);

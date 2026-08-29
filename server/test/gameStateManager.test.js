@@ -352,6 +352,46 @@ test('playerSkipped counts only eligible active players', () => {
   });
 });
 
+test('a clue closes when the last eligible player skips after a wrong answer', () => {
+  // Ordering matters here: handleAnswer reads skippedPlayers, and the handler
+  // only calls startBuzzWindow (which clears that set) afterwards.
+  const { gm, code, sockets } = mkGame({ count: 3 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+
+  gm.playerSkipped(code, sockets[0].sessionId);
+  gm.playerSkipped(code, sockets[2].sessionId);
+
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  const res = gm.handleAnswer(code, sockets[1].sessionId, false);
+
+  assert.equal(res.canBuzzAgain, false, 'everyone else already passed');
+  assert.ok(res.correctAnswer, 'so the answer is revealed');
+});
+
+test('skips reset for each new buzz window', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 3 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+
+  gm.playerSkipped(code, sockets[0].sessionId);
+
+  // Someone buzzes and misses, reopening the window for the rest.
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  assert.equal(gm.handleAnswer(code, sockets[1].sessionId, false).canBuzzAgain, true);
+  gm.startBuzzWindow(code);
+
+  assert.equal(room.gameState.skippedPlayers.size, 0, 'a fresh window, a fresh pass');
+
+  // The two who have not answered can now each pass, which ends the clue.
+  assert.equal(gm.playerSkipped(code, sockets[0].sessionId).allSkipped, false);
+  const last = gm.playerSkipped(code, sockets[2].sessionId);
+  assert.equal(last.totalEligible, 2, 'the player who already buzzed is excluded');
+  assert.equal(last.allSkipped, true);
+});
+
 test('a player cannot skip twice', () => {
   const { gm, code, sockets } = mkGame({ count: 3 });
   gm.selectQuestion(sockets[0], code, 0, 0);
