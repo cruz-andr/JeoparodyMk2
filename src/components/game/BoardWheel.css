@@ -121,6 +121,8 @@
 .mark { font-family: var(--font-board); font-size: 1.13rem; font-weight: 900; }
 .mark.ok { color: #2f7a49; }
 .mark.miss { color: #8f3340; }
+/* A pass is not a miss, so it must not wear the miss colour. */
+.mark.pass { color: rgba(242, 236, 224, 0.42); }
 
 /* Context rows: no values, no light, nothing to reach for. */
 .wheel-band.context .wheel-tile {

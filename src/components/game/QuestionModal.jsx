@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Timer from '../common/Timer';
 import MediaClueDisplay from '../media/MediaClueDisplay';
@@ -17,9 +17,26 @@ export default function QuestionModal({
   // player's wager, not the value printed on the board.
   points = question.points,
   isDailyDouble = false,
+  // Typed mode: the player writes a response and it is graded for them, as on
+  // the Sixer. Opt in, so the self graded flow everywhere else is untouched.
+  typed = false,
+  result = null,
+  onSubmitAnswer,
+  onOverride,
+  onContinue,
+  closeLabel = 'Skip',
 }) {
   const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
-  const hasTimer = questionTimeLimit !== null;
+  /* No per clue countdown in typed mode. The board that uses it is timed as a
+     whole, the way a crossword is, so a second clock ticking on each clue
+     would be measuring the same thing twice and rushing the typing besides. */
+  const hasTimer = questionTimeLimit !== null && !typed;
+  const [entry, setEntry] = useState('');
+
+  // A new clue starts with an empty box, not the last one's text.
+  useEffect(() => {
+    setEntry('');
+  }, [question]);
 
   const handleTimeUp = () => {
     if (onTimeUp) {
@@ -35,6 +52,16 @@ export default function QuestionModal({
     const handleKeyDown = (e) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (typed) {
+        // Nothing to reveal and nothing to self grade; the only key that acts
+        // is the one that moves on.
+        if (result && (e.code === 'Enter' || e.code === 'Space')) {
+          e.preventDefault();
+          onContinue?.();
+        }
+        return;
+      }
 
       if (!showAnswer) {
         if (e.code === 'Space' || e.code === 'Enter') {
@@ -53,11 +80,11 @@ export default function QuestionModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAnswer, onRevealAnswer, onCorrect, onIncorrect]);
+  }, [typed, result, onContinue, showAnswer, onRevealAnswer, onCorrect, onIncorrect]);
 
   return (
     <motion.div
-      className="question-modal-overlay"
+      className={`question-modal-overlay ${typed ? 'typed' : ''}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -93,7 +120,68 @@ export default function QuestionModal({
           <p className="clue-text">{question.answer}</p>
         </div>
 
-        {showAnswer ? (
+        {typed ? (
+          result ? (
+            <motion.div
+              className="typed-result"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className={`typed-badge ${result.correct ? 'correct' : 'incorrect'}`}>
+                {result.correct
+                  ? `Correct +$${points.toLocaleString()}`
+                  : `Incorrect -$${points.toLocaleString()}`}
+              </div>
+
+              <p className="typed-said">
+                {result.playerAnswer
+                  ? <>You said: <span>{result.playerAnswer}</span></>
+                  : 'You did not answer.'}
+              </p>
+              <p className="typed-truth">
+                Correct response: <span>{question.question}</span>
+              </p>
+
+              <div className="typed-after">
+                {!result.correct && onOverride && (
+                  <button type="button" className="typed-override" onClick={onOverride}>
+                    I was right
+                  </button>
+                )}
+                <button type="button" className="typed-continue" onClick={onContinue}>
+                  Continue
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <form
+              className="typed-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const given = entry.trim();
+                if (given) onSubmitAnswer?.(given);
+              }}
+            >
+              <input
+                type="text"
+                className="typed-input"
+                value={entry}
+                onChange={(e) => setEntry(e.target.value)}
+                placeholder="What is..."
+                aria-label="Your response"
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
+                enterKeyHint="done"
+              />
+              <button type="submit" className="typed-submit" disabled={!entry.trim()}>
+                Submit
+              </button>
+            </form>
+          )
+        ) : showAnswer ? (
           <motion.div
             className="answer-section"
             initial={{ opacity: 0, y: 20 }}
@@ -136,9 +224,11 @@ export default function QuestionModal({
           </div>
         )}
 
-        <button className="close-button" onClick={onClose}>
-          Skip
-        </button>
+        {!(typed && result) && (
+          <button className="close-button" onClick={onClose}>
+            {closeLabel}
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );

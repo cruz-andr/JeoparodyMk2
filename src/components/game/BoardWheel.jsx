@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePrefersReducedMotion } from '../../hooks/useMediaQuery';
+import { answerMark } from '../../stores/dailyLogic';
 import './BoardWheel.css';
 
 /**
@@ -370,6 +371,7 @@ export default function BoardWheel({
                 {pointValues.map((points, pointIndex) => {
                   const answer = answerAt(categoryIndex, pointIndex);
                   const done = Boolean(answer?.revealed);
+                  const mark = answerMark(answer);
 
                   return (
                     <button
@@ -380,13 +382,19 @@ export default function BoardWheel({
                       disabled={done || !playable}
                       aria-label={
                         done
-                          ? `${name}, $${points}, already played`
+                          ? `${name}, $${points}, ${
+                              mark === 'correct' ? 'got it' : mark === 'passed' ? 'passed' : 'missed'
+                            }`
                           : `${name}, $${points}`
                       }
                     >
                       {done ? (
-                        <span className={answer.correct ? 'mark ok' : 'mark miss'}>
-                          {answer.correct ? '✓' : '✗'}
+                        <span
+                          className={`mark ${
+                            mark === 'correct' ? 'ok' : mark === 'passed' ? 'pass' : 'miss'
+                          }`}
+                        >
+                          {mark === 'correct' ? '✓' : mark === 'passed' ? '–' : '✗'}
                         </span>
                       ) : (
                         <span className="wheel-value">${points}</span>

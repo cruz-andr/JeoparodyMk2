@@ -24,6 +24,9 @@ export const emptyFormatStats = () => ({
   bestScore: null,
   weekBestScore: null,
   weekKey: null,
+  // How long the last board took, and the quickest one yet.
+  lastTimeMs: null,
+  bestTimeMs: null,
 });
 
 /** YYYY-MM-DD for a Date, in UTC so every player gets the same board. */
@@ -92,12 +95,16 @@ export function computeStreak(stats, { totalQuestions, today }) {
  * `score` is optional: The Board is worth dollars, The Sixer is just six clues
  * right or wrong, so only the former carries one.
  */
-export function applyCompletion(stats, { correctCount, totalQuestions, today, score = null }) {
+export function applyCompletion(
+  stats,
+  { correctCount, totalQuestions, today, score = null, timeMs = null }
+) {
   if (stats.lastPlayedDate === today) return stats;
 
   const currentStreak = computeStreak(stats, { totalQuestions, today });
   const week = startOfWeek(today);
   const scored = typeof score === 'number' && Number.isFinite(score);
+  const timed = typeof timeMs === 'number' && Number.isFinite(timeMs) && timeMs > 0;
 
   // A best that never resets saturates: the board tops out at a fixed maximum,
   // so an all-time high stops being a target within a few weeks. The weekly one
@@ -119,7 +126,58 @@ export function applyCompletion(stats, { correctCount, totalQuestions, today, sc
       ? Math.max(priorWeekBest ?? -Infinity, score)
       : priorWeekBest ?? null,
     weekKey: scored ? week : stats.weekKey ?? null,
+    lastTimeMs: timed ? timeMs : stats.lastTimeMs ?? null,
+    bestTimeMs: timed
+      ? Math.min(stats.bestTimeMs ?? Infinity, timeMs)
+      : stats.bestTimeMs ?? null,
   };
+}
+
+/**
+ * What a board is worth.
+ *
+ * A pass is not a wrong answer: it uses the clue up but costs nothing, so it
+ * has to be told apart from a miss rather than folded in with it.
+ */
+export function boardScore(answers, values) {
+  if (!Array.isArray(answers) || !Array.isArray(values) || values.length === 0) return 0;
+  return answers.reduce((total, answer, i) => {
+    if (!answer?.revealed || answer.passed) return total;
+    const points = values[i % values.length];
+    return answer.correct ? total + points : total - points;
+  }, 0);
+}
+
+/** How a played clue reads on the results grid and in a share. */
+export function answerMark(answer) {
+  if (!answer?.revealed) return 'unplayed';
+  if (answer.passed) return 'passed';
+  return answer.correct ? 'correct' : 'wrong';
+}
+
+/** mm:ss, or h:mm:ss once a board has taken an hour. */
+export function formatDuration(ms) {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0) return null;
+  const seconds = Math.floor(ms / 1000);
+  const pad = (n) => String(n).padStart(2, '0');
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+/**
+ * Elapsed time for a run that can be paused.
+ *
+ * The board is timed like a crossword, so time spent with the tab shut is not
+ * time spent playing: `elapsedMs` banks the finished stretches and `startedAt`
+ * marks the one still running.
+ */
+export function elapsedMs(timing, now = Date.now()) {
+  if (!timing) return 0;
+  const banked = Number.isFinite(timing.elapsedMs) ? timing.elapsedMs : 0;
+  if (!Number.isFinite(timing.startedAt)) return banked;
+  return banked + Math.max(0, now - timing.startedAt);
 }
 
 /** A fresh, unplayed run for a set of clues. */
@@ -129,9 +187,16 @@ export function freshRun(date, questions, categories = null) {
     questions,
     categories,
     currentIndex: 0,
-    answers: questions.map(() => ({ correct: null, revealed: false, playerAnswer: '' })),
+    answers: questions.map(() => ({
+      correct: null,
+      revealed: false,
+      passed: false,
+      playerAnswer: '',
+    })),
     userAnswers: questions.map(() => ''),
     isComplete: false,
+    // The board is timed; a new run starts a new clock.
+    timing: { elapsedMs: 0, startedAt: null },
   };
 }
 

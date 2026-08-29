@@ -172,3 +172,117 @@
     gap: 8px;
   }
 }
+
+
+/* Typed answers, as on the Sixer. Only rendered when the modal is in typed
+   mode, so the self graded flow keeps its own controls. */
+.typed-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.typed-input {
+  width: 100%;
+  max-width: 520px;
+  padding: 15px 20px;
+  font-size: 1.15rem;
+  text-align: center;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-md);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.typed-input::placeholder { color: var(--text-muted); }
+
+.typed-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.typed-submit {
+  min-width: 200px;
+  padding: 13px 30px;
+  background-color: var(--jeopardy-gold);
+  color: var(--jeopardy-black);
+}
+
+.typed-submit:disabled { background-color: var(--text-muted); }
+
+/* Skip is a sibling of the form, and .close-button carries no margin of its
+   own, so without this it sits flush against Submit and reads as one control
+   split in two. */
+.question-modal-overlay.typed .close-button {
+  margin-top: 16px;
+}
+
+.typed-result { margin-top: 8px; }
+
+.typed-badge {
+  display: inline-block;
+  padding: 10px 28px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.typed-badge.correct { background: var(--color-success); color: var(--text-primary); }
+
+.typed-badge.incorrect {
+  background: rgba(255, 107, 107, 0.3);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+.typed-said { margin-bottom: 6px; color: var(--text-secondary); }
+.typed-said span { color: var(--text-primary); font-weight: 600; }
+
+.typed-truth { margin-bottom: 20px; color: var(--text-secondary); }
+.typed-truth span {
+  color: var(--jeopardy-gold);
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.typed-after {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.typed-override {
+  background: transparent;
+  border: 1px solid rgba(242, 236, 224, 0.4);
+  color: var(--text-secondary);
+  padding: 12px 22px;
+}
+
+.typed-continue {
+  min-width: 180px;
+  padding: 12px 30px;
+  background-color: var(--jeopardy-gold);
+  color: var(--jeopardy-black);
+}
+
+/* The wheel pins the body, so the layout viewport does not shrink when the
+   phone keyboard opens: a centred modal stays centred and the keyboard covers
+   the box being typed into. Anchoring to the top keeps it in the clear. */
+@media (max-width: 768px) {
+  .question-modal-overlay.typed {
+    align-items: flex-start;
+    padding-top: 18px;
+    overflow-y: auto;
+  }
+
+  .typed-input { font-size: 1.05rem; }
+  .typed-submit,
+  .typed-continue { width: 100%; }
+}

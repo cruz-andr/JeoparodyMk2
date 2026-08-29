@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
-import { boardGridRows, decodeAnswers } from '../../stores/dailyLogic';
+import { boardGridRows, decodeAnswers,
+  answerMark,
+  elapsedMs,
+  formatDuration,
+} from '../../stores/dailyLogic';
 import './DailyResults.css';
 
 // Clues per run, used to turn a running total into an accuracy percentage.
@@ -32,12 +36,17 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
   // Transposed for the Board so each row is a value tier, as on the board
   // itself; a single row for the Sixer.
   const emojiRows = (() => {
-    const flags = answers.map((a) => Boolean(a.correct));
-    if (format !== 'board') return [flags];
-    return boardGridRows(flags) ?? [flags];
+    // Three states, not two: a passed clue is neither a hit nor a miss.
+    const marks = answers.map(answerMark);
+    if (format !== 'board') return [marks];
+    return boardGridRows(marks) ?? [marks];
   })();
 
   const correctCount = answers.filter((a) => a.correct).length;
+  const passedCount = answers.filter((a) => a.passed).length;
+  // Only the Board is timed.
+  const run = store[format] ?? {};
+  const took = format === 'board' ? formatDuration(elapsedMs(run.timing)) : null;
   const totalQuestions = questions.length;
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
@@ -85,18 +94,18 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
       <div className={`emoji-grid ${format === 'board' ? 'board' : ''}`}>
         {emojiRows.map((row, rowIndex) => (
           <div className="emoji-row" key={rowIndex}>
-            {row.map((correct, colIndex) => {
+            {row.map((mark, colIndex) => {
               const n = rowIndex * row.length + colIndex;
               return (
                 <motion.span
                   key={colIndex}
-                  className={`emoji-block ${correct ? 'correct' : 'incorrect'}`}
+                  className={`emoji-block ${mark}`}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   // capped so a thirty cell board does not take three seconds
                   transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
                 >
-                  {correct ? '🟩' : '🟥'}
+                  {mark === 'correct' ? '🟩' : mark === 'passed' ? '⬜' : '🟥'}
                 </motion.span>
               );
             })}
@@ -111,7 +120,11 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
         <span className="score-total">{totalQuestions}</span>
       </div>
 
-      <p className="score-percentage">{percentage}% correct</p>
+      <p className="score-percentage">
+        {percentage}% correct
+        {passedCount > 0 && `, ${passedCount} passed`}
+        {took && ` in ${took}`}
+      </p>
 
       {/* Share Button */}
       <button

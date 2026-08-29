@@ -19,6 +19,10 @@ import {
   boardGridRows,
   encodeAnswers,
   decodeAnswers,
+  boardScore,
+  answerMark,
+  formatDuration,
+  elapsedMs,
 } from './dailyLogic.js';
 
 let passed = 0;
@@ -223,7 +227,12 @@ test('a fresh run is blank and sized to its clues', () => {
   assert.equal(run.isComplete, false);
   assert.equal(run.answers.length, 2);
   assert.equal(run.userAnswers.length, 2);
-  assert.deepEqual(run.answers[0], { correct: null, revealed: false, playerAnswer: '' });
+  assert.deepEqual(run.answers[0], {
+    correct: null,
+    revealed: false,
+    passed: false,
+    playerAnswer: '',
+  });
 });
 
 // =========================================================================
@@ -344,6 +353,110 @@ test('migration tolerates junk without throwing', () => {
 });
 
 // --- report --------------------------------------------------------------
+
+// --- passing a clue -----------------------------------------------------
+
+const VALUES = [200, 400, 600, 800, 1000];
+const played = (over) => ({ correct: false, revealed: true, passed: false, playerAnswer: '', ...over });
+
+test('a pass uses the clue up but costs nothing', () => {
+  const answers = [played({ passed: true })];
+  assert.equal(boardScore(answers, VALUES), 0);
+});
+
+test('a pass is not a wrong answer', () => {
+  assert.equal(boardScore([played({ passed: true })], VALUES), 0);
+  assert.equal(boardScore([played()], VALUES), -200);
+});
+
+test('a right answer adds the value of its row', () => {
+  assert.equal(boardScore([played({ correct: true })], VALUES), 200);
+  assert.equal(boardScore([played(), played({ correct: true })], VALUES), -200 + 400);
+});
+
+test('an unplayed clue scores nothing either way', () => {
+  assert.equal(boardScore([{ correct: null, revealed: false }], VALUES), 0);
+});
+
+test('values repeat down each category', () => {
+  const all = Array.from({ length: 30 }, () => played({ correct: true }));
+  assert.equal(boardScore(all, VALUES), 18000); // 6 categories x $3,000
+});
+
+test('a board of nothing but passes scores zero, not minus everything', () => {
+  const all = Array.from({ length: 30 }, () => played({ passed: true }));
+  assert.equal(boardScore(all, VALUES), 0);
+});
+
+test('answerMark tells the three played states apart', () => {
+  assert.equal(answerMark({ revealed: false }), 'unplayed');
+  assert.equal(answerMark(played({ passed: true })), 'passed');
+  assert.equal(answerMark(played({ correct: true })), 'correct');
+  assert.equal(answerMark(played()), 'wrong');
+});
+
+test('a fresh run starts with nothing passed', () => {
+  const run = freshRun('2026-08-29', [{}, {}]);
+  assert.equal(run.answers.every((a) => a.passed === false), true);
+});
+
+// --- timing the board ---------------------------------------------------
+
+test('formatDuration reads as a clock', () => {
+  assert.equal(formatDuration(0), '0:00');
+  assert.equal(formatDuration(9000), '0:09');
+  assert.equal(formatDuration(754000), '12:34');
+  assert.equal(formatDuration(3661000), '1:01:01');
+});
+
+test('formatDuration refuses nonsense rather than printing it', () => {
+  assert.equal(formatDuration(null), null);
+  assert.equal(formatDuration(-1), null);
+  assert.equal(formatDuration(NaN), null);
+});
+
+test('time spent with the tab shut does not count', () => {
+  // banked five minutes, then paused
+  assert.equal(elapsedMs({ elapsedMs: 300000, startedAt: null }, 9e12), 300000);
+});
+
+test('a running stretch is added to what is already banked', () => {
+  assert.equal(elapsedMs({ elapsedMs: 300000, startedAt: 1000 }, 4000), 303000);
+});
+
+test('a clock that has never started reads zero', () => {
+  assert.equal(elapsedMs(undefined), 0);
+  assert.equal(elapsedMs({}), 0);
+});
+
+test('completion records the time, and keeps the quickest', () => {
+  const base = { ...emptyFormatStats(), lastPlayedDate: null };
+  const first = applyCompletion(base, {
+    correctCount: 10, totalQuestions: 30, today: '2026-08-29', score: 1000, timeMs: 754000,
+  });
+  assert.equal(first.lastTimeMs, 754000);
+  assert.equal(first.bestTimeMs, 754000);
+
+  const quicker = applyCompletion({ ...first, lastPlayedDate: '2026-08-29' }, {
+    correctCount: 10, totalQuestions: 30, today: '2026-08-30', score: 1000, timeMs: 600000,
+  });
+  assert.equal(quicker.bestTimeMs, 600000);
+
+  const slower = applyCompletion({ ...quicker, lastPlayedDate: '2026-08-30' }, {
+    correctCount: 10, totalQuestions: 30, today: '2026-08-31', score: 1000, timeMs: 900000,
+  });
+  assert.equal(slower.lastTimeMs, 900000, 'the latest time is still the last time');
+  assert.equal(slower.bestTimeMs, 600000, 'but the best is not overwritten by a slower one');
+});
+
+test('an untimed completion leaves the recorded times alone', () => {
+  const withTime = { ...emptyFormatStats(), lastTimeMs: 754000, bestTimeMs: 754000 };
+  const after = applyCompletion(withTime, {
+    correctCount: 6, totalQuestions: 6, today: '2026-08-29',
+  });
+  assert.equal(after.lastTimeMs, 754000);
+  assert.equal(after.bestTimeMs, 754000);
+});
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 for (const { name, err } of failures) {

@@ -7,6 +7,8 @@ import {
   emptyRun,
   emptyFormatStats,
   migrateToTwoFormats,
+  elapsedMs,
+  formatDuration,
   boardGridRows,
   encodeAnswers,
 } from './dailyLogic';
@@ -99,12 +101,24 @@ export const useDailyStore = create(
         });
       },
 
+      /* A pass uses the clue up without scoring it. Recorded rather than just
+         closed, so the clue cannot be reopened for another free look and the
+         run always reaches an end. */
+      passQuestion: (format, index) => {
+        if (!isFormat(format)) return;
+        set((state) => {
+          const answers = [...state[format].answers];
+          answers[index] = { correct: false, passed: true, revealed: true, playerAnswer: '' };
+          return { [format]: { ...state[format], answers } };
+        });
+      },
+
       overrideAnswer: (format, index) => {
         if (!isFormat(format)) return;
         set((state) => {
           const answers = [...state[format].answers];
           if (!answers[index]) return {};
-          answers[index] = { ...answers[index], correct: true };
+          answers[index] = { ...answers[index], correct: true, passed: false };
           return { [format]: { ...state[format], answers } };
         });
       },
@@ -136,13 +150,45 @@ export const useDailyStore = create(
       },
 
       /** `score` applies to formats that have one; The Sixer passes none. */
+      /* The board is timed like a crossword. Time with the tab shut is not
+         time playing, so the clock banks each stretch as it stops. */
+      startClock: (format) => {
+        if (!isFormat(format)) return;
+        set((state) => {
+          const timing = state[format].timing ?? { elapsedMs: 0, startedAt: null };
+          if (timing.startedAt) return {}; // already running
+          return { [format]: { ...state[format], timing: { ...timing, startedAt: Date.now() } } };
+        });
+      },
+
+      pauseClock: (format) => {
+        if (!isFormat(format)) return;
+        set((state) => {
+          const timing = state[format].timing;
+          if (!timing?.startedAt) return {};
+          return {
+            [format]: {
+              ...state[format],
+              timing: { elapsedMs: elapsedMs(timing), startedAt: null },
+            },
+          };
+        });
+      },
+
       completeGame: (format, { score = null } = {}) => {
         if (!isFormat(format)) return;
         const state = get();
         const run = state[format];
+        // Stop the clock on the same tick the run ends, so the time recorded is
+        // the time played and not the time the results screen stayed open.
+        const timeMs = run.timing ? elapsedMs(run.timing) : null;
 
         set({
-          [format]: { ...run, isComplete: true },
+          [format]: {
+            ...run,
+            isComplete: true,
+            timing: { elapsedMs: timeMs ?? 0, startedAt: null },
+          },
           stats: {
             ...state.stats,
             [format]: applyCompletion(state.stats[format], {
@@ -150,6 +196,7 @@ export const useDailyStore = create(
               totalQuestions: run.questions.length,
               today: toDateString(),
               score,
+              timeMs,
             }),
           },
         });
@@ -159,7 +206,11 @@ export const useDailyStore = create(
         if (!isFormat(format)) return '';
         const run = get()[format];
         const label = format === 'board' ? 'The Board' : 'The Sixer';
-        const grid = run.answers.map((a) => (a.correct ? '\u{1F7E9}' : '\u{1F7E5}'));
+        // A pass is neither a hit nor a miss, so it cannot share a colour with
+        // either without misreporting the board.
+        const grid = run.answers.map((a) =>
+          a.passed ? '\u{2B1C}' : a.correct ? '\u{1F7E9}' : '\u{1F7E5}'
+        );
         const correctCount = run.answers.filter((a) => a.correct).length;
 
         // The Board shares as the board looks: six across, five down.
@@ -171,8 +222,8 @@ export const useDailyStore = create(
         const path = format === 'board' ? '/daily/board' : '/daily';
 
         // The Sixer carries the player's typed answers so a friend can reveal
-        // them after playing. The Board is self-graded and has none, so its
-        // link is plain.
+        // them after playing. The Board is typed too, but thirty answers do not
+        // fit in a link worth sending, so its link stays plain.
         let query = '';
         if (format === 'sixer') {
           const packed = encodeAnswers(run.answers.map((a) => a.playerAnswer || ''));
@@ -180,7 +231,12 @@ export const useDailyStore = create(
           if (packed) query = `?verify=${packed}`;
         }
 
-        return `Jeoparody ${label} ${dateStr}\n${emoji}\n${correctCount}/${run.questions.length}\nhttps://jeoparody-mk2.vercel.app${path}${query}`;
+        const took = format === 'board' ? formatDuration(elapsedMs(run.timing)) : null;
+        const tally = took
+          ? `${correctCount}/${run.questions.length} in ${took}`
+          : `${correctCount}/${run.questions.length}`;
+
+        return `Jeoparody ${label} ${dateStr}\n${emoji}\n${tally}\nhttps://jeoparody-mk2.vercel.app${path}${query}`;
       },
 
       shareResults: async (format) => {

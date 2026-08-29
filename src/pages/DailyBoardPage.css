@@ -171,6 +171,12 @@ body.wheel-locked #root {
   height: 100%;
 }
 
+.wheel-clock,
+.daily-board-clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--jeopardy-gold-light);
+}
+
 /* label and close share a row, so they share a vertical centre */
 .wheel-header {
   flex-shrink: 0;
