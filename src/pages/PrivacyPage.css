@@ -1,0 +1,65 @@
+.legal-page {
+  min-height: 100vh;
+  background: #05081C;
+  color: var(--text-primary);
+  padding: 48px 20px 96px;
+}
+
+.legal-inner {
+  max-width: 68ch;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.legal-back {
+  display: inline-block;
+  margin-bottom: 34px;
+  color: var(--jeopardy-gold);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.legal-back:hover { text-decoration: underline; }
+
+.legal-page h1 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 2.4rem;
+  color: var(--jeopardy-gold);
+  margin: 0 0 6px;
+}
+
+.legal-updated {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0 0 28px;
+}
+
+.legal-lede {
+  font-size: 1.08rem;
+  margin: 0 0 34px;
+}
+
+.legal-page h2 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 1.15rem;
+  color: var(--jeopardy-gold-light);
+  margin: 34px 0 10px;
+}
+
+.legal-page p { margin: 0 0 14px; }
+
+.legal-page ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.legal-page li { padding-left: 4px; }
+
+.legal-page b { color: #fff; font-weight: 600; }
+
+.legal-page a { color: var(--jeopardy-gold-light); }

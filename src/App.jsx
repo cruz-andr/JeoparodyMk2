@@ -17,6 +17,7 @@ const GamePage = lazy(() => import('./pages/GamePage'));
 const HighscoresPage = lazy(() => import('./pages/HighscoresPage'));
 const DailyPage = lazy(() => import('./pages/DailyPage'));
 const DailyBoardPage = lazy(() => import('./pages/DailyBoardPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 function PageLoader() {
   return (
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
   { path: '/join/:roomCode', element: <JoinPage /> },
   { path: '/game/:roomCode', element: <GamePage /> },
   { path: '/highscores', element: <HighscoresPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
 ]);
 
 function App() {
