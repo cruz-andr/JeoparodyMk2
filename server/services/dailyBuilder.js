@@ -93,6 +93,21 @@ export function buildBoard(roundClues) {
  */
 export const SIXER_WEEK_ROWS = [1, 2, 2, 3, 3, 4, 5];
 
+/*
+ * What a Double Jeopardy row is worth in today's money.
+ *
+ * The Board already normalises: whatever era its game is from, its rows show
+ * as $200 through $1000. The Sixer passed through whatever the archive said,
+ * so a clue from a 1995 show came back as $1000 and read as no harder than a
+ * $1000 clue on the Board, despite being a Double Jeopardy row 5. Two formats,
+ * one number, two meanings.
+ *
+ * Showing the row's modern value makes a number mean the same thing in both,
+ * and makes the week's climb visible: $400 on Monday up to $2000 on Sunday,
+ * whichever game it was drawn from.
+ */
+export const DOUBLE_ROW_VALUES = [400, 800, 1200, 1600, 2000];
+
 /** Which row of the board a given date should be pitched at, 1 easiest. */
 export function sixerTargetRow(date) {
   if (!date) return SIXER_WEEK_ROWS[0];
@@ -122,7 +137,9 @@ function pickByRow(clues, row, seed, offset) {
   // Several clues can share a value; break it the same way for everyone.
   const target = Number(ordered[index].value);
   const tied = ordered.filter((c) => Number(c.value) === target);
-  return tied[(seed + offset) % tied.length];
+  // The row actually taken, which is not the row asked for when a category is
+  // short of a full column.
+  return { clue: tied[(seed + offset) % tied.length], row: index + 1 };
 }
 
 /**
@@ -145,28 +162,32 @@ export function buildSixer(roundClues, seed = 0, targetRow = null) {
     if (picked.length >= SIXER_CLUES) break;
     picked.push(
       targetRow === null
-        ? clues[(seed + picked.length) % clues.length]
+        ? { clue: clues[(seed + picked.length) % clues.length], row: null }
         : pickByRow(clues, targetRow, seed, picked.length)
     );
   }
 
   // Not enough distinct categories: top up from whatever is left over.
   if (picked.length < SIXER_CLUES) {
+    const taken = new Set(picked.map((p) => p.clue));
     for (const clue of roundClues) {
       if (picked.length >= SIXER_CLUES) break;
-      if (isUsable(clue) && !picked.includes(clue)) picked.push(clue);
+      if (isUsable(clue) && !taken.has(clue)) picked.push({ clue, row: null });
     }
   }
 
   if (picked.length < SIXER_CLUES) return null;
 
   return {
-    questions: picked.slice(0, SIXER_CLUES).map((clue) => ({
+    questions: picked.slice(0, SIXER_CLUES).map(({ clue, row }) => ({
       category: String(clue.category).toUpperCase(),
       // scraper convention, which DailyPage already reads
       clue: clue.clue,
       answer: clue.answer,
-      value: clue.value,
+      // The row's worth in today's money, so a number means the same thing in
+      // both formats. What it was actually worth on the night is kept beside it.
+      value: row ? DOUBLE_ROW_VALUES[row - 1] : clue.value,
+      airedValue: clue.value,
     })),
   };
 }

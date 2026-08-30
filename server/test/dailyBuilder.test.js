@@ -349,17 +349,35 @@ test('a pre-2001 game ramps just as well, at its own values', () => {
   // whose Double Jeopardy topped out at $1000 every day from Thursday on
   // picked the same $1000 clue and four days of the week were identical.
   const clues = columnsWorth(VINTAGE);
-  const week = WEEK.map(
-    (d) => buildSixer(clues, 0, sixerTargetRow(d)).questions[0].value
+  const aired = WEEK.map(
+    (d) => buildSixer(clues, 0, sixerTargetRow(d)).questions[0].airedValue
   );
-  assert.deepEqual(week, [200, 400, 400, 600, 600, 800, 1000]);
-  assert.equal(new Set(week).size, 5, 'all five rows are still reachable');
+  assert.deepEqual(aired, [200, 400, 400, 600, 600, 800, 1000]);
+  assert.equal(new Set(aired).size, 5, 'all five rows are still reachable');
+});
+
+test('the week reads the same whichever era the game is from', () => {
+  // The Board shows its rows as $200 to $1000 whatever year its game aired,
+  // so a Sixer passing through 1995 values made the same number mean two
+  // different difficulties depending on which format you were playing.
+  const shown = (values) =>
+    WEEK.map((d) => buildSixer(columnsWorth(values), 0, sixerTargetRow(d)).questions[0].value);
+
+  assert.deepEqual(shown(VINTAGE), [400, 800, 800, 1200, 1200, 1600, 2000]);
+  assert.deepEqual(shown(MODERN), shown(VINTAGE));
+});
+
+test('what it was worth on the night is not thrown away', () => {
+  const sunday = buildSixer(columnsWorth(VINTAGE), 0, sixerTargetRow('2026-09-06')).questions[0];
+  assert.equal(sunday.value, 2000, 'shown in today\'s money');
+  assert.equal(sunday.airedValue, 1000, 'and what it actually paid in 1995');
 });
 
 test('the hardest day is the hardest clue in either era', () => {
   for (const values of [MODERN, VINTAGE]) {
     const sunday = buildSixer(columnsWorth(values), 0, sixerTargetRow('2026-09-06'));
-    assert.equal(sunday.questions[0].value, Math.max(...values));
+    assert.equal(sunday.questions[0].airedValue, Math.max(...values));
+    assert.equal(sunday.questions[0].value, 2000, 'always the top row in modern money');
   }
 });
 
@@ -371,6 +389,8 @@ test('a category short of a full column gives up its hardest clue', () => {
     }
   }
   const sunday = buildSixer(clues, 0, sixerTargetRow('2026-09-06'));
+  assert.deepEqual(sunday.questions.map((q) => q.airedValue), [800, 800, 800, 800, 800, 800]);
+  // Row 2 of what it has, not row 5, and labelled honestly as such.
   assert.deepEqual(sunday.questions.map((q) => q.value), [800, 800, 800, 800, 800, 800]);
 });
 
