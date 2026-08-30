@@ -14,8 +14,8 @@ import {
   buildSixer,
   buildDailyChallenge,
   ROW_VALUES,
-  sixerTargetValue,
-  SIXER_WEEK_VALUES,
+  sixerTargetRow,
+  SIXER_WEEK_ROWS,
 } from '../services/dailyBuilder.js';
 
 let passed = 0;
@@ -290,71 +290,106 @@ const WEEK = ['2026-08-31','2026-09-01','2026-09-02','2026-09-03',
               '2026-09-04','2026-09-05','2026-09-06'];
 
 test('the week climbs and never drops back', () => {
-  const values = WEEK.map(sixerTargetValue);
+  const values = WEEK.map(sixerTargetRow);
   for (let i = 1; i < values.length; i++) {
     assert.ok(values[i] >= values[i - 1], `${WEEK[i]} is not easier than the day before`);
   }
 });
 
-test('Monday is the easiest day and Sunday the hardest', () => {
-  assert.equal(sixerTargetValue('2026-08-31'), 400);
-  assert.equal(sixerTargetValue('2026-09-06'), 2000);
+test('Monday is the easiest row and Sunday the hardest', () => {
+  assert.equal(sixerTargetRow('2026-08-31'), 1);
+  assert.equal(sixerTargetRow('2026-09-06'), 5);
 });
 
-test('the two repeated tiers fall mid week, not at either end', () => {
-  const values = WEEK.map(sixerTargetValue);
-  const repeated = values.filter((v, i) => i && v === values[i - 1]);
-  assert.equal(repeated.length, 2, 'seven days over five tiers repeats exactly twice');
-  assert.notEqual(values[0], values[1], 'Monday stands alone');
-  assert.notEqual(values[5], values[6], 'Sunday stands alone');
+test('the two repeated rows fall mid week, not at either end', () => {
+  const rows = WEEK.map(sixerTargetRow);
+  const repeated = rows.filter((v, i) => i && v === rows[i - 1]);
+  assert.equal(repeated.length, 2, 'seven days over five rows repeats exactly twice');
+  assert.notEqual(rows[0], rows[1], 'Monday stands alone');
+  assert.notEqual(rows[5], rows[6], 'Sunday stands alone');
 });
 
 test('the week starts on Monday, as the weekly best reset does', () => {
-  // Sunday must be the END of a week, not the start of the next one.
-  assert.equal(sixerTargetValue('2026-09-06'), SIXER_WEEK_VALUES[6]);
-  assert.equal(sixerTargetValue('2026-09-07'), SIXER_WEEK_VALUES[0]);
+  assert.equal(sixerTargetRow('2026-09-06'), SIXER_WEEK_ROWS[6]);
+  assert.equal(sixerTargetRow('2026-09-07'), SIXER_WEEK_ROWS[0]);
 });
 
-test('a missing or unparsable date falls back to the easiest tier', () => {
-  assert.equal(sixerTargetValue(null), 400);
-  assert.equal(sixerTargetValue('not-a-date'), 400);
+test('a missing or unparsable date falls back to the easiest row', () => {
+  assert.equal(sixerTargetRow(null), 1);
+  assert.equal(sixerTargetRow('not-a-date'), 1);
 });
 
-test('the Sixer picks the day\'s tier out of each category', () => {
+const columnsWorth = (values) => {
   const clues = [];
   for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
-    for (const value of [400, 800, 1200, 1600, 2000]) {
-      clues.push({ category, value, clue: `${category} ${value} clue`, answer: `${category}${value}` });
+    for (const value of values) {
+      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
     }
   }
-  const monday = buildSixer(clues, 0, sixerTargetValue('2026-08-31'));
-  assert.deepEqual(monday.questions.map((q) => q.value), [400, 400, 400, 400, 400, 400]);
+  return clues;
+};
 
-  const sunday = buildSixer(clues, 0, sixerTargetValue('2026-09-06'));
+const MODERN = [400, 800, 1200, 1600, 2000];   // Double Jeopardy since Nov 2001
+const VINTAGE = [200, 400, 600, 800, 1000];    // Double Jeopardy before it
+
+test('the Sixer takes the day\'s row out of each category', () => {
+  const clues = columnsWorth(MODERN);
+  assert.deepEqual(
+    buildSixer(clues, 0, sixerTargetRow('2026-08-31')).questions.map((q) => q.value),
+    [400, 400, 400, 400, 400, 400]
+  );
+  assert.deepEqual(
+    buildSixer(clues, 0, sixerTargetRow('2026-09-06')).questions.map((q) => q.value),
+    [2000, 2000, 2000, 2000, 2000, 2000]
+  );
+});
+
+test('a pre-2001 game ramps just as well, at its own values', () => {
+  // The bug this guards: the ramp used to target dollar amounts, so on a game
+  // whose Double Jeopardy topped out at $1000 every day from Thursday on
+  // picked the same $1000 clue and four days of the week were identical.
+  const clues = columnsWorth(VINTAGE);
+  const week = WEEK.map(
+    (d) => buildSixer(clues, 0, sixerTargetRow(d)).questions[0].value
+  );
+  assert.deepEqual(week, [200, 400, 400, 600, 600, 800, 1000]);
+  assert.equal(new Set(week).size, 5, 'all five rows are still reachable');
+});
+
+test('the hardest day is the hardest clue in either era', () => {
+  for (const values of [MODERN, VINTAGE]) {
+    const sunday = buildSixer(columnsWorth(values), 0, sixerTargetRow('2026-09-06'));
+    assert.equal(sunday.questions[0].value, Math.max(...values));
+  }
+});
+
+test('a category short of a full column gives up its hardest clue', () => {
+  const clues = [];
+  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    for (const value of [400, 800]) {
+      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
+    }
+  }
+  const sunday = buildSixer(clues, 0, sixerTargetRow('2026-09-06'));
+  assert.deepEqual(sunday.questions.map((q) => q.value), [800, 800, 800, 800, 800, 800]);
+});
+
+test('a clue with no usable value does not sink the pick', () => {
+  const clues = [];
+  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
+    clues.push({ category, value: null, clue: `${category} dd`, answer: 'dd' });
+    for (const value of [400, 800, 1200, 1600, 2000]) {
+      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
+    }
+  }
+  const sunday = buildSixer(clues, 0, sixerTargetRow('2026-09-06'));
   assert.deepEqual(sunday.questions.map((q) => q.value), [2000, 2000, 2000, 2000, 2000, 2000]);
 });
 
-test('a category missing the exact tier gives up its nearest clue', () => {
-  const clues = [];
-  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
-    // no 2000 anywhere: the hardest day has to settle for 1600
-    for (const value of [400, 800, 1200, 1600]) {
-      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
-    }
-  }
-  const sunday = buildSixer(clues, 0, sixerTargetValue('2026-09-06'));
-  assert.deepEqual(sunday.questions.map((q) => q.value), [1600, 1600, 1600, 1600, 1600, 1600]);
-});
-
 test('the same day gives every player the same six', () => {
-  const clues = [];
-  for (const category of ['A', 'B', 'C', 'D', 'E', 'F']) {
-    for (const value of [400, 800, 1200, 1600, 2000]) {
-      clues.push({ category, value, clue: `${category} ${value}`, answer: `${category}${value}` });
-    }
-  }
-  const a = buildSixer(clues, 3, sixerTargetValue('2026-09-03'));
-  const b = buildSixer(clues, 3, sixerTargetValue('2026-09-03'));
+  const clues = columnsWorth(MODERN);
+  const a = buildSixer(clues, 3, sixerTargetRow('2026-09-03'));
+  const b = buildSixer(clues, 3, sixerTargetRow('2026-09-03'));
   assert.deepEqual(a.questions, b.questions);
 });
 
