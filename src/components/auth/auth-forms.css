@@ -1,0 +1,159 @@
+/* Shared by every account screen. */
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 9px;
+  background: #fff;
+  color: #1f1f1f;
+  font-weight: 600;
+  font-size: 0.94rem;
+  text-decoration: none;
+  transition: background 140ms ease;
+}
+
+.google-btn:hover { background: #f1f1f1; }
+
+.google-mark { width: 18px; height: 18px; flex: none; display: block; }
+
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(242, 236, 224, 0.14);
+}
+
+.auth-field-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 0.74rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-password-wrap { position: relative; }
+
+.auth-reveal {
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 0.74rem;
+  letter-spacing: 0.4px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+}
+
+/* Requirements sit under the field and tick as they are met, rather than
+   appearing only after a rejection. */
+.auth-reqs {
+  list-style: none;
+  padding: 0;
+  margin: -6px 0 18px;
+  display: grid;
+  gap: 5px;
+}
+
+.auth-reqs li {
+  display: flex;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.auth-reqs li.met { color: var(--color-success); }
+
+.auth-submit {
+  width: 100%;
+  padding: 13px;
+  border-radius: 9px;
+  border: none;
+  background: var(--jeopardy-gold);
+  color: #0b1030;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.auth-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.auth-secondary {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid rgba(242, 236, 224, 0.16);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.auth-foot {
+  margin: 16px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.auth-foot a { color: var(--jeopardy-gold-light); }
+
+.auth-legal {
+  margin: 22px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: rgba(152, 160, 204, 0.8);
+  text-align: center;
+}
+
+.auth-legal a { color: var(--text-muted); }
+
+.auth-error {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: rgba(210, 98, 111, 0.14);
+  border: 1px solid rgba(210, 98, 111, 0.4);
+  font-size: 0.85rem;
+  color: #f0b7be;
+}

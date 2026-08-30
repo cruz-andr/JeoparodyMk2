@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import * as authApi from '../services/api/authService';
 
 // Generate or retrieve session ID from cookie
 const getSessionId = () => {
@@ -52,45 +53,65 @@ export const useUserStore = create(
 
       setToken: (token) => set({ token }),
 
-      login: async (credentials) => {
-        // This will be implemented when backend is ready
-        // For now, simulate login
-        const { email, password } = credentials;
-
-        // TODO: Call API
-        const mockUser = {
-          id: 'user-' + Date.now(),
-          email,
-          displayName: email.split('@')[0],
-        };
-
-        set({
-          user: mockUser,
-          isAuthenticated: true,
-          isGuest: false,
-        });
-
-        return mockUser;
+      /* These two used to invent a user and never call anything, which is why
+         signing in appeared to work while no account existed anywhere. */
+      login: async ({ email, password }) => {
+        const { token, user } = await authApi.login(email, password);
+        set({ token, user, isAuthenticated: true, isGuest: false });
+        return user;
       },
 
-      register: async (userData) => {
-        // This will be implemented when backend is ready
-        const { email, password, displayName } = userData;
+      register: async ({ email, password, displayName }) => {
+        const { token, user } = await authApi.register(email, password, displayName);
+        set({ token, user, isAuthenticated: true, isGuest: false });
+        return user;
+      },
 
-        // TODO: Call API
-        const mockUser = {
-          id: 'user-' + Date.now(),
-          email,
-          displayName,
-        };
+      /** Google hands the token back in the URL; this turns it into a session. */
+      adoptToken: async (token) => {
+        const { user } = await authApi.me(token);
+        set({ token, user, isAuthenticated: true, isGuest: false });
+        return user;
+      },
 
-        set({
-          user: mockUser,
-          isAuthenticated: true,
-          isGuest: false,
-        });
+      /* On boot the stored token might be expired, or belong to an account
+         that has since been deleted. Ask, and stand down quietly if so, rather
+         than showing someone a name they cannot use. */
+      restoreSession: async () => {
+        const { token } = get();
+        if (!token) return null;
+        try {
+          const { user } = await authApi.me(token);
+          set({ user, isAuthenticated: true, isGuest: false });
+          return user;
+        } catch (err) {
+          if (err?.status === 401 || err?.status === 403 || err?.status === 404) {
+            set({ token: null, user: null, isAuthenticated: false, isGuest: true });
+          }
+          return null;
+        }
+      },
 
-        return mockUser;
+      saveSignature: async (signature) => {
+        const { token, user } = get();
+        if (!token) return null;
+        await authApi.saveSignature(token, signature);
+        set({ user: { ...user, signature } });
+        return signature;
+      },
+
+      clearSignature: async () => {
+        const { token, user } = get();
+        if (!token) return;
+        await authApi.clearSignature(token);
+        set({ user: { ...user, signature: null } });
+      },
+
+      deleteAccount: async () => {
+        const { token } = get();
+        if (!token) return;
+        await authApi.deleteAccount(token);
+        set({ token: null, user: null, isAuthenticated: false, isGuest: true });
       },
 
       logout: () => {
@@ -173,6 +194,13 @@ export const useUserStore = create(
         localHighscores: state.localHighscores,
         user: state.isGuest ? null : state.user,
         isGuest: state.isGuest,
+        // Kept so a refresh does not sign you out. Checked against the server
+        // on boot; see restoreSession.
+        token: state.isGuest ? null : state.token,
+        /* Persisted alongside the token. Without it a reload came back with a
+           token but isAuthenticated false, so any screen guarding on it bounced
+           to sign-in before the check against the server could finish. */
+        isAuthenticated: state.isGuest ? false : state.isAuthenticated,
       }),
     }
   )

@@ -18,6 +18,11 @@ const HighscoresPage = lazy(() => import('./pages/HighscoresPage'));
 const DailyPage = lazy(() => import('./pages/DailyPage'));
 const DailyBoardPage = lazy(() => import('./pages/DailyBoardPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const SignUpPage = lazy(() => import('./pages/SignUpPage'));
+const SignInPage = lazy(() => import('./pages/SignInPage'));
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const AccountNamePage = lazy(() => import('./pages/AccountNamePage'));
 
 function PageLoader() {
   return (
@@ -42,6 +47,11 @@ const router = createBrowserRouter([
   { path: '/game/:roomCode', element: <GamePage /> },
   { path: '/highscores', element: <HighscoresPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/signup', element: <SignUpPage /> },
+  { path: '/signin', element: <SignInPage /> },
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
+  { path: '/account', element: <AccountPage /> },
+  { path: '/account/name', element: <AccountNamePage /> },
 ]);
 
 function App() {

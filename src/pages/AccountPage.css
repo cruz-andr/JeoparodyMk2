@@ -1,0 +1,104 @@
+.account-block {
+  margin: 0 0 22px;
+  padding: 16px;
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  border-radius: 11px;
+}
+
+.account-signature {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  background: #0d1466;
+}
+
+.account-empty {
+  margin: 0;
+  padding: 18px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.account-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.account-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.84rem;
+  color: var(--jeopardy-gold-light);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-link:hover:not(:disabled) { text-decoration: underline; }
+.account-link:disabled { opacity: 0.4; cursor: default; }
+
+.account-rows {
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.account-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.08);
+}
+
+.account-rows > div:last-child { border-bottom: 0; }
+
+.account-rows dt {
+  font-size: 0.74rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.account-rows dd { margin: 0; font-size: 0.92rem; }
+
+.account-danger {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.84rem;
+  color: var(--color-error);
+  cursor: pointer;
+}
+
+.account-danger:hover { text-decoration: underline; }
+
+.account-confirm {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid rgba(210, 98, 111, 0.4);
+  border-radius: 11px;
+  background: rgba(210, 98, 111, 0.08);
+  text-align: center;
+}
+
+.account-confirm p {
+  margin: 0 0 14px;
+  font-size: 0.86rem;
+  color: #f0b7be;
+}
+
+.account-danger-solid {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 9px;
+  background: var(--color-error);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-danger-solid:disabled { opacity: 0.5; cursor: not-allowed; }

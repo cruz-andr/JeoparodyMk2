@@ -1,0 +1,152 @@
+.auth-page {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #05081C;
+  color: var(--text-primary);
+}
+
+/* --- the art half --- */
+.auth-art {
+  position: relative;
+  overflow: hidden;
+  background: #0B1138;
+  border-right: 1px solid rgba(242, 236, 224, 0.14);
+}
+
+/* Scaled past every edge and turned slightly, so nothing is a whole square. */
+.auth-board {
+  position: absolute;
+  inset: -6% -8%;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  transform: rotate(-1.5deg) scale(1.06);
+  transform-origin: center;
+}
+
+.auth-board-cat,
+.auth-board-sq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-family: var(--font-board, var(--font-display));
+  font-weight: 900;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.auth-board-cat {
+  aspect-ratio: 1.05;
+  padding: 4px;
+  text-align: center;
+  font-size: 0.5rem;
+  line-height: 1.05;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: linear-gradient(177deg, #1B2496, #0B1063);
+}
+
+.auth-board-sq {
+  aspect-ratio: 1.35;
+  font-size: 0.8rem;
+  color: var(--jeopardy-gold-light);
+  background: linear-gradient(177deg, #232CA8, #0D1466);
+}
+
+.auth-art-top,
+.auth-art-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+}
+
+.auth-art-top {
+  top: 0;
+  padding: 26px 34px;
+  background: linear-gradient(180deg, rgba(5, 8, 30, 0.92) 0%, rgba(5, 8, 30, 0) 100%);
+}
+
+.auth-art-foot {
+  bottom: 0;
+  padding: 34px 34px 32px;
+  background: linear-gradient(180deg, rgba(5, 8, 30, 0) 0%, rgba(5, 8, 30, 0.88) 46%, rgba(5, 8, 30, 0.97) 100%);
+}
+
+.auth-art-foot h2 {
+  margin: 0 0 8px;
+  white-space: pre-line;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.9rem;
+  line-height: 1.03;
+  color: #fff;
+}
+
+.auth-art-foot p {
+  margin: 0;
+  max-width: 36ch;
+  font-size: 0.95rem;
+  color: rgba(242, 236, 224, 0.72);
+}
+
+.auth-wordmark {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.7rem;
+  letter-spacing: 0.5px;
+  color: var(--jeopardy-gold);
+  text-decoration: none;
+}
+
+.auth-wordmark-phone { display: none; }
+
+/* --- the form half --- */
+.auth-form-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 44px 42px 60px;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+/* The heading and its line are centred; the fields below stay left aligned,
+   because a label over a left aligned input is what the eye scans down. */
+.auth-form h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.85rem;
+  line-height: 1.02;
+  color: #fff;
+  text-align: center;
+}
+
+.auth-sub {
+  margin: 0 0 24px;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  /* Artwork is desktop only. */
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-art { display: none; }
+  .auth-form-side { padding: 32px 20px 56px; }
+  .auth-wordmark-phone {
+    display: block;
+    margin-bottom: 26px;
+    text-align: center;
+  }
+}

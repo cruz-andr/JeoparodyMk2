@@ -47,12 +47,22 @@ export default function MainMenu() {
   const stats = useDailyStore((s) => s.stats);
   const userStats = useUserStore((s) => s.stats);
   const displayName = useUserStore((s) => s.user?.displayName);
+  const signature = useUserStore((s) => s.user?.signature);
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
+  const restoreSession = useUserStore((s) => s.restoreSession);
+  const [showIdentity, setShowIdentity] = useState(false);
 
   const boardStreak = stats.board.currentStreak;
   const sixerStreak = stats.sixer.currentStreak;
   // The Board's own best, for the week in progress. Read through the helper so
   // a value left over from last week is not shown as if it still counted.
   const boardWeekBest = currentWeekBest(stats.board, toDateString());
+
+  /* A stored token can have expired, or belong to an account since deleted.
+     Ask once on arrival rather than showing someone a name they cannot use. */
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
 
   // Today's categories make the hero real. The menu must still work when the
   // backend is unreachable, so a failure here is silent.
@@ -105,7 +115,38 @@ export default function MainMenu() {
             </span>
           </span>
           <span className="menu-divider" />
-          <span className="menu-player">{displayName || 'Guest'}</span>
+          {/* Guest used to be a word that did nothing. It is the way in now. */}
+          <div className="menu-identity-wrap">
+            <button
+              className="menu-player"
+              onClick={() => (isAuthenticated ? navigate('/account') : setShowIdentity((v) => !v))}
+              aria-haspopup={isAuthenticated ? undefined : 'menu'}
+              aria-expanded={isAuthenticated ? undefined : showIdentity}
+            >
+              {signature ? (
+                <img className="menu-signature" src={signature} alt={displayName || 'Your account'} />
+              ) : (
+                displayName || 'Guest'
+              )}
+            </button>
+
+            {showIdentity && !isAuthenticated && (
+              <div className="menu-identity-menu" role="menu">
+                <button role="menuitem" onClick={() => navigate('/signup')}>
+                  Create an account
+                </button>
+                <button role="menuitem" onClick={() => navigate('/signin')}>
+                  Sign in
+                </button>
+                <button
+                  role="menuitem" className="quiet"
+                  onClick={() => setShowIdentity(false)}
+                >
+                  Keep playing as a guest
+                </button>
+              </div>
+            )}
+          </div>
           <button
             className="menu-text-btn"
             onClick={() => navigate('/highscores')}
