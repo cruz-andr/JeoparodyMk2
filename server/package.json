@@ -6,7 +6,7 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "db:init": "node db/init.js",
-    "test": "node test/gameStateManager.test.js && node test/dailyBuilder.test.js && node test/socketFlow.test.js"
+    "test": "node test/gameStateManager.test.js && node test/dailyBuilder.test.js && node test/socketFlow.test.js && node test/config.test.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

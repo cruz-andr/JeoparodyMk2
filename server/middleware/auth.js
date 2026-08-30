@@ -1,7 +1,24 @@
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+/*
+ * Tokens are only worth anything if the key that signs them is a secret.
+ *
+ * This used to fall back to a literal string, which is committed to a public
+ * repository, so the deployed server was signing tokens with a key anybody
+ * could read: forging a token for any account was a one-liner. In production
+ * the server now refuses to start rather than run with a known key.
+ */
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'JWT_SECRET is not set. Refusing to start: every session token would be ' +
+      'forgeable. Set it with: fly secrets set JWT_SECRET=$(openssl rand -hex 32)'
+    );
+  }
+  console.warn('[auth] JWT_SECRET is not set; using a development key. Never ship this.');
+  return 'development-only-key-not-for-production';
+})();
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];

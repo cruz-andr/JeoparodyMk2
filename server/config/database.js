@@ -6,7 +6,34 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DB_PATH = process.env.DATABASE_PATH || join(__dirname, '../db/jeopardy.sqlite');
+/*
+ * Where the database actually lives.
+ *
+ * The fly machine mounts a volume at /data, and the Dockerfile sets
+ * DATABASE_URL, but this file read DATABASE_PATH, a different name that
+ * nothing set. So it fell back to a path inside the container image: the
+ * volume sat empty and every deploy silently destroyed every account.
+ *
+ * All three are accepted now, and production defaults onto the volume rather
+ * than into the image, so getting the variable name wrong cannot cost data
+ * again.
+ */
+function fileFromUrl(url) {
+  if (!url) return null;
+  if (url.startsWith('file://')) return fileURLToPath(url);
+  return url.startsWith('/') ? url : null;
+}
+
+/** Exported so the rule can be tested without opening a database. */
+export function resolveDatabasePath(env = process.env, devPath = join(__dirname, '../db/jeopardy.sqlite')) {
+  return (
+    env.DATABASE_PATH ||
+    fileFromUrl(env.DATABASE_URL) ||
+    (env.NODE_ENV === 'production' ? '/data/jeopardy.sqlite' : devPath)
+  );
+}
+
+const DB_PATH = resolveDatabasePath();
 
 let db = null;
 
