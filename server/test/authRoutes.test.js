@@ -87,6 +87,11 @@ await test('an account can be created', async () => {
   const body = await r.json();
   assert.ok(body.token, 'a token comes back');
   assert.equal(body.user.email, 'a@example.com');
+  // The same shape /me returns, so a client never has to know which call it came from.
+  for (const key of ['id', 'email', 'displayName', 'signature', 'hasPassword', 'hasGoogle']) {
+    assert.ok(key in body.user, `register omitted ${key}`);
+  }
+  assert.equal('password_hash' in body.user, false);
   token = body.token;
 });
 
@@ -161,10 +166,23 @@ await test('only a PNG data URL is accepted as a signature', async () => {
   }
 });
 
-await test('an enormous drawing is refused rather than stored', async () => {
-  const huge = 'data:image/png;base64,' + 'A'.repeat(300 * 1024);
-  const r = await api('/api/auth/signature', { method: 'PUT', token, body: { signature: huge } });
+await test('an oversized drawing is refused by us, not just by the body parser', async () => {
+  /* This asserted only a 413, which express.json returns on its own for
+     anything over 100KB, so the check in the route never ran and the test
+     could not tell the difference. The error code proves whose refusal it is. */
+  const tooBig = 'data:image/png;base64,' + 'A'.repeat(80 * 1024);
+  const r = await api('/api/auth/signature', { method: 'PUT', token, body: { signature: tooBig } });
   assert.equal(r.status, 413);
+  const body = await r.json();
+  assert.equal(body.error?.code, 'SIGNATURE_TOO_LARGE', 'refused by the route, not the parser');
+});
+
+await test('a real sized drawing is comfortably under the cap', async () => {
+  // A 300x80 signature is a few kilobytes; the cap must not be in its way.
+  const realistic = 'data:image/png;base64,' + 'A'.repeat(24 * 1024);
+  const r = await api('/api/auth/signature', { method: 'PUT', token, body: { signature: realistic } });
+  assert.equal(r.status, 200);
+  await api('/api/auth/signature', { method: 'DELETE', token });
 });
 
 await test('one account cannot touch another', async () => {
@@ -195,6 +213,15 @@ await test('a Google callback with no code sends you back, not into an error', a
 
 await test('a forged state is rejected', async () => {
   const r = await api('/api/auth/google/callback?code=x&state=not-a-real-state');
+  assert.equal(r.status, 302);
+  assert.match(r.headers.get('location'), /\/signin\?error=bad_state/);
+});
+
+await test('a real session token is not accepted as an OAuth state', async () => {
+  /* Everything this server signs uses one key, so a state checked only for
+     being signed would accept a player's own token and the protection would
+     be worth nothing. */
+  const r = await api(`/api/auth/google/callback?code=x&state=${encodeURIComponent(token)}`);
   assert.equal(r.status, 302);
   assert.match(r.headers.get('location'), /\/signin\?error=bad_state/);
 });

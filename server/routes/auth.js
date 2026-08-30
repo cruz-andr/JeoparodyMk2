@@ -40,16 +40,8 @@ router.post('/register', async (req, res, next) => {
     // Generate token
     const token = generateToken({ userId, isGuest: false });
 
-    res.status(201).json({
-      token,
-      user: {
-        id: userId,
-        email,
-        displayName,
-        username,
-        isGuest: false,
-      },
-    });
+    const created = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    res.status(201).json({ token, user: publicUser(created) });
   } catch (error) {
     next(error);
   }
@@ -87,16 +79,7 @@ router.post('/login', async (req, res, next) => {
     // Generate token
     const token = generateToken({ userId: user.id, isGuest: false });
 
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.display_name,
-        username: user.username,
-        isGuest: false,
-      },
-    });
+    res.json({ token, user: publicUser(user) });
   } catch (error) {
     next(error);
   }
@@ -202,8 +185,11 @@ router.get('/google/callback', async (req, res) => {
     if (error) return fail(error === 'access_denied' ? 'cancelled' : 'google_error');
     if (!code || !state) return fail('missing_code');
 
+    /* Checked for what it is, not merely that we signed it. Every token this
+       server issues is signed with the same key, so verifying alone would
+       accept a player's own session token as an OAuth state. */
     try {
-      verifyToken(state);
+      if (verifyToken(state).purpose !== 'google-oauth') return fail('bad_state');
     } catch {
       return fail('bad_state');
     }
@@ -306,8 +292,13 @@ router.get('/me', authenticateToken, (req, res, next) => {
 
 /* A drawn name is a PNG data URL. Capped because it is user supplied and goes
    in a database row: a 300 by 80 signature is a few kilobytes, so anything
-   approaching this is not a signature. */
-const MAX_SIGNATURE_BYTES = 256 * 1024;
+   approaching this is not a signature.
+
+   Below express.json's own 100KB limit, deliberately. At 256KB this check
+   could never run: the body parser rejected the request first, with its own
+   opaque error, and the test asserting a 413 was passing on express's refusal
+   rather than on anything here. */
+const MAX_SIGNATURE_BYTES = 64 * 1024;
 
 router.put('/signature', authenticateToken, (req, res, next) => {
   try {
