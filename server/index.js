@@ -36,7 +36,8 @@ const allowedOrigins = [
   'http://localhost:5000',
   'http://localhost:5001',
   'http://localhost:4173', // vite preview, i.e. testing a production build locally
-  'https://jeoparody-mk2.vercel.app',
+  'https://jeoparody.andrescruz.xyz', // the canonical domain
+  'https://jeoparody-mk2.vercel.app', // kept: the old URL still resolves
   'https://jeoparody.app',
 ].filter(Boolean);
 

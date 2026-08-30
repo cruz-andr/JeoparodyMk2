@@ -240,7 +240,15 @@ export const useDailyStore = create(
           ? `${correctCount}/${run.questions.length} in ${took}`
           : `${correctCount}/${run.questions.length}`;
 
-        return `Jeoparody ${label} ${dateStr}\n${emoji}\n${tally}\nhttps://jeoparody-mk2.vercel.app${path}${query}`;
+        /* Built from wherever the player is rather than from a domain written
+           into the source. The old hardcoded URL survived a domain change and
+           would have kept sending everyone to the previous address. */
+        const origin =
+          typeof window !== 'undefined' && window.location?.origin
+            ? window.location.origin
+            : 'https://jeoparody.andrescruz.xyz';
+
+        return `Jeoparody ${label} ${dateStr}\n${emoji}\n${tally}\n${origin}${path}${query}`;
       },
 
       shareResults: async (format) => {
