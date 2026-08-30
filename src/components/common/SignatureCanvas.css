@@ -129,28 +129,48 @@
 }
 
 
-/* Undo sits beside Clear. Undo takes back the last stroke; Clear takes back
-   everything, which is why they are not the same button. */
+/* As in the proposal: a quiet line under the pad, Clear on the left and Undo
+   on the right. They are not the same button, so they do not look alike by
+   being two identical chips: Undo takes back the last stroke, Clear takes back
+   everything. */
 .signature-actions {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
 }
 
-.undo-signature-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: var(--text-secondary);
-  padding: 8px 18px;
-  font-size: 0.85rem;
+.signature-action {
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  font-size: 0.82rem;
+  letter-spacing: 0.2px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  transition: color 140ms ease, opacity 140ms ease;
 }
 
-.undo-signature-btn:hover:not(:disabled) {
-  border-color: var(--jeopardy-gold);
+.signature-action:hover:not(:disabled) {
   color: var(--text-primary);
+  text-decoration: underline;
 }
 
-.undo-signature-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.signature-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.signature-action:focus-visible {
+  outline: 2px solid var(--jeopardy-gold-light);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* the old chip treatment no longer applies to either of them */
+.clear-signature-btn {
+  align-self: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
 }

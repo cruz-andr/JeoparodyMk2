@@ -18,6 +18,11 @@ export default function SignatureCanvas({
      numbers. Held in a ref because a point arrives every pointer move and none
      of them should cost a render. */
   const strokesRef = useRef([]);
+  // Shown in the tooltip so the shortcut is discoverable on the right platform.
+  const modifierLabel =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '')
+      ? '\u2318'
+      : 'Ctrl+';
   const [strokeCount, setStrokeCount] = useState(0);
 
   // Initialize canvas with blue background
@@ -168,6 +173,29 @@ export default function SignatureCanvas({
     publish();
   }, [mode, redraw, publish]);
 
+  /* Command Z on a Mac, Control Z everywhere else. Bound to the window rather
+     than the canvas because a canvas is not focusable, so there would be
+     nowhere for the key to land. */
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const key = e.key?.toLowerCase();
+      if (key !== 'z' || e.shiftKey || e.altKey) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+
+      // Never steal undo from something the player is typing into. Their own
+      // text has its own history and the browser handles it better than we do.
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+
+      if (mode !== 'draw' || strokesRef.current.length === 0) return;
+      e.preventDefault();
+      undo();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mode, undo]);
+
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -285,24 +313,25 @@ export default function SignatureCanvas({
       )}
 
       <div className="signature-actions">
-        {mode === 'draw' && (
-          <button
-            type="button"
-            className="undo-signature-btn"
-            onClick={undo}
-            disabled={strokeCount === 0}
-          >
-            Undo
-          </button>
-        )}
         <button
           type="button"
-          className="clear-signature-btn"
+          className="signature-action clear-signature-btn"
           onClick={clearCanvas}
           disabled={!hasContent}
         >
           Clear
         </button>
+        {mode === 'draw' && (
+          <button
+            type="button"
+            className="signature-action undo-signature-btn"
+            onClick={undo}
+            disabled={strokeCount === 0}
+            title={`Undo the last stroke (${modifierLabel}Z)`}
+          >
+            Undo
+          </button>
+        )}
       </div>
     </div>
   );
