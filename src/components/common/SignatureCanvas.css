@@ -127,3 +127,30 @@
   height: 40px;
   max-width: 160px;
 }
+
+
+/* Undo sits beside Clear. Undo takes back the last stroke; Clear takes back
+   everything, which is why they are not the same button. */
+.signature-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.undo-signature-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--text-secondary);
+  padding: 8px 18px;
+  font-size: 0.85rem;
+}
+
+.undo-signature-btn:hover:not(:disabled) {
+  border-color: var(--jeopardy-gold);
+  color: var(--text-primary);
+}
+
+.undo-signature-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

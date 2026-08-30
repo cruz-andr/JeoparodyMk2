@@ -12,6 +12,13 @@ export default function SignatureCanvas({
   const [hasContent, setHasContent] = useState(false);
   const [mode, setMode] = useState('draw'); // 'draw' | 'type'
   const [typedName, setTypedName] = useState('');
+  /* Strokes are kept as points rather than as canvas snapshots so that undo can
+     replay them. A snapshot per stroke would be about 380KB at this size, which
+     is a lot of memory to hold for a signature; a stroke is a few hundred
+     numbers. Held in a ref because a point arrives every pointer move and none
+     of them should cost a render. */
+  const strokesRef = useRef([]);
+  const [strokeCount, setStrokeCount] = useState(0);
 
   // Initialize canvas with blue background
   const initCanvas = useCallback(() => {
@@ -94,7 +101,10 @@ export default function SignatureCanvas({
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
 
-    // Clear canvas when switching modes
+    // Clear canvas when switching modes. The history goes with it, or undo
+    // would bring back strokes from a mode you have since left.
+    strokesRef.current = [];
+    setStrokeCount(0);
     initCanvas();
     setHasContent(false);
     setTypedName('');
@@ -112,6 +122,51 @@ export default function SignatureCanvas({
     setTypedName(name);
     renderTypedName(name);
   };
+
+  /** Repaint the pad from the strokes that survive. */
+  const redraw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    initCanvas();
+    const ctx = canvas.getContext('2d');
+    /* Replayed the way it was drawn, not the way it reads.
+       Live drawing strokes the path again on every pointer move, so the
+       anti-aliased edges darken with each pass. Replaying the whole path in a
+       single stroke produces a visibly lighter line, and an undo that changes
+       what it did not remove is not an undo. */
+    for (const stroke of strokesRef.current) {
+      if (stroke.length === 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      if (stroke.length === 1) {
+        // A tap is a dot, and lineTo on its own paints nothing.
+        ctx.lineTo(stroke[0].x + 0.1, stroke[0].y);
+        ctx.stroke();
+      } else {
+        for (let i = 1; i < stroke.length; i++) {
+          ctx.lineTo(stroke[i].x, stroke[i].y);
+          ctx.stroke();
+        }
+      }
+      ctx.closePath();
+    }
+  }, [initCanvas]);
+
+  const publish = useCallback(() => {
+    if (!onSignatureChange) return;
+    const canvas = canvasRef.current;
+    const empty = strokesRef.current.length === 0;
+    onSignatureChange(empty ? null : canvas.toDataURL('image/png'));
+  }, [onSignatureChange]);
+
+  const undo = useCallback(() => {
+    if (mode !== 'draw' || strokesRef.current.length === 0) return;
+    strokesRef.current.pop();
+    setStrokeCount(strokesRef.current.length);
+    setHasContent(strokesRef.current.length > 0);
+    redraw();
+    publish();
+  }, [mode, redraw, publish]);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
@@ -140,6 +195,7 @@ export default function SignatureCanvas({
 
     ctx.beginPath();
     ctx.moveTo(x, y);
+    strokesRef.current.push([{ x, y }]);
     setIsDrawing(true);
     setHasContent(true);
   };
@@ -154,6 +210,7 @@ export default function SignatureCanvas({
 
     ctx.lineTo(x, y);
     ctx.stroke();
+    strokesRef.current[strokesRef.current.length - 1]?.push({ x, y });
   };
 
   const stopDrawing = () => {
@@ -163,15 +220,14 @@ export default function SignatureCanvas({
     const ctx = canvas.getContext('2d');
     ctx.closePath();
     setIsDrawing(false);
+    setStrokeCount(strokesRef.current.length);
 
-    // Export signature
-    if (onSignatureChange) {
-      const dataUrl = canvas.toDataURL('image/png');
-      onSignatureChange(dataUrl);
-    }
+    publish();
   };
 
   const clearCanvas = () => {
+    strokesRef.current = [];
+    setStrokeCount(0);
     initCanvas();
     setHasContent(false);
     setTypedName('');
@@ -228,14 +284,26 @@ export default function SignatureCanvas({
         />
       )}
 
-      <button
-        type="button"
-        className="clear-signature-btn"
-        onClick={clearCanvas}
-        disabled={!hasContent}
-      >
-        Clear
-      </button>
+      <div className="signature-actions">
+        {mode === 'draw' && (
+          <button
+            type="button"
+            className="undo-signature-btn"
+            onClick={undo}
+            disabled={strokeCount === 0}
+          >
+            Undo
+          </button>
+        )}
+        <button
+          type="button"
+          className="clear-signature-btn"
+          onClick={clearCanvas}
+          disabled={!hasContent}
+        >
+          Clear
+        </button>
+      </div>
     </div>
   );
 }
