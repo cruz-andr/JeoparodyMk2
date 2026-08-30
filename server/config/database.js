@@ -51,8 +51,36 @@ export function getDatabase() {
   return db;
 }
 
+
+/**
+ * Add a column to a table that already exists.
+ *
+ * CREATE TABLE IF NOT EXISTS does nothing to a table that is already there, so
+ * a new column in the schema above never reaches a database that has been
+ * running. That matters now the file lives on a volume and survives deploys:
+ * the production users table predates every column added from here on.
+ *
+ * Idempotent, so it is safe to run on every boot.
+ */
+export function addColumnIfMissing(database, table, column, definition) {
+  const existing = database.prepare(`PRAGMA table_info(${table})`).all();
+  if (existing.some((c) => c.name === column)) return false;
+  database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  return true;
+}
+
 export async function initializeDatabase() {
   const database = getDatabase();
+
+  // Columns added after the first release. See addColumnIfMissing.
+  const migrations = [
+    // Sign in with Google: the subject claim, stable for the life of the account.
+    ['users', 'google_id', 'TEXT'],
+    // The drawn name, as a PNG data URL. This is what other players see.
+    ['users', 'signature', 'TEXT'],
+    // Google's profile picture, when they sign in that way.
+    ['users', 'avatar_url', 'TEXT'],
+  ];
 
   // Create tables
   database.exec(`
@@ -131,6 +159,26 @@ export async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
     CREATE INDEX IF NOT EXISTS idx_highscores_score ON highscores(score DESC);
   `);
+
+  for (const [table, column, definition] of migrations) {
+    try {
+      if (addColumnIfMissing(database, table, column, definition)) {
+        console.log(`[db] added ${table}.${column}`);
+      }
+    } catch (err) {
+      console.error(`[db] could not add ${table}.${column}:`, err.message);
+    }
+  }
+
+  /* Two accounts must never share a Google identity. A UNIQUE column will not
+     do: google_id is null for everyone who signed up with a password, and
+     SQLite treats each null as distinct, so the constraint would be pointless
+     for them and a nuisance to reason about. A partial index constrains only
+     the rows that actually have one. */
+  database.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS users_google_id ' +
+    'ON users(google_id) WHERE google_id IS NOT NULL'
+  );
 
   return database;
 }
