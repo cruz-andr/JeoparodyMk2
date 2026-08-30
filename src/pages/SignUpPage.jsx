@@ -20,12 +20,17 @@ export default function SignUpPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [reveal, setReveal] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const met = RULES.filter((r) => r.met(password));
-  const ready = email.trim().length > 3 && met.length === RULES.length && !busy;
+  const matches = confirm.length > 0 && confirm === password;
+  // Only complain once they have actually typed something to compare.
+  const mismatch = confirm.length > 0 && confirm !== password;
+  const ready =
+    email.trim().length > 3 && met.length === RULES.length && matches && !busy;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,14 +77,12 @@ export default function SignUpPage() {
           />
           <button
             type="button" className="auth-reveal" onClick={() => setReveal((r) => !r)}
-            aria-label={reveal ? 'Hide password' : 'Show password'}
+            aria-label={reveal ? 'Hide both passwords' : 'Show both passwords'}
           >
             {reveal ? 'Hide' : 'Show'}
           </button>
         </div>
 
-        {/* No confirm field: it doubles the typing and catches almost nothing,
-            because people paste the same mistake twice. Show and reset do more. */}
         <ul className="auth-reqs">
           {RULES.map((rule) => {
             const ok = rule.met(password);
@@ -91,6 +94,33 @@ export default function SignUpPage() {
             );
           })}
         </ul>
+
+        <label className="auth-field-label" htmlFor="confirm">Confirm password</label>
+        <div className="auth-password-wrap">
+          <input
+            id="confirm"
+            className={`auth-input ${mismatch ? 'auth-input-bad' : ''}`}
+            type={reveal ? 'text' : 'password'}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+            aria-invalid={mismatch}
+            aria-describedby="confirm-note"
+            required
+          />
+        </div>
+        {/* Said the moment it stops matching, not after the form is rejected. */}
+        <p
+          id="confirm-note"
+          className={`auth-match ${mismatch ? 'bad' : matches ? 'ok' : ''}`}
+          role={mismatch ? 'alert' : undefined}
+        >
+          {mismatch
+            ? 'These do not match yet.'
+            : matches
+              ? 'Both match.'
+              : 'Type it once more.'}
+        </p>
 
         <button className="auth-submit" type="submit" disabled={!ready}>
           {busy ? 'Creating…' : 'Continue'}

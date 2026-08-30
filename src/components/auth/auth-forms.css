@@ -157,3 +157,18 @@
   font-size: 0.85rem;
   color: #f0b7be;
 }
+
+.auth-input-bad,
+.auth-input-bad:focus {
+  border-color: var(--color-error);
+}
+
+/* Sits under the confirm field and answers before the form is submitted. */
+.auth-match {
+  margin: -8px 0 16px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.auth-match.ok { color: var(--color-success); }
+.auth-match.bad { color: var(--color-error); }
