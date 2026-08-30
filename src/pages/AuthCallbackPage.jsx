@@ -34,7 +34,14 @@ export default function AuthCallbackPage() {
     window.history.replaceState(null, '', window.location.pathname);
 
     adoptToken(token)
-      .then((user) => navigate(user?.signature ? '/menu' : '/account/name?new=1', { replace: true }))
+      /* Google hands over the name on the account, which is not one anybody
+         chose here, so a first-time arrival picks a username before anything
+         else. Someone coming back already has both and goes straight in. */
+      .then((user) => {
+        if (!user?.username) return navigate('/account/username?new=1', { replace: true });
+        if (!user?.signature) return navigate('/account/name?new=1', { replace: true });
+        return navigate('/menu', { replace: true });
+      })
       .catch(() => setFailed(true));
   }, [adoptToken, navigate]);
 

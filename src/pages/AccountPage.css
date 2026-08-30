@@ -102,3 +102,5 @@
 }
 
 .account-danger-solid:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.account-unset { color: var(--text-muted); }

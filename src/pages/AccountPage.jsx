@@ -77,6 +77,15 @@ export default function AccountPage() {
       </section>
 
       <dl className="account-rows">
+        <div>
+          <dt>Username</dt>
+          <dd>
+            {user.username ?? <span className="account-unset">Not chosen</span>}{' '}
+            <Link className="account-link" to="/account/username">
+              {user.username ? 'Change' : 'Pick one'}
+            </Link>
+          </dd>
+        </div>
         <div><dt>Email</dt><dd>{user.email ?? 'None'}</dd></div>
         <div>
           <dt>Signed in with</dt>

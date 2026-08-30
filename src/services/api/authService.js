@@ -54,6 +54,13 @@ export const login = (email, password) =>
 
 export const me = (token) => call('/me', { token });
 
+/** Asked while typing, so a name is not refused only after being committed to. */
+export const checkUsername = (username) =>
+  call(`/username-available?username=${encodeURIComponent(username)}`);
+
+export const saveUsername = (token, username) =>
+  call('/username', { method: 'PUT', token, body: { username } });
+
 export const saveSignature = (token, signature) =>
   call('/signature', { method: 'PUT', token, body: { signature } });
 
@@ -88,6 +95,10 @@ export function readableError(error) {
       return 'There is already an account with that email.';
     case 'INVALID_CREDENTIALS':
       return 'That email and password do not match.';
+    case 'USERNAME_TAKEN':
+      return 'Someone claimed that one first. Try another.';
+    case 'INVALID_USERNAME':
+      return error.message;
     case 'SIGNATURE_TOO_LARGE':
       return 'That drawing is too large to save.';
     case 'OFFLINE':

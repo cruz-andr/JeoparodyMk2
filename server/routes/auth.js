@@ -18,6 +18,11 @@ router.post('/register', async (req, res, next) => {
 
     const db = getDatabase();
 
+    if (username) {
+      const problem = usernameProblem(username);
+      if (problem) throw new AppError(problem, 400, 'INVALID_USERNAME');
+    }
+
     // Check if email or username already exists
     const existing = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(email, username);
     if (existing) {
@@ -337,6 +342,82 @@ router.delete('/account', authenticateToken, (req, res, next) => {
     const result = db.prepare('DELETE FROM users WHERE id = ?').run(req.user.userId);
     if (result.changes === 0) throw new AppError('Account not found', 404, 'NOT_FOUND');
     res.json({ deleted: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Usernames
+// ---------------------------------------------------------------------------
+
+/* Long enough to be a name, short enough to fit on a podium. Letters, digits
+   and underscore only: anything else invites lookalike characters that let one
+   player pass for another. */
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
+
+/* Words that would let someone pass for the game itself or for a person
+   answering for it. */
+const RESERVED = new Set([
+  'admin', 'administrator', 'root', 'system', 'moderator', 'mod', 'staff',
+  'support', 'help', 'jeoparody', 'jeopardy', 'host', 'official', 'me', 'you',
+  'null', 'undefined', 'anonymous', 'guest', 'player', 'deleted',
+]);
+
+/** Why this username cannot be used, or null if it can. */
+export function usernameProblem(username) {
+  if (typeof username !== 'string' || !username.trim()) return 'Pick a username.';
+  const value = username.trim();
+  if (value.length < 3) return 'At least 3 characters.';
+  if (value.length > 20) return 'At most 20 characters.';
+  if (!USERNAME_PATTERN.test(value)) return 'Letters, numbers and underscores only.';
+  if (RESERVED.has(value.toLowerCase())) return 'That one is reserved.';
+  return null;
+}
+
+/* Compared without case, so Ada and ada cannot both exist: two names that read
+   the same are two ways to be mistaken for someone else. */
+function usernameTaken(db, username, exceptUserId = null) {
+  const row = db
+    .prepare('SELECT id FROM users WHERE username IS NOT NULL AND lower(username) = lower(?)')
+    .get(username.trim());
+  return Boolean(row) && row.id !== exceptUserId;
+}
+
+router.get('/username-available', (req, res, next) => {
+  try {
+    const username = String(req.query.username ?? '');
+    const problem = usernameProblem(username);
+    if (problem) return res.json({ available: false, reason: problem });
+
+    const db = getDatabase();
+    if (usernameTaken(db, username)) {
+      return res.json({ available: false, reason: 'That one is taken.' });
+    }
+    res.json({ available: true, reason: null });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/username', authenticateToken, (req, res, next) => {
+  try {
+    const username = String(req.body?.username ?? '').trim();
+    const problem = usernameProblem(username);
+    if (problem) throw new AppError(problem, 400, 'INVALID_USERNAME');
+
+    const db = getDatabase();
+    /* Checked here as well as in the availability call, because the two are
+       separate requests and someone else can take the name in between. */
+    if (usernameTaken(db, username, req.user.userId)) {
+      throw new AppError('That one is taken.', 409, 'USERNAME_TAKEN');
+    }
+
+    db.prepare('UPDATE users SET username = ?, display_name = ? WHERE id = ?')
+      .run(username, username, req.user.userId);
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.userId);
+    res.json({ user: publicUser(user) });
   } catch (error) {
     next(error);
   }

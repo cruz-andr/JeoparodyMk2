@@ -38,14 +38,13 @@ export default function SignUpPage() {
     setBusy(true);
     setError(null);
     try {
-      // The name shown on a podium is the drawing, made on the next screen.
-      // Until then the part before the @ is a reasonable stand-in.
+      // A stand-in until the next screen, where a username is chosen.
       await register({
         email: email.trim(),
         password,
         displayName: email.trim().split('@')[0],
       });
-      navigate('/account/name?new=1');
+      navigate('/account/username?new=1');
     } catch (err) {
       setError(readableError(err));
       setBusy(false);

@@ -92,6 +92,14 @@ export const useUserStore = create(
         }
       },
 
+      saveUsername: async (username) => {
+        const { token } = get();
+        if (!token) return null;
+        const { user } = await authApi.saveUsername(token, username);
+        set({ user });
+        return user;
+      },
+
       saveSignature: async (signature) => {
         const { token, user } = get();
         if (!token) return null;

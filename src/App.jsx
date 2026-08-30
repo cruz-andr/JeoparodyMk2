@@ -23,6 +23,7 @@ const SignInPage = lazy(() => import('./pages/SignInPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const AccountNamePage = lazy(() => import('./pages/AccountNamePage'));
+const AccountUsernamePage = lazy(() => import('./pages/AccountUsernamePage'));
 
 function PageLoader() {
   return (
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/account', element: <AccountPage /> },
   { path: '/account/name', element: <AccountNamePage /> },
+  { path: '/account/username', element: <AccountUsernamePage /> },
 ]);
 
 function App() {

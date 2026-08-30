@@ -226,6 +226,72 @@ await test('a real session token is not accepted as an OAuth state', async () =>
   assert.match(r.headers.get('location'), /\/signin\?error=bad_state/);
 });
 
+let token2 = null;
+await test('a second account exists to test names against', async () => {
+  const r = await api('/api/auth/register', {
+    method: 'POST',
+    body: { email: 'ada@example.com', password: 'hunter22A', displayName: 'Ada' },
+  });
+  assert.equal(r.status, 201);
+  token2 = (await r.json()).token;
+});
+
+// --- usernames ---------------------------------------------------------
+
+await test('a username can be claimed and comes back with the account', async () => {
+  const r = await api('/api/auth/username', { method: 'PUT', token: token2, body: { username: 'ada_l' } });
+  assert.equal(r.status, 200);
+  const { user } = await r.json();
+  assert.equal(user.username, 'ada_l');
+  assert.equal(user.displayName, 'ada_l', 'the name shown follows the username');
+});
+
+await test('availability answers before anyone commits', async () => {
+  const taken = await (await api('/api/auth/username-available?username=ada_l')).json();
+  assert.equal(taken.available, false);
+  assert.equal(taken.reason, 'That one is taken.');
+
+  const free = await (await api('/api/auth/username-available?username=freddie99')).json();
+  assert.equal(free.available, true);
+});
+
+await test('case does not create a second person', async () => {
+  // Ada and ADA reading the same is exactly how one player passes for another.
+  const check = await (await api('/api/auth/username-available?username=ADA_L')).json();
+  assert.equal(check.available, false);
+
+  const r = await api('/api/auth/username', { method: 'PUT', token, body: { username: 'Ada_L' } });
+  assert.equal(r.status, 409);
+});
+
+await test('shapes that are not names are refused, each with a reason', async () => {
+  const cases = [
+    ['ab', 'At least 3 characters.'],
+    ['a'.repeat(21), 'At most 20 characters.'],
+    ['has space', 'Letters, numbers and underscores only.'],
+    ['emoji\u{1F642}', 'Letters, numbers and underscores only.'],
+    ['semi;colon', 'Letters, numbers and underscores only.'],
+    ['admin', 'That one is reserved.'],
+    ['Guest', 'That one is reserved.'],
+    ['', 'Pick a username.'],
+  ];
+  for (const [value, reason] of cases) {
+    const r = await api('/api/auth/username', { method: 'PUT', token, body: { username: value } });
+    assert.equal(r.status, 400, `${JSON.stringify(value)} was accepted`);
+    const body = await r.json();
+    assert.equal(body.error.message, reason, `wrong reason for ${JSON.stringify(value)}`);
+  }
+});
+
+await test('keeping your own username is not a clash with yourself', async () => {
+  const r = await api('/api/auth/username', { method: 'PUT', token: token2, body: { username: 'ada_l' } });
+  assert.equal(r.status, 200);
+});
+
+await test('claiming one needs a token', async () => {
+  assert.equal((await api('/api/auth/username', { method: 'PUT', body: { username: 'nobody1' } })).status, 401);
+});
+
 await test('deleting the account really deletes it', async () => {
   assert.equal((await api('/api/auth/account', { method: 'DELETE', token })).status, 200);
   // the token is still valid, but there is nothing behind it any more
