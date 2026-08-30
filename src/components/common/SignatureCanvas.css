@@ -1,7 +1,24 @@
+/* The canvas has a fixed pixel width, because that width is also its bitmap
+   size, so in a stretch column it sat against the left edge. Centred here,
+   with the rows around it still spanning the full width so Clear and Undo stay
+   at opposite ends rather than collapsing together. */
 .signature-canvas-container {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--spacing-sm);
+}
+
+.signature-canvas-container > .signature-label,
+.signature-canvas-container > .signature-mode-toggle,
+.signature-canvas-container > .signature-text-input,
+.signature-canvas-container > .signature-actions {
+  width: 100%;
+}
+
+.signature-canvas {
+  display: block;
+  max-width: 100%;
 }
 
 .signature-label {
