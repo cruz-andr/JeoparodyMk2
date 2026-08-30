@@ -91,6 +91,14 @@ export async function initializeDatabase() {
       email TEXT UNIQUE,
       password_hash TEXT,
       is_guest INTEGER DEFAULT 0,
+      /* Three names, three jobs, and they are not interchangeable:
+           username     the handle. Unique, typed, how you are found and added.
+           signature    the drawing. What players actually see on a podium.
+           display_name the text label, for rows that cannot hold an image:
+                        leaderboards, room lists, alt text. For an account it
+                        mirrors the username. Guests have only this one, since
+                        they never pick a handle, which is why the column stays
+                        NOT NULL and cannot simply be dropped. */
       display_name TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       last_active_at TEXT DEFAULT (datetime('now'))

@@ -104,3 +104,19 @@
 .account-danger-solid:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .account-unset { color: var(--text-muted); }
+
+.account-hint {
+  margin: -2px 0 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Says what the row is for, without turning the label into a sentence. */
+.account-dt-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.68rem;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  color: rgba(152, 160, 204, 0.72);
+}

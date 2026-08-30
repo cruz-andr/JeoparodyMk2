@@ -8,10 +8,14 @@ import '../components/auth/auth-forms.css';
 /**
  * Choose a username.
  *
- * Both ways in arrive here: signing up with an email and signing in with
- * Google, because Google hands over whatever it has on file and that is not a
- * name you chose. It is the name on the leaderboard, so it is asked for once
- * and can be changed later from the account screen.
+ * Two names, two jobs. The username is the handle: unique, typed, and how
+ * somebody finds you or adds you as a friend. The drawing made on the next
+ * screen is the name people SEE, on your podium when you buzz. The username
+ * stands in wherever a drawing cannot go, which is a text leaderboard row and
+ * the alt text on the drawing itself.
+ *
+ * Both ways in arrive here, since Google hands over whatever name it has on
+ * file and that is not one you chose.
  */
 export default function AccountUsernamePage() {
   const navigate = useNavigate();
@@ -83,9 +87,9 @@ export default function AccountUsernamePage() {
   return (
     <AuthLayout
       title={isNew ? 'Pick a username' : 'Change your username'}
-      subtitle="This is the name on the leaderboard."
+      subtitle="How people find you. Not what they see."
       pitch={'One board.\nEveryone on it.'}
-      pitchLine="Your username is how you appear beside everyone else who played today."
+      pitchLine="Unique to you, so a friend can find you by typing it. You draw the name people see next."
     >
       <form onSubmit={handleSubmit} noValidate>
         {error && <div className="auth-error" role="alert">{error}</div>}

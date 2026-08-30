@@ -56,8 +56,15 @@ export default function AccountPage() {
 
       <section className="account-block">
         <p className="auth-field-label">Your name</p>
+        <p className="account-hint">What players see when you buzz in.</p>
+        {/* The username is the alt text: the same identity in words, which is
+            exactly what a screen reader needs in place of a drawing. */}
         {user.signature ? (
-          <img className="account-signature" src={user.signature} alt="The name you drew" />
+          <img
+            className="account-signature"
+            src={user.signature}
+            alt={user.username ? `${user.username}, drawn` : 'The name you drew'}
+          />
         ) : (
           <p className="account-empty">You have not drawn one yet.</p>
         )}
@@ -78,7 +85,7 @@ export default function AccountPage() {
 
       <dl className="account-rows">
         <div>
-          <dt>Username</dt>
+          <dt>Username<span className="account-dt-hint">how people find you</span></dt>
           <dd>
             {user.username ?? <span className="account-unset">Not chosen</span>}{' '}
             <Link className="account-link" to="/account/username">
