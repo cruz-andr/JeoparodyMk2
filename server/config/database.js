@@ -93,12 +93,18 @@ export async function initializeDatabase() {
       is_guest INTEGER DEFAULT 0,
       /* Three names, three jobs, and they are not interchangeable:
            username     the handle. Unique, typed, how you are found and added.
-           signature    the drawing. What players actually see on a podium.
-           display_name the text label, for rows that cannot hold an image:
-                        leaderboards, room lists, alt text. For an account it
-                        mirrors the username. Guests have only this one, since
-                        they never pick a handle, which is why the column stays
-                        NOT NULL and cannot simply be dropped. */
+           signature    the drawing. What players actually see, everywhere a
+                        player is shown: the lobby, the podium, Quickplay.
+                        Multiplayer will not let you join without one.
+           display_name text, and it is read far less than it looks. Every
+                        player list renders the drawing; this is the alt text
+                        on it, the host control panel's plain list, and the
+                        fallback wherever a drawing is missing. Guests are
+                        given one, which is why it stays NOT NULL.
+
+         There is no leaderboard showing other players: the highscores page is
+         your own local stats, and the /api/leaderboard routes are called by
+         nothing. Worth knowing before building anything that assumes one. */
       display_name TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now')),
       last_active_at TEXT DEFAULT (datetime('now'))
