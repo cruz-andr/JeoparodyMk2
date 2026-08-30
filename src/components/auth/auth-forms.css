@@ -106,7 +106,7 @@
   border: none;
   background: var(--jeopardy-gold);
   color: #0b1030;
-  font-family: var(--font-display);
+  font-family: var(--font-board);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -116,6 +116,11 @@
 
 .auth-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Set like the primary, because they are a pair and sit against each other.
+   It only set a background and a border, so it fell through to the global
+   button rule and came out in the body face while the one above it was in the
+   display face. Being the quieter of the two is the border's job, not a
+   different typeface's. */
 .auth-secondary {
   width: 100%;
   margin-top: 10px;
@@ -124,7 +129,16 @@
   background: transparent;
   border: 1px solid rgba(242, 236, 224, 0.16);
   color: var(--text-primary);
+  font-family: var(--font-board);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 1rem;
   cursor: pointer;
+}
+
+.auth-secondary:hover {
+  border-color: rgba(242, 236, 224, 0.34);
 }
 
 .auth-foot {
