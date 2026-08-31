@@ -43,6 +43,10 @@
   gap: 20px;
   padding: 18px 20px;
   align-items: start;
+  /* Without this the two stacked rows share the leftover height between them
+     on a phone, which opened a gap the size of a thumb between the rail and
+     the board. */
+  align-content: start;
   min-height: 0;
 }
 
@@ -297,21 +301,63 @@ input.hl-delta:focus { outline: 2px solid var(--jeopardy-gold); outline-offset: 
 
 /* --------------------------------------------------------------- phone */
 
-/* One breakpoint. On a phone the board is a thing you scroll past and the rail
-   is the whole point, so the rail comes first. */
+/* A host on a phone is standing up running a room, not reading a screen. So
+   the phone shows one thing at a time: the board when there is a clue to pick,
+   and the clue when there is one open. */
 @media (max-width: 900px) {
   .hl-main {
     grid-template-columns: minmax(0, 1fr);
-    padding: 14px;
-    gap: 14px;
+    padding: 12px;
+    gap: 12px;
   }
-  .hl-rail { position: static; order: -1; }
-  /* On a phone the board is scrolled past, not filled, so it goes back to the
-     shared size. */
-  .hl-board .game-board { --cell-height: unset; }
-  .hl-top { flex-wrap: wrap; gap: 8px; }
-  .hl-scores { gap: 14px; padding: 10px 14px; }
-  button.hl-do { padding: 16px; font-size: 0.92rem; }
+
+  /* The rail is the screen, so it loses the card it sits in on a desktop. */
+  .hl-rail {
+    position: static;
+    order: -1;
+    padding: 0;
+    background: none;
+    gap: 16px;
+  }
+
+  .hl.is-clue .hl-board { display: none; }
+
+  /* No clue open: the board is the only thing to do, so it takes the height
+     it has instead of sitting at its default size over an empty half screen.
+     All three variables, because the shared board swaps between them by width
+     and overriding only the first one changed nothing here. */
+  .hl-board .game-board {
+    --cell-height: var(--hl-cell);
+    --cell-height-tablet: var(--hl-cell);
+    --cell-height-mobile: var(--hl-cell);
+  }
+  .hl-board { --hl-cell: clamp(52px, calc((100vh - 340px) / 5), 110px); }
+
+  /* The category names shrink with it, or a five row board plus a tall header
+     is taller than the screen again. */
+  .hl-board .category-header { min-height: 46px; padding: 8px 3px; }
+
+  .hl-top { padding: 10px 14px; gap: 10px; }
+  .hl-where { font-size: 0.64rem; letter-spacing: 0.8px; }
+
+  .hl-stage { font-size: 1.15rem; }
+  .hl-clue-text { font-size: 1.1rem; }
+  .hl-answer { font-size: 1.3rem; }
+
+  /* Big enough to hit without looking, which is the whole job on a phone. */
+  button.hl-do { padding: 18px; font-size: 0.95rem; }
   button.hl-right,
-  button.hl-wrong { padding: 18px 10px; }
+  button.hl-wrong { padding: 22px 10px; font-size: 0.9rem; }
+
+  /* One row that scrolls sideways rather than three that wrap. The strip stays
+     a fixed height, so the clue never moves when a player joins. */
+  .hl-scores {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 18px;
+    padding: 10px 14px;
+    scrollbar-width: none;
+  }
+  .hl-scores::-webkit-scrollbar { display: none; }
+  .hl-score { flex: 0 0 auto; }
 }

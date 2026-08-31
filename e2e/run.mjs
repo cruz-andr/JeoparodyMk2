@@ -111,6 +111,9 @@ for (const suite of suites) {
       console.log(c === 0 ? 'passed' : 'FAILED');
       /* A suite that prints its own diagnosis on the way down is worth more
          than six greppable lines, so ONLY=<suite> shows everything it said. */
+      /* With ONLY set you are looking at one suite on purpose, so its own
+         output is worth seeing whether or not it passed. */
+      if (only && c === 0) console.log(out);
       if (c !== 0) {
         console.log(only
           ? out

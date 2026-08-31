@@ -141,7 +141,9 @@ export default function HostLiveScreen({
   };
 
   return (
-    <div className="hl">
+    /* is-clue drives one thing at a time on a phone: with a clue open the
+       board is not needed and cannot be picked from anyway, so it goes. */
+    <div className={`hl ${currentQuestion ? 'is-clue' : ''}`}>
       <header className="hl-top">
         <button className="plain-btn quiet-action hl-leave" onClick={onLeave}>
           &lsaquo; End the game
