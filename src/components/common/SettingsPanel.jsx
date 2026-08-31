@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useSettingsStore } from '../../stores';
 import { QUESTION_TIME_LIMITS, ANSWER_TIME_LIMITS } from '../../stores/settingsStore';
-import './SettingsModal.css';
+import './SettingsPanel.css';
 
 /**
- * Every setting, in one searchable place.
+ * Every setting, without deciding where it is shown.
+ *
+ * This was a modal. Settings now live inside the profile as a page, and a guest
+ * still reaches them directly, so the list cannot assume a container.
+ *
  *
  * There were three separate settings surfaces with overlapping and different
  * subsets, which is how five settings ended up being collected and then read by
@@ -44,7 +47,14 @@ const PRESETS = [
   { id: 'speed', label: 'Speed Round', description: '10s timer, no Final Jeopardy' },
 ];
 
-export default function SettingsModal({ isOpen, onClose }) {
+/**
+ * Every setting, without deciding where it is shown.
+ *
+ * It was only ever a modal. Settings now live inside the profile as a page, and
+ * a guest still reaches them directly, so the list itself cannot assume a
+ * container. Both surfaces render this.
+ */
+export default function SettingsPanel() {
   const s = useSettingsStore();
   const [query, setQuery] = useState('');
 
@@ -166,83 +176,61 @@ export default function SettingsModal({ isOpen, onClose }) {
         .filter((g) => g.items.length)
     : groups;
 
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
-      <motion.div
-        className="settings-overlay"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
-        <motion.div
-          className="settings-modal"
-          initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <header className="settings-header">
-            <h2>Settings</h2>
-            <button className="close-btn" onClick={onClose} aria-label="Close settings">
-              &times;
-            </button>
-          </header>
+    <>
+      <div className="settings-search">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search settings"
+          aria-label="Search settings"
+          autoComplete="off"
+        />
+      </div>
 
-          <div className="settings-search">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search settings"
-              aria-label="Search settings"
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="settings-content">
-            {!needle && (
-              <section className="settings-section">
-                <h3>Quick Presets</h3>
-                <div className="presets-grid">
-                  {PRESETS.map((p) => (
-                    <button key={p.id} className="preset-btn" onClick={() => s.loadPreset(p.id)}>
-                      <span className="preset-label">{p.label}</span>
-                      <span className="preset-description">{p.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {shown.map((g) => (
-              <section className="settings-section" key={g.id}>
-                <h3>{g.title}</h3>
-                <div className="toggle-group">
-                  {g.items.map((i) => (
-                    <div className="setting-row" key={i.id}>
-                      {i.control}
-                      {i.hint && <p className="setting-hint">{i.hint}</p>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-
-            {needle && !shown.length && (
-              <p className="settings-empty">Nothing matches &ldquo;{query}&rdquo;.</p>
-            )}
-
-            {!needle && (
-              <section className="settings-section">
-                <button className="preset-btn" onClick={s.resetToDefaults}>
-                  <span className="preset-label">Reset to defaults</span>
-                  <span className="preset-description">Puts every setting back</span>
+      <div className="settings-content">
+        {!needle && (
+          <section className="settings-section">
+            <h3>Quick Presets</h3>
+            <div className="presets-grid">
+              {PRESETS.map((p) => (
+                <button key={p.id} className="preset-btn" onClick={() => s.loadPreset(p.id)}>
+                  <span className="preset-label">{p.label}</span>
+                  <span className="preset-description">{p.description}</span>
                 </button>
-              </section>
-            )}
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {shown.map((g) => (
+          <section className="settings-section" key={g.id}>
+            <h3>{g.title}</h3>
+            <div className="toggle-group">
+              {g.items.map((i) => (
+                <div className="setting-row" key={i.id}>
+                  {i.control}
+                  {i.hint && <p className="setting-hint">{i.hint}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {needle && !shown.length && (
+          <p className="settings-empty">Nothing matches &ldquo;{query}&rdquo;.</p>
+        )}
+
+        {!needle && (
+          <section className="settings-section">
+            <button className="preset-btn" onClick={s.resetToDefaults}>
+              <span className="preset-label">Reset to defaults</span>
+              <span className="preset-description">Puts every setting back</span>
+            </button>
+          </section>
+        )}
+      </div>
+    </>
   );
 }

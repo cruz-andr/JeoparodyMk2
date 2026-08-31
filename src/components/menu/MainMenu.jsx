@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SettingsModal from '../common/SettingsModal';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useUserStore } from '../../stores';
 import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
@@ -39,7 +38,6 @@ function formatDate(dateString) {
 
 export default function MainMenu() {
   const navigate = useNavigate();
-  const [showSettings, setShowSettings] = useState(false);
   const [code, setCode] = useState('');
   const [today, setToday] = useState(null);
   const codeInputRef = useRef(null);
@@ -50,13 +48,41 @@ export default function MainMenu() {
   const signature = useUserStore((s) => s.user?.signature);
   const isAuthenticated = useUserStore((s) => s.isAuthenticated);
   const restoreSession = useUserStore((s) => s.restoreSession);
+  const logout = useUserStore((s) => s.logout);
   const [showIdentity, setShowIdentity] = useState(false);
+  const identityRef = useRef(null);
+  const chipRef = useRef(null);
 
   const boardStreak = stats.board.currentStreak;
   const sixerStreak = stats.sixer.currentStreak;
   // The Board's own best, for the week in progress. Read through the helper so
   // a value left over from last week is not shown as if it still counted.
   const boardWeekBest = currentWeekBest(stats.board, toDateString());
+
+  /* A menu that only closes by clicking the thing that opened it is not a menu.
+     Both ways out are expected: clicking away, and Escape. Escape also puts the
+     focus back on the chip, or a keyboard user is left nowhere. */
+  useEffect(() => {
+    if (!showIdentity) return undefined;
+
+    const onPointerDown = (e) => {
+      if (!identityRef.current?.contains(e.target)) setShowIdentity(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      setShowIdentity(false);
+      chipRef.current?.focus();
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showIdentity]);
 
   /* A stored token can have expired, or belong to an account since deleted.
      Ask once on arrival rather than showing someone a name they cannot use. */
@@ -116,12 +142,13 @@ export default function MainMenu() {
           </span>
           <span className="menu-divider" />
           {/* Guest used to be a word that did nothing. It is the way in now. */}
-          <div className="menu-identity-wrap">
+          <div className="menu-identity-wrap" ref={identityRef}>
             <button
+              ref={chipRef}
               className="menu-player"
-              onClick={() => (isAuthenticated ? navigate('/account') : setShowIdentity((v) => !v))}
-              aria-haspopup={isAuthenticated ? undefined : 'menu'}
-              aria-expanded={isAuthenticated ? undefined : showIdentity}
+              onClick={() => setShowIdentity((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={showIdentity}
             >
               {signature ? (
                 <img className="menu-signature" src={signature} alt={displayName || 'Your account'} />
@@ -130,20 +157,33 @@ export default function MainMenu() {
               )}
             </button>
 
-            {showIdentity && !isAuthenticated && (
+            {showIdentity && (
               <div className="menu-identity-menu" role="menu">
-                <button role="menuitem" onClick={() => navigate('/signup')}>
-                  Create an account
-                </button>
-                <button role="menuitem" onClick={() => navigate('/signin')}>
-                  Sign in
-                </button>
-                <button
-                  role="menuitem" className="quiet"
-                  onClick={() => setShowIdentity(false)}
-                >
-                  Keep playing as a guest
-                </button>
+                {isAuthenticated ? (
+                  <>
+                    <button role="menuitem" onClick={() => navigate('/profile')}>Profile</button>
+                    <button role="menuitem" onClick={() => navigate('/settings')}>Settings</button>
+                    <button role="menuitem" onClick={() => navigate('/account')}>Account</button>
+                    <div className="menu-identity-sep" />
+                    <button role="menuitem" className="quiet" onClick={() => { logout(); setShowIdentity(false); }}>
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button role="menuitem" onClick={() => navigate('/signup')}>
+                      Create an account
+                    </button>
+                    <button role="menuitem" onClick={() => navigate('/signin')}>Sign in</button>
+                    <div className="menu-identity-sep" />
+                    {/* A guest has settings but no profile, so the way in cannot
+                        be through one. They keep a direct route. */}
+                    <button role="menuitem" onClick={() => navigate('/settings')}>Settings</button>
+                    <button role="menuitem" className="quiet" onClick={() => setShowIdentity(false)}>
+                      Keep playing as a guest
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -152,21 +192,6 @@ export default function MainMenu() {
             onClick={() => navigate('/highscores')}
           >
             Highscores
-          </button>
-          <button
-            className="menu-icon-btn"
-            onClick={() => setShowSettings(true)}
-            aria-label="Settings"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.4" stroke="currentColor" strokeWidth="1.8" />
-              <path
-                d="M12 2.5v3.2M12 18.3v3.2M4.5 4.5l2.3 2.3M17.2 17.2l2.3 2.3M2.5 12h3.2M18.3 12h3.2M4.5 19.5l2.3-2.3M17.2 6.8l2.3-2.3"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
           </button>
         </div>
       </header>
@@ -289,8 +314,6 @@ export default function MainMenu() {
           Join &rarr;
         </button>
       </form>
-
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }
