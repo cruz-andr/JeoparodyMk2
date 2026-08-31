@@ -143,6 +143,17 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
       await api.evaluate(`document.querySelector(${JSON.stringify(sel)})
         .dispatchEvent(new Event('change', { bubbles: true }))`);
     },
+    /* A real pointer move, so CSS :hover actually applies. A synthetic
+       mouseover event does not: the browser only sets the hover state from its
+       own input pipeline, which is what Input.dispatchMouseEvent feeds. */
+    async hover(sel) {
+      const box = await api.evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)});
+        if (!e) return null; const r = e.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+      if (!box) throw new Error('no element for ' + sel);
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, buttons: 0 });
+      await new Promise((r) => setTimeout(r, 120));
+    },
     /* Become a different device without reloading. A suite that has to reach a
        screen through several steps can walk there once and then look at it at
        both sizes, instead of driving the whole flow twice. */

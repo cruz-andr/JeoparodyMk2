@@ -81,7 +81,9 @@ button.host-settings {
 
 /* ---- body ---- */
 .host-body {
-  max-width: 1180px;
+  /* Was 1180, which left a third of a large monitor empty on either side and
+     made the board look shrunk into the middle of the page. */
+  max-width: 1560px;
   margin: 0 auto;
   padding: 16px 18px 70px;
 }

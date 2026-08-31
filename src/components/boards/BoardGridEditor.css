@@ -11,7 +11,7 @@
 
 .grid-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 22vw, 400px);
   gap: 26px;
   align-items: start;
 }
@@ -50,7 +50,7 @@ button.ge-head {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 54px;
+  min-height: clamp(54px, 6vh, 76px);
   padding: 7px 6px;
   background: var(--tile);
   color: #fff;
@@ -72,7 +72,9 @@ button.ge-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 62px;
+  /* Grows with the screen. Fixed at 62px the board sat small in the middle of
+     a large monitor with the height going spare underneath it. */
+  min-height: clamp(62px, 8vh, 104px);
   background: var(--tile);
   color: var(--jeopardy-gold-light);
   font-weight: 800;
@@ -472,6 +474,12 @@ button.ge-row.is-on .ge-row-text { color: #10121f; font-style: normal; }
 /* Touch, not a cursor. The editor picks its narrow layout from its own width,
    but how big a target has to be is about the device holding it, so this is a
    media query rather than a container one. */
+button.ge-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
 @media (max-width: 820px) {
   button.ge-tab,
   button.ge-action,

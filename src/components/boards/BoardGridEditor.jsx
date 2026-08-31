@@ -70,6 +70,17 @@ const sameCell = (a, b) => (
  * board editor passes neither, and the controls are simply absent rather than
  * present and dead.
  */
+/* The four pointed star the menu cards use, rather than a sparkle borrowed
+   from every other AI feature online. Anything a model does wears it, so a
+   host can tell at a glance which buttons ask one. */
+function AiMark() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 0 L14.4 9.6 L24 12 L14.4 14.4 L12 24 L9.6 14.4 L0 12 L9.6 9.6 Z" />
+    </svg>
+  );
+}
+
 export default function BoardGridEditor({
   board, onChange, onCleared, onBeforeClear, onReroll, rerollsLeft, onSuggestWrong,
   dailyDoubles, onToggleDailyDouble, dailyDoublesWanted = 0,
@@ -397,6 +408,7 @@ export default function BoardGridEditor({
                 try { await onReroll(at.c); } finally { setThinking(''); }
               }}
             >
+              <AiMark />
               {thinking === 'reroll'
                 ? 'Finding another'
                 : `Try another category${rerollsLeft ? ` (${rerollsLeft} left)` : ''}`}
@@ -558,6 +570,7 @@ export default function BoardGridEditor({
                     } finally { setThinking(''); }
                   }}
                 >
+                  <AiMark />
                   {thinking === 'wrong' ? 'Thinking' : 'Suggest three wrong answers'}
                 </button>
               )}

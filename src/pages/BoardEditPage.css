@@ -15,7 +15,11 @@
 .board-save.is-saving { color: var(--text-secondary); }
 .board-save.is-failed { color: var(--color-error); }
 
-.board-edit-body { max-width: 1020px; }
+/* Wider than the shelves this page shares its chrome with. Those are rows of
+   cards, where a narrow column reads better; this one holds the same six
+   column board the host writes on, and at 1020px it sat shrunk in the middle
+   of a large monitor. */
+.board-edit-body { max-width: 1560px; }
 
 .board-edit-head {
   display: flex;
