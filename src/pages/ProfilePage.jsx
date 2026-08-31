@@ -5,6 +5,7 @@ import { useDailyStore } from '../stores/dailyStore';
 import { currentWeekBest, toDateString } from '../stores/dailyLogic';
 import Icon from '../components/common/Icon';
 import './ProfilePage.css';
+import AppTabBar from '../components/common/AppTabBar';
 
 /**
  * Your profile: what you have done, then what is yours.
@@ -129,6 +130,8 @@ export default function ProfilePage() {
           </button>
         </nav>
       </main>
+
+      <AppTabBar />
     </div>
   );
 }

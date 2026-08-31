@@ -26,6 +26,9 @@
 /* ── Rail ───────────────────────────────────────────────── */
 
 .menu-rail {
+  /* The identity menu falls back to this box on a phone. See the note by
+     .menu-identity-wrap near the bottom of the file. */
+  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -70,6 +73,10 @@
   display: flex;
   align-items: baseline;
   gap: 7px;
+  padding: 4px 2px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
 .menu-stat-label,
@@ -625,6 +632,7 @@
 }
 
 .menu-player:hover { color: var(--jeopardy-gold-light); }
+.menu-stat:hover .menu-stat-label { color: var(--jeopardy-gold-light); }
 
 .menu-signature {
   display: block;
@@ -640,6 +648,8 @@
   right: 0;
   z-index: 40;
   min-width: 210px;
+  /* Never wider than the screen it opens on. */
+  max-width: calc(100vw - 24px);
   padding: 6px;
   border: 1px solid rgba(242, 236, 224, 0.16);
   border-radius: 11px;
@@ -681,4 +691,22 @@
   height: 1px;
   margin: 5px 0;
   background: rgba(242, 236, 224, 0.14);
+}
+
+
+/* The chip sits a third of the way across a phone header, so a 210px menu
+   right-aligned to it hangs off the left edge of the screen: the first letter
+   of every item was being cut in half.
+
+   The chip is the wrong thing to measure from at this width. Dropping the
+   wrapper to `static` hands the absolute menu up to the rail instead, so
+   `right: 0` now means the right edge of the header rather than the right
+   edge of a word in the middle of it. Same rule, bigger box. */
+@media (max-width: 780px) {
+  .menu-identity-wrap { position: static; }
+
+  .menu-identity-menu {
+    min-width: 0;
+    width: min(260px, calc(100vw - 32px));
+  }
 }

@@ -1,0 +1,74 @@
+/* Phones only. On a desktop the pointer reaches the top of the window as
+   easily as the bottom, and a bar pinned across the foot of a 1400px page
+   looks like a phone app someone stretched. */
+.app-tabs,
+.app-tabs-spacer { display: none; }
+
+@media (max-width: 780px) {
+  .app-tabs-spacer {
+    display: block;
+    /* The bar plus the home indicator underneath it. */
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid rgba(242, 236, 224, 0.14);
+    background: #070d2c;
+    /* Under iOS the bar sits over the browser chrome as it slides away, so it
+       needs its own shadow to stay separate from the page behind it. */
+    box-shadow: 0 -10px 26px rgba(0, 0, 0, 0.4);
+  }
+
+  .app-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    /* 60px tall, which clears the 44px minimum a fingertip needs. */
+    height: 60px;
+    padding: 0 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .app-tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+  }
+
+  .app-tab-mark {
+    display: block;
+    height: 18px;
+    width: auto;
+    max-width: 62px;
+    opacity: 0.8;
+  }
+
+  .app-tab-label {
+    font-family: var(--font-board), sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .app-tab.is-on { color: var(--jeopardy-gold-light); }
+  .app-tab.is-on .app-tab-mark { opacity: 1; }
+
+  /* A tab marks itself the way the dropdown items do: it lights up. An outline
+     on something this wide is a rectangle across a third of the screen. */
+  .app-tab:focus-visible {
+    outline: none;
+    background: rgba(217, 169, 76, 0.14);
+  }
+}

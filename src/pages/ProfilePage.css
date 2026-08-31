@@ -210,3 +210,12 @@
   justify-self: start;
   width: fit-content;
 }
+
+
+/* Profile is the root of a tab, not a page you arrived at from somewhere. A
+   tab root does not carry a back button: Play is already the way to the menu,
+   and it is an inch below your thumb. On a desktop there is no tab bar, so the
+   link stays. */
+@media (max-width: 780px) {
+  .profile-back { visibility: hidden; }
+}

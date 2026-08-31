@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { useDailyStore } from '../stores/dailyStore';
 import './HighscoresPage.css';
+import AppTabBar from '../components/common/AppTabBar';
 
 export default function HighscoresPage() {
   const navigate = useNavigate();
@@ -86,10 +87,12 @@ export default function HighscoresPage() {
           )}
         </div>
 
-        <button onClick={() => navigate('/menu')} className="btn-primary">
+        <button onClick={() => navigate('/menu')} className="btn-primary highscores-back">
           Back to Menu
         </button>
       </motion.div>
+
+      <AppTabBar />
     </div>
   );
 }

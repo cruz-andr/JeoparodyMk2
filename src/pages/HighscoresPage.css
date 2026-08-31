@@ -142,3 +142,12 @@
     font-size: 0.9rem;
   }
 }
+
+
+/* The Play tab already goes back to the menu, and on a phone this button sat
+   directly on top of it. Two ways out, one inch apart, is one too many. */
+@media (max-width: 780px) {
+  /* Matched at the same weight as the `.highscores-container > .btn-primary`
+     rule above, or it loses: one class does not beat two. */
+  .highscores-container > .highscores-back { display: none; }
+}

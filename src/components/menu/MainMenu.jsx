@@ -5,6 +5,7 @@ import { useUserStore } from '../../stores';
 import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
 import { currentWeekBest, toDateString } from '../../stores/dailyLogic';
 import './MainMenu.css';
+import AppTabBar from '../common/AppTabBar';
 
 /**
  * The board is the menu: six category headers are the six ways to play, and
@@ -134,12 +135,20 @@ export default function MainMenu() {
         </div>
 
         <div className="menu-identity">
-          <span className="menu-stat">
+          {/* Highscores used to be a bare word in the corner. Your best score
+              is already sitting here and is the first row of that table, so it
+              is the link: click the number, see the numbers. On a phone this
+              is the Records tab along the bottom instead. */}
+          <button
+            className="plain-btn menu-stat"
+            onClick={() => navigate('/highscores')}
+            title="See the highscores"
+          >
             <span className="menu-stat-label">Solo Best</span>
             <span className="menu-stat-value gold">
               ${userStats.highestScore.toLocaleString()}
             </span>
-          </span>
+          </button>
           <span className="menu-divider" />
           {/* Guest used to be a word that did nothing. It is the way in now. */}
           <div className="menu-identity-wrap" ref={identityRef}>
@@ -189,12 +198,6 @@ export default function MainMenu() {
               </div>
             )}
           </div>
-          <button
-            className="menu-text-btn"
-            onClick={() => navigate('/highscores')}
-          >
-            Highscores
-          </button>
         </div>
       </header>
 
@@ -316,6 +319,8 @@ export default function MainMenu() {
           Join &rarr;
         </button>
       </form>
+
+      <AppTabBar />
     </div>
   );
 }
