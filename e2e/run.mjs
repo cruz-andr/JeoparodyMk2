@@ -34,6 +34,7 @@ const wipe = () => {
   for (const suffix of ['', '-wal', '-shm']) {
     try { rmSync(`${DB}${suffix}`); } catch { /* not there */ }
   }
+  try { rmSync(join(here, 'shots'), { recursive: true }); } catch { /* not there */ }
 };
 
 const started = [];

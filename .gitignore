@@ -29,3 +29,6 @@ CLAUDE.md
 # Throwaway databases the server test suites boot against
 server/test/tmp-*.sqlite*
 e2e/tmp-*.sqlite*
+
+# Screenshots the browser suite takes while it runs
+e2e/shots/

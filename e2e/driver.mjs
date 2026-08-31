@@ -1,6 +1,6 @@
 // Minimal CDP driver: real Chrome, real viewport, real clicks.
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import WebSocket from './ws.mjs';
@@ -143,9 +143,16 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
       await api.evaluate(`document.querySelector(${JSON.stringify(sel)})
         .dispatchEvent(new Event('change', { bubbles: true }))`);
     },
-    async shot(path) {
+    /* Into e2e/shots/, which is ignored and wiped by the runner. Written to
+       the repo root by default, a failing suite leaves debris behind that the
+       next person has to work out the provenance of. */
+    async shot(name) {
       const { data } = await send('Page.captureScreenshot', { format: 'png' });
-      writeFileSync(path, Buffer.from(data, 'base64'));
+      const dir = new URL('./shots/', import.meta.url).pathname;
+      mkdirSync(dir, { recursive: true });
+      const file = name.includes('/') ? name : join(dir, name);
+      writeFileSync(file, Buffer.from(data, 'base64'));
+      return file;
     },
     kill() {
       try { ws.close(); } catch { /* already gone */ }
