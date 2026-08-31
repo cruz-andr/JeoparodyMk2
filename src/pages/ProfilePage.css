@@ -1,0 +1,179 @@
+.profile-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #05081c;
+  color: var(--text-primary);
+}
+
+.profile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+}
+
+.profile-top-title {
+  font-family: var(--font-board);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.2rem;
+}
+
+.profile-back,
+.profile-top-spacer {
+  flex: 1 0 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+}
+
+.profile-top-spacer { cursor: default; }
+
+.profile-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 20px 72px;
+}
+
+.profile-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+}
+
+.profile-card {
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: linear-gradient(177deg, #1b2496, #0d1466);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.profile-card img {
+  display: block;
+  width: 200px;
+  height: auto;
+}
+
+.profile-nodrawing {
+  margin: 0;
+  width: 200px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: rgba(242, 236, 224, 0.6);
+}
+
+.profile-who h1 {
+  display: flex;
+  align-items: center;
+  margin: 0 0 2px;
+  font-family: var(--font-board);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.6rem;
+  color: #fff;
+}
+
+.profile-who p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+/* No ring: a bordered circle read as a button competing with the name rather
+   than an action belonging to it. The box stays 34px so losing the border does
+   not shrink the tap target to the glyph. */
+.profile-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-left: 8px;
+  color: var(--jeopardy-gold-light);
+  transition: color 140ms ease;
+}
+
+.profile-edit:hover { color: #fff; }
+
+.profile-record {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 24px 0 28px;
+}
+
+.profile-stat {
+  padding: 14px 16px;
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  border-radius: 10px;
+}
+
+.profile-stat b {
+  display: block;
+  font-family: var(--font-board);
+  font-weight: 900;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--jeopardy-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-stat span {
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.profile-rows {
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 15px 18px;
+  border: none;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.08);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-transform: none;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profile-row:last-child { border-bottom: 0; }
+.profile-row:hover { background: rgba(255, 255, 255, 0.05); }
+
+.profile-row-name { font-size: 0.98rem; }
+
+.profile-row-note {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.profile-row-go { color: var(--text-muted); }
+
+@media (max-width: 640px) {
+  .profile-head { flex-direction: column; align-items: stretch; gap: 16px; }
+  .profile-card img,
+  .profile-nodrawing { width: 100%; }
+  .profile-who h1 { font-size: 1.4rem; }
+  .profile-record { grid-template-columns: repeat(2, 1fr); }
+}

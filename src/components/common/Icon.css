@@ -1,0 +1,5 @@
+/* Icons sit on the text baseline they belong to rather than floating. */
+.icon {
+  display: block;
+  flex: none;
+}

@@ -24,6 +24,9 @@ const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const AccountNamePage = lazy(() => import('./pages/AccountNamePage'));
 const AccountUsernamePage = lazy(() => import('./pages/AccountUsernamePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ProfileEditPage = lazy(() => import('./pages/ProfileEditPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function PageLoader() {
   return (
@@ -54,6 +57,9 @@ const router = createBrowserRouter([
   { path: '/account', element: <AccountPage /> },
   { path: '/account/name', element: <AccountNamePage /> },
   { path: '/account/username', element: <AccountUsernamePage /> },
+  { path: '/profile', element: <ProfilePage /> },
+  { path: '/profile/edit', element: <ProfileEditPage /> },
+  { path: '/settings', element: <SettingsPage /> },
 ]);
 
 function App() {
