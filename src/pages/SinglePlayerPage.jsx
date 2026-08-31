@@ -5,6 +5,8 @@ import { useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { useAudio } from '../hooks';
 import * as aiService from '../services/api/aiService';
 import GameBoard from '../components/game/GameBoard';
+import BoardWheel from '../components/game/BoardWheel';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameSettingsPanel from '../components/setup/GameSettingsPanel';
@@ -20,6 +22,10 @@ import './SinglePlayerPage.css';
 export default function SinglePlayerPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  /* Same breakpoint the daily board uses. A six by five grid needs about 600px
+     to be legible and a phone gives about 360, which is why the board turns
+     instead. See BoardWheel. */
+  const isPhone = useMediaQuery('(max-width: 768px)');
   const {
     phase,
     genre,
@@ -387,7 +393,23 @@ export default function SinglePlayerPage() {
       )}
 
       {/* Game Board */}
-      {phase === 'playing' && (
+      {phase === 'playing' && (isPhone ? (
+        /* The same wheel the daily board uses. Community boards used to come
+           through here and get the desktop grid squeezed onto a phone, because
+           this page never had the phone branch the daily board got. */
+        <div className="wheel-stage sp-wheel">
+          <BoardWheel
+            categories={categories}
+            answers={questions.flatMap((category) => category.map((q) => ({
+              revealed: Boolean(q.revealed),
+              passed: q.revealed && q.correct === undefined,
+              correct: q.correct === true,
+            })))}
+            pointValues={getPointValues()}
+            onSelect={handleQuestionSelect}
+          />
+        </div>
+      ) : (
         <GameBoard
           categories={categories}
           questions={questions}
@@ -395,7 +417,7 @@ export default function SinglePlayerPage() {
           onQuestionSelect={handleQuestionSelect}
           onNewGame={handleBackToMenu}
         />
-      )}
+      ))}
 
       {/* Round End */}
       {phase === 'roundEnd' && (

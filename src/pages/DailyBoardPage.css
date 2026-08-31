@@ -151,26 +151,6 @@
   background: radial-gradient(120% 62% at 50% 16%, #16207a 0%, #070c2e 56%, #03050f 100%);
 }
 
-/* iOS reports 100vh as the URL-bar-collapsed height, so the global
-   min-height: 100vh on body and #root made the document taller than the
-   visible viewport: the whole board scrolled and rubber banded under a
-   surface that is meant to be fixed, with the wheel's own swipe fighting it.
-   Locked while the wheel is on screen and released on the way out, so every
-   other page keeps scrolling normally. */
-body.wheel-locked {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  min-height: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-body.wheel-locked #root {
-  min-height: 0;
-  height: 100%;
-}
-
 .wheel-clock,
 .daily-board-clock {
   font-variant-numeric: tabular-nums;

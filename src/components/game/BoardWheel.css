@@ -1,3 +1,48 @@
+/* The wheel's own page requirements, not the daily board's.
+
+   They lived in DailyBoardPage.css, so the first other page to use the wheel
+   got a board that scrolled and rubber banded under a surface meant to be
+   fixed. A component that needs the document to hold still should say so
+   itself, next to the thing that needs it.
+*/
+/* iOS reports 100vh as the URL-bar-collapsed height, so the global
+   min-height: 100vh on body and #root made the document taller than the
+   visible viewport: the whole board scrolled and rubber banded under a
+   surface that is meant to be fixed, with the wheel's own swipe fighting it.
+   Locked while the wheel is on screen and released on the way out, so every
+   other page keeps scrolling normally. */
+body.wheel-locked {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.wheel-locked #root {
+  min-height: 0;
+  height: 100%;
+}
+
+
+/* A stage for the wheel on any page: the viewport, and nothing spilling out
+   of it. dvh rather than vh because iOS reports vh as the URL-bar-collapsed
+   height, which makes the document taller than what you can see.
+
+   It carries the ground too. The wheel is a lit object turning in the dark and
+   it needs the dark; on a flat black page the tilted rows had nothing to be
+   lit against. */
+.wheel-stage {
+  position: fixed;
+  inset: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(120% 62% at 50% 16%, #16207a 0%, #070c2e 56%, #03050f 100%);
+}
+
 /*
  * The board, turned. One category per row, five on screen, middle three live.
  *

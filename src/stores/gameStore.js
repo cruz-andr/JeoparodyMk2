@@ -104,14 +104,36 @@ export const useGameStore = create((set, get) => ({
   revealAnswer: () => set({ showAnswer: true }),
 
   // For single player self-scoring
+  /* The outcome is recorded on the clue itself, not only in the running total.
+
+     A score says how you are doing; it does not say which of thirty cells you
+     got right, and the phone wheel marks each one the way the daily board
+     does. Without this every played cell reads as wrong, because
+     answerMark treats a missing `correct` as a miss. */
+  recordOutcome: (correct) => {
+    const { questions, currentQuestion } = get();
+    if (!currentQuestion) return;
+
+    set({
+      questions: questions.map((category, c) =>
+        category.map((q, r) => (
+          c === currentQuestion.categoryIndex && r === currentQuestion.pointIndex
+            ? { ...q, correct }
+            : q
+        ))
+      ),
+    });
+  },
+
   markCorrect: () => {
-    const { currentQuestion, currentRound, dailyDoubleWager, phase, score } = get();
+    const { currentQuestion, dailyDoubleWager, phase, score } = get();
     if (!currentQuestion) return;
 
     const points = phase === 'dailyDouble' || dailyDoubleWager > 0
       ? dailyDoubleWager
       : currentQuestion.points;
 
+    get().recordOutcome(true);
     set({
       score: score + points,
       questionsAttempted: get().questionsAttempted + 1,
@@ -120,13 +142,14 @@ export const useGameStore = create((set, get) => ({
   },
 
   markIncorrect: () => {
-    const { currentQuestion, currentRound, dailyDoubleWager, phase, score } = get();
+    const { currentQuestion, dailyDoubleWager, phase, score } = get();
     if (!currentQuestion) return;
 
     const points = phase === 'dailyDouble' || dailyDoubleWager > 0
       ? dailyDoubleWager
       : currentQuestion.points;
 
+    get().recordOutcome(false);
     set({
       score: score - points,
       questionsAttempted: get().questionsAttempted + 1,

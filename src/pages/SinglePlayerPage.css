@@ -139,3 +139,41 @@
     font-size: 1.2rem;
   }
 }
+
+
+/* ── Phone: the board turns, so the page around it gets out of the way ──
+   The wheel is pinned to the viewport, so anything above it is taken out of
+   a fixed height rather than pushing the page down. A 2rem wordmark and a
+   score line were eating a third of the screen and squashing the board into
+   what was left. */
+@media (max-width: 768px) {
+  .single-player-page:has(.sp-wheel) .game-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    margin: 0;
+    padding: 10px 14px;
+    /* The mobile rule above stacks the header, which is right for a page that
+       scrolls and wrong for one pinned to the viewport: two lines of chrome
+       come straight out of the board's height. */
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .single-player-page:has(.sp-wheel) .game-header h1 {
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+  }
+
+  .single-player-page:has(.sp-wheel) .score-display {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+
+  /* Room for that header at the top of the stage. */
+  .sp-wheel { padding-top: 46px; }
+}

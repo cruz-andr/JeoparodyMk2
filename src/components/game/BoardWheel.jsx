@@ -23,6 +23,17 @@ import './BoardWheel.css';
  * See https://bugs.webkit.org/show_bug.cgi?id=243582
  */
 
+/* Held for as long as the wheel is on screen and released on the way out, so
+   every other page keeps scrolling normally. Owned here rather than by the
+   page, because forgetting it does not look like a missing class, it looks
+   like the board is broken. */
+function useHeldDocument() {
+  useEffect(() => {
+    document.body.classList.add('wheel-locked');
+    return () => document.body.classList.remove('wheel-locked');
+  }, []);
+}
+
 const VISIBLE_RADIUS = 3; // rows kept in the DOM either side of centre
 const PLAYABLE_RADIUS = 1; // rows that can be tapped either side of centre
 const SLOT = 150; // px per category, matching the band spacing
@@ -61,6 +72,7 @@ export default function BoardWheel({
   pointValues = [],
   onSelect,
 }) {
+  useHeldDocument();
   const [settled, setSettled] = useState(0);
   const reduceMotion = usePrefersReducedMotion();
 

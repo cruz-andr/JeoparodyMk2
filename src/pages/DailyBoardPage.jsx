@@ -40,12 +40,8 @@ export default function DailyBoardPage() {
   const { playCorrect, playWrong } = useAudio();
 
   // The wheel is a fixed surface, so the document behind it must not scroll.
-  // See body.wheel-locked in DailyBoardPage.css.
-  useEffect(() => {
-    if (!isPhone) return undefined;
-    document.body.classList.add('wheel-locked');
-    return () => document.body.classList.remove('wheel-locked');
-  }, [isPhone]);
+  /* The scroll lock lives in BoardWheel now: it is the thing that needs the
+     document to hold still, so it is the thing that asks. */
 
   const {
     board,
