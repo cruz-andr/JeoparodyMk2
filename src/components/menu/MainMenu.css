@@ -641,9 +641,13 @@
 
 .menu-signature {
   display: block;
-  height: 22px;
+  /* Big enough to actually read as your handwriting. At 22px it was a squiggle
+     the size of a word of body text, which is a strange thing to do to the one
+     part of the interface you drew yourself. The rail bottom-aligns, and the
+     wordmark next to it stands 36px, so this has that much room to fill. */
+  height: 34px;
   width: auto;
-  max-width: 110px;
+  max-width: 170px;
   border-radius: 3px;
 }
 
@@ -714,4 +718,22 @@
     min-width: 0;
     width: min(260px, calc(100vw - 32px));
   }
+}
+
+
+/* Kept down here rather than up in the 780px block, because that block sits
+   above the base .menu-signature rule and would lose to it: same specificity,
+   so the later rule wins. The wordmark drops to 29px at this width, and the
+   signature comes down with it. */
+@media (max-width: 780px) {
+  .menu-signature {
+    height: 28px;
+    max-width: 132px;
+  }
+
+  /* Solo Best is the desktop door to the highscores. On a phone that is the
+     Records tab along the bottom, so here it is just a number taking the room
+     the signature needs to sit beside the wordmark instead of under it. */
+  .menu-stat,
+  .menu-divider { display: none; }
 }
