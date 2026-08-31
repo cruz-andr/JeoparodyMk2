@@ -661,6 +661,20 @@
 }
 
 .menu-identity-menu button:hover { background: rgba(255, 255, 255, 0.07); }
+
+/* A menu item marks itself by lighting up, not by drawing a box around itself.
+   These are full width, so any outline is a 196px gold rectangle however
+   correct it is, and Safari will paint one on a plain mouse click where Chrome
+   will not. Highlighting instead is the ordinary menu pattern and behaves the
+   same in every browser.
+
+   The outline is replaced, not deleted: a keyboard user still has to be able to
+   see which item they are on. */
+.menu-identity-menu button:focus-visible {
+  outline: none;
+  background: rgba(217, 169, 76, 0.16);
+  box-shadow: inset 3px 0 0 var(--jeopardy-gold);
+}
 .menu-identity-menu button.quiet { color: var(--text-muted); }
 
 .menu-identity-sep {
