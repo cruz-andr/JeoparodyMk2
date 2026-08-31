@@ -406,10 +406,10 @@ export function initializeSocketHandlers(io) {
     });
 
     // Start Round 2 (Double Jeopardy)
-    socket.on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId }) => {
+    socket.on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Round 2 for room ${roomCode}`);
-      gameManager.startRound2(roomCode, questions, categories, firstPickerId);
+      gameManager.startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles);
       io.to(roomCode).emit('game:round-2-started', { questions, categories, firstPickerId });
     });
 
@@ -512,8 +512,8 @@ export function initializeSocketHandlers(io) {
     // =====================
 
     // Host sets custom questions
-    socket.on('host:set-custom-questions', ({ roomCode, questions, categories }, callback) => {
-      const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId);
+    socket.on('host:set-custom-questions', ({ roomCode, questions, categories, dailyDoubles }, callback) => {
+      const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId, dailyDoubles);
 
       if (result?.success) {
         io.to(roomCode).emit('host:questions-set', { questions, categories });

@@ -90,6 +90,35 @@ button.ge-cell.is-empty {
 
 button.ge-head:hover,
 button.ge-cell:hover { background: #232ba8; }
+
+/* A placed Daily Double. Marked rather than coloured differently, because the
+   cell is still whatever it was: written, empty, selected. */
+button.ge-cell.is-double { position: relative; }
+.ge-dd {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font-family: var(--font-board);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--jeopardy-gold);
+}
+button.ge-cell.is-double.is-on .ge-dd,
+button.ge-cell.is-marking.is-double .ge-dd { color: #10121f; }
+button.ge-cell.is-marking.is-double { background: var(--jeopardy-gold); color: #10121f; }
+
+/* While marking, every cell is a target and says so. */
+button.ge-cell.is-marking:hover { box-shadow: inset 0 0 0 2px var(--jeopardy-gold); }
+
+.ge-marking {
+  margin: 10px 0 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1.1px;
+  color: var(--jeopardy-gold-light);
+}
 button.ge-cell.is-empty:hover { background: rgba(26, 32, 128, 0.4); }
 
 /* The one you are writing. Gold is what the board already uses for the thing

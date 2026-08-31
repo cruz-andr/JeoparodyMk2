@@ -72,6 +72,7 @@ const sameCell = (a, b) => (
  */
 export default function BoardGridEditor({
   board, onChange, onCleared, onBeforeClear, onReroll, rerollsLeft, onSuggestWrong,
+  dailyDoubles, onToggleDailyDouble, dailyDoublesWanted = 0,
 }) {
   const [at, setAt] = useState({ kind: 'clue', c: 0, r: 0 });
   const [showChoices, setShowChoices] = useState(false);
@@ -244,6 +245,14 @@ export default function BoardGridEditor({
 
   const contents = { display: 'contents' };
 
+  /* Marking Daily Doubles turns the whole board into targets, so it is a mode
+     rather than something you can do by accident: the cells say what a click
+     will do while it is on. */
+  const marking = Boolean(onToggleDailyDouble);
+  const isDouble = (c, r) => (dailyDoubles ?? []).some(
+    (d) => d.categoryIndex === c && d.pointIndex === r
+  );
+
   const wideBoard = (
     <div className="ge-grid" role="grid" aria-label="The board" onKeyDown={onBoardKey}>
       {/* display:contents gives a screen reader real rows without the
@@ -268,12 +277,22 @@ export default function BoardGridEditor({
             <div role="gridcell" style={contents} key={`${c}-${r}`}>
               <button
                 {...cell({ kind: 'clue', c, r },
-                  `ge-cell ${isWritten(category.questions?.[r]) ? 'is-written' : 'is-empty'}`)}
+                  `ge-cell ${isWritten(category.questions?.[r]) ? 'is-written' : 'is-empty'}`
+                  + `${isDouble(c, r) ? ' is-double' : ''}${marking ? ' is-marking' : ''}`)}
                 style={{ gridColumn: c + 1, gridRow: r + 2 }}
+                onClick={() => {
+                  /* Marking still moves the selection, so the arrow keys carry
+                     on from the cell you just clicked and the panel shows the
+                     clue you are putting the marker on. */
+                  pick({ kind: 'clue', c, r });
+                  if (marking) onToggleDailyDouble(c, r);
+                }}
                 aria-label={`${category.name || `Category ${c + 1}`}, $${points}, ${
-                  isWritten(category.questions?.[r]) ? 'written' : 'empty'}`}
+                  isWritten(category.questions?.[r]) ? 'written' : 'empty'}${
+                  isDouble(c, r) ? ', Daily Double' : ''}`}
               >
                 ${points}
+                {isDouble(c, r) && <span className="ge-dd" aria-hidden="true">DD</span>}
               </button>
             </div>
           ))}
@@ -574,6 +593,16 @@ export default function BoardGridEditor({
         <div className="ge-board">
           {narrow ? narrowBoard : wideBoard}
           {finalTile}
+          {marking && (
+            <p className="ge-marking">
+              {(dailyDoubles ?? []).length === dailyDoublesWanted
+                ? `Daily ${dailyDoublesWanted === 1 ? 'Double' : 'Doubles'} placed. Click one to move it.`
+                : `Click ${dailyDoublesWanted - (dailyDoubles ?? []).length} more ${
+                  dailyDoublesWanted - (dailyDoubles ?? []).length === 1 ? 'cell' : 'cells'
+                } to place the Daily ${dailyDoublesWanted === 1 ? 'Double' : 'Doubles'}`}
+            </p>
+          )}
+
           <p className="ge-legend">
             {written === CLUES
               ? 'Every clue written.'

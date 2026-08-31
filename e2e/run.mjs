@@ -30,11 +30,16 @@ const suites = readdirSync(here)
   .filter((f) => f.endsWith('.mjs') && !['run.mjs', 'driver.mjs', 'ws.mjs'].includes(f))
   .sort();
 
-const wipe = () => {
+/* The shots are the only way to look at what a suite saw, and wiping them on
+   the way out means you have to re-run to see anything. KEEP_SHOTS=1 leaves
+   them behind. */
+const keepShots = process.env.KEEP_SHOTS === '1';
+
+const wipe = ({ shots = true } = {}) => {
   for (const suffix of ['', '-wal', '-shm']) {
     try { rmSync(`${DB}${suffix}`); } catch { /* not there */ }
   }
-  try { rmSync(join(here, 'shots'), { recursive: true }); } catch { /* not there */ }
+  if (shots) try { rmSync(join(here, 'shots'), { recursive: true }); } catch { /* not there */ }
 };
 
 const started = [];
@@ -107,6 +112,6 @@ for (const suite of suites) {
 }
 
 stop();
-wipe();
+wipe({ shots: !keepShots });
 console.log(`\n${suites.length - failed} of ${suites.length} suites passed\n`);
 process.exit(failed ? 1 : 0);

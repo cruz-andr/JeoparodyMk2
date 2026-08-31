@@ -159,7 +159,45 @@ export class GameStateManager {
     }
   }
 
-  setQuestions(roomCode, questions, categories, firstPickerId) {
+  /**
+   * Daily Doubles a host chose, checked before they are trusted.
+   *
+   * They arrive from a client, so they are filtered to cells that exist and
+   * de-duplicated: a pair pointing at the same cell would place one Daily
+   * Double and silently lose the other. Anything short of what the round wants
+   * is topped up at random, so a host who marked one of two still gets two.
+   */
+  resolveDailyDoubles(chosen, categoryCount, rowCount, round) {
+    const wanted = round === 2 ? 2 : 1;
+    const seen = new Set();
+    const kept = [];
+
+    for (const spot of Array.isArray(chosen) ? chosen : []) {
+      const c = Number(spot?.categoryIndex);
+      const r = Number(spot?.pointIndex);
+      if (!Number.isInteger(c) || !Number.isInteger(r)) continue;
+      if (c < 0 || c >= categoryCount || r < 0 || r >= rowCount) continue;
+      const key = `${c}:${r}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      kept.push({ categoryIndex: c, pointIndex: r });
+      if (kept.length === wanted) break;
+    }
+
+    if (kept.length === wanted) return kept;
+
+    /* Top up from a random placement, skipping anything already taken. */
+    for (const spot of placeDailyDoubles(categoryCount, round, rowCount)) {
+      const key = `${spot.categoryIndex}:${spot.pointIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      kept.push(spot);
+      if (kept.length === wanted) break;
+    }
+    return kept;
+  }
+
+  setQuestions(roomCode, questions, categories, firstPickerId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
     if (room) {
       room.status = 'in_progress';
@@ -174,10 +212,10 @@ export class GameStateManager {
       room.gameState.playersWhoBuzzed = new Set();
       room.gameState.currentRound = 1;
 
-      // Place Daily Doubles if setting enabled
+      // Placed by the host if they chose to, at random if they did not.
       if (room.settings.enableDailyDouble) {
-        room.gameState.dailyDoubles = this.placeDailyDoubles(
-          questions.length, 1, questions[0]?.length || 5
+        room.gameState.dailyDoubles = this.resolveDailyDoubles(
+          dailyDoubles, questions.length, questions[0]?.length || 5, 1
         );
       } else {
         room.gameState.dailyDoubles = [];
@@ -532,7 +570,7 @@ export class GameStateManager {
     };
   }
 
-  startRound2(roomCode, questions, categories, firstPickerId) {
+  startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
     if (!room) return;
 
@@ -547,10 +585,10 @@ export class GameStateManager {
     room.gameState.playersWhoBuzzed = new Set();
     room.gameState.currentRound = 2;
 
-    // Place Daily Doubles for round 2 if setting enabled (2 for Double Jeopardy)
+    // Two in Double Jeopardy, placed by the host if they chose to.
     if (room.settings.enableDailyDouble) {
-      room.gameState.dailyDoubles = this.placeDailyDoubles(
-        questions.length, 2, questions[0]?.length || 5
+      room.gameState.dailyDoubles = this.resolveDailyDoubles(
+        dailyDoubles, questions.length, questions[0]?.length || 5, 2
       );
     } else {
       room.gameState.dailyDoubles = [];
@@ -996,7 +1034,7 @@ export class GameStateManager {
   // =====================
 
   // Set custom questions from host
-  setHostQuestions(roomCode, questions, categories, hostId) {
+  setHostQuestions(roomCode, questions, categories, hostId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
     if (!room || room.hostId !== hostId) return null;
 
@@ -1004,6 +1042,15 @@ export class GameStateManager {
     room.gameState.questions = questions;
     room.gameState.categories = categories;
     room.gameState.customQuestions = true;
+
+    /* A host who marked their own Daily Doubles. setQuestions places them for
+       every other path; this one hands the board over separately, so it has to
+       place them too or a hosted game would quietly get random ones. */
+    if (room.settings.enableDailyDouble) {
+      room.gameState.dailyDoubles = this.resolveDailyDoubles(
+        dailyDoubles, questions.length, questions[0]?.length || 5, 1
+      );
+    }
 
     // Initialize host mode tracking
     room.gameState.typedAnswers = new Map();

@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {
   CATEGORIES, CLUES, POINTS, ROWS,
-  countWritten, finalState, isWritten, moveSelection, nextEmptyFrom,
+  countWritten, finalState, isWritten, moveSelection, nextEmptyFrom, toggleDouble,
 } from './gridLogic.js';
 
 let passed = 0;
@@ -180,6 +180,44 @@ test('a doubled board keeps its own values', () => {
   // The arithmetic does not care about values, and must not start to.
   assert.deepEqual(moveSelection(clue(0, 0), 'ArrowDown'), clue(0, 1));
   assert.equal(countWritten(doubled), 0);
+});
+
+// ------------------------------------------------------------ daily doubles
+
+const dd = (c, r) => ({ categoryIndex: c, pointIndex: r });
+
+test('marking an empty round places one', () => {
+  assert.deepEqual(toggleDouble([], 2, 3, 1), [dd(2, 3)]);
+});
+
+test('marking a marked cell unmarks it', () => {
+  assert.deepEqual(toggleDouble([dd(2, 3)], 2, 3, 1), []);
+});
+
+test('round one holds one, so a second click moves it', () => {
+  assert.deepEqual(toggleDouble([dd(2, 3)], 4, 1, 1), [dd(4, 1)]);
+});
+
+test('round two holds two before it starts moving them', () => {
+  const two = toggleDouble([dd(2, 3)], 4, 1, 2);
+  assert.deepEqual(two, [dd(2, 3), dd(4, 1)]);
+  // The third click drops the oldest, not the newest: the marker you placed
+  // longest ago is the one you have stopped thinking about.
+  assert.deepEqual(toggleDouble(two, 0, 0, 2), [dd(4, 1), dd(0, 0)]);
+});
+
+test('unmarking works on a full round', () => {
+  assert.deepEqual(toggleDouble([dd(2, 3), dd(4, 1)], 2, 3, 2), [dd(4, 1)]);
+});
+
+test('a missing list is an empty one', () => {
+  assert.deepEqual(toggleDouble(undefined, 1, 1, 1), [dd(1, 1)]);
+});
+
+test('a nonsense count still keeps one marker', () => {
+  // wanted comes from settings, so it must never be able to produce a list
+  // that drops everything.
+  assert.deepEqual(toggleDouble([dd(2, 3)], 4, 1, 0), [dd(4, 1)]);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

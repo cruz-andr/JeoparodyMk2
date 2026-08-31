@@ -940,6 +940,9 @@ export default function GamePage() {
           questions: hostRound2.current.questions,
           categories: hostRound2.current.categories,
           firstPickerId: playerIds[Math.floor(Math.random() * playerIds.length)],
+          /* Where the host marked them while writing the board. Absent means
+             the server places them at random, as it always has. */
+          dailyDoubles: hostRound2.current.dailyDoubles ?? null,
         });
         return;
       }

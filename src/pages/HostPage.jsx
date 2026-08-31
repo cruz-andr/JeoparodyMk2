@@ -8,7 +8,7 @@ import { hostToBoard, boardToHost } from '../stores/boardShape';
 import socketClient from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import { emptyBoard, countClues, POINT_VALUES } from '@shared/boardFormat.js';
-import { finalState } from '../components/boards/gridLogic';
+import { finalState, toggleDouble } from '../components/boards/gridLogic';
 import BoardGridEditor from '../components/boards/BoardGridEditor';
 import HostSettingsSheet from '../components/host/HostSettingsSheet';
 import HostFillPanel from '../components/host/HostFillPanel';
@@ -67,6 +67,11 @@ export default function HostPage() {
      Both are per round: two rounds can come from two different topics. */
   const [topics, setTopics] = useState({ 1: '', 2: '' });
   const [rerolls, setRerolls] = useState({ 1: 5, 2: 5 });
+  /* Which cells the host marked, per round, when they chose to place the Daily
+     Doubles themselves. Empty means the server picks, which is what has always
+     happened. */
+  const [doubles, setDoubles] = useState({ 1: [], 2: [] });
+  const [marking, setMarking] = useState(false);
   const [waiting, setWaiting] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -133,6 +138,34 @@ export default function HostPage() {
   const doubleOn = settings.enableDoubleJeopardy;
   const finalOn = settings.enableFinalJeopardy;
   const finalIs = finalState({ finalJeopardy: final });
+
+  /* Placing them by hand is only on offer when Daily Doubles are on and the
+     host asked for it in Game Settings. */
+  const placing = settings.enableDailyDouble && settings.dailyDoublePlacement === 'chosen';
+  const wanted = round === 2 ? 2 : 1;
+  /* Only drawn while the host is placing them. The marks are kept rather than
+     thrown away, so turning it off and on again gives back what they placed,
+     but a marker on screen has to mean the game will use it. */
+  const placed = placing && typeof round === 'number' ? doubles[round] ?? [] : [];
+
+  /* Marking is a mode on one board, so it ends when that board leaves the
+     screen. A host who switches to Double Jeopardy is usually going there to
+     write it, and their first click landing a marker instead of opening a clue
+     is the kind of surprise a mode has to avoid. */
+  useEffect(() => { setMarking(false); }, [round]);
+  useEffect(() => { if (!placing) setMarking(false); }, [placing]);
+
+  /**
+   * Marking a cell. Clicking a marked cell unmarks it; clicking a new one when
+   * the round is already full moves the oldest, which is what people expect
+   * from a fixed number of markers and saves a clear-then-place.
+   */
+  const markDouble = useCallback((c, r) => {
+    setDoubles((prev) => ({
+      ...prev,
+      [round]: toggleDouble(prev[round], c, r, round === 2 ? 2 : 1),
+    }));
+  }, [round]);
 
   /* A round that is switched off is not a round you can be looking at. */
   useEffect(() => {
@@ -280,6 +313,7 @@ export default function HostPage() {
       roomCode,
       categories: one.categories,
       questions: one.questions,
+      dailyDoubles: placing ? doubles[1] : null,
     });
 
     sessionStorage.setItem('jeopardy_fresh_join', 'true');
@@ -292,7 +326,13 @@ export default function HostPage() {
           projectorMode,
           /* Carried so the game never has to invent a second round or reach for
              one of five hardcoded finals. See GamePage. */
-          round2: doubleOn ? { categories: two.categories, questions: two.questions } : null,
+          round2: doubleOn
+            ? {
+              categories: two.categories,
+              questions: two.questions,
+              dailyDoubles: placing ? doubles[2] : null,
+            }
+            : null,
           finalJeopardy: finalOn ? final : null,
         },
       },
@@ -419,6 +459,18 @@ export default function HostPage() {
                 </svg>
                 {busy || 'Or use AI to create the board'}
               </button>
+
+              {placing && (
+                <button
+                  className={`plain-btn quiet-action host-ai ${marking ? 'is-on' : ''}`}
+                  aria-pressed={marking}
+                  onClick={() => setMarking((on) => !on)}
+                >
+                  {marking
+                    ? 'Done placing'
+                    : `Place the Daily ${wanted === 1 ? 'Double' : 'Doubles'}`}
+                </button>
+              )}
             </div>
 
             <BoardGridEditor
@@ -429,6 +481,9 @@ export default function HostPage() {
               onReroll={topics[round] ? rerollCategory : undefined}
               rerollsLeft={rerolls[round]}
               onSuggestWrong={suggestWrong}
+              dailyDoubles={placed}
+              dailyDoublesWanted={wanted}
+              onToggleDailyDouble={marking ? markDouble : undefined}
             />
           </>
         )}
