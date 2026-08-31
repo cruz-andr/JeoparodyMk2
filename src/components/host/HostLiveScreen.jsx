@@ -48,6 +48,10 @@ export default function HostLiveScreen({
   const [delta, setDelta] = useState('');
   const [confirmKick, setConfirmKick] = useState(null);
   const [revealed, setRevealed] = useState(false);
+  /* Who has already had their shot at this clue and got it wrong. The server
+     keeps the buzzer shut to them; this is so the host can see why the rail
+     went back to waiting instead of moving on. */
+  const [wrongSoFar, setWrongSoFar] = useState([]);
   const projector = useRef(null);
   const channelRef = useRef(null);
 
@@ -64,6 +68,19 @@ export default function HostLiveScreen({
 
   const send = (event, extra = {}) => socketClient.emit(event, { roomCode, ...extra });
 
+  const judge = (player, correct) => {
+    if (!correct) {
+      const name = player.displayName || player.name || player.playerName;
+      if (name) setWrongSoFar((prev) => (prev.includes(name) ? prev : [...prev, name]));
+    }
+    send('host:judge-answer', { playerId: player.id ?? player.playerId, correct });
+  };
+
+  /* Everyone who has not answered wrong yet. The server decides who may buzz;
+     this only names them, because "waiting for a buzz" a second time is
+     confusing without saying who is left. */
+  const stillIn = rows.filter((p) => !wrongSoFar.includes(p.displayName || p.name));
+
   /* Anything half-finished belongs to the clue it was started on. Carrying an
      open adjust field or a half-typed kick across to the next clue put the
      host one stray Enter away from changing the wrong score. */
@@ -72,6 +89,7 @@ export default function HostLiveScreen({
     setDelta('');
     setConfirmKick(null);
     setRevealed(false);
+    setWrongSoFar([]);
   }, [currentQuestion?.category, currentQuestion?.points]);
 
   /* What the wall is shown, rebuilt whenever anything it depends on moves.
@@ -188,6 +206,18 @@ export default function HostLiveScreen({
                 <p className="hl-answer">{currentQuestion.question}</p>
               </div>
 
+              {/* A wrong answer does not end the clue: whoever has not buzzed
+                  gets a go. Without saying so, the rail dropping back to
+                  "waiting for a buzz" looks like nothing happened. */}
+              {stage === 'waiting' && !windowed && wrongSoFar.length > 0 && (
+                <p className="hl-again">
+                  {wrongSoFar.join(' and ')} {wrongSoFar.length === 1 ? 'was' : 'were'} wrong.
+                  {stillIn.length
+                    ? ` ${stillIn.map((p) => p.displayName || p.name).join(', ')} can still buzz.`
+                    : ' Nobody else can buzz.'}
+                </p>
+              )}
+
               {action && (
                 <button className="hl-do" onClick={() => send(action.event)}>
                   {action.label}
@@ -211,16 +241,10 @@ export default function HostLiveScreen({
                     )}
                   </p>
                   <div className="hl-verdict">
-                    <button
-                      className="hl-right"
-                      onClick={() => send('host:judge-answer', { playerId: buzzed.id, correct: true })}
-                    >
+                    <button className="hl-right" onClick={() => judge(buzzed, true)}>
                       Right <span className="hl-worth">+{money(currentQuestion.points)}</span>
                     </button>
-                    <button
-                      className="hl-wrong"
-                      onClick={() => send('host:judge-answer', { playerId: buzzed.id, correct: false })}
-                    >
+                    <button className="hl-wrong" onClick={() => judge(buzzed, false)}>
                       Wrong <span className="hl-worth">-{money(currentQuestion.points)}</span>
                     </button>
                   </div>
@@ -246,16 +270,10 @@ export default function HostLiveScreen({
                         </p>
                         <p className="hl-answer-said">{entry.answer}</p>
                         <div className="hl-verdict is-small">
-                          <button
-                            className="hl-right"
-                            onClick={() => send('host:judge-answer', { playerId: entry.playerId, correct: true })}
-                          >
+                          <button className="hl-right" onClick={() => judge(entry, true)}>
                             Right
                           </button>
-                          <button
-                            className="hl-wrong"
-                            onClick={() => send('host:judge-answer', { playerId: entry.playerId, correct: false })}
-                          >
+                          <button className="hl-wrong" onClick={() => judge(entry, false)}>
                             Wrong
                           </button>
                         </div>

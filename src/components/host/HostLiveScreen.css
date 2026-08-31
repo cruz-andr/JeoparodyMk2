@@ -137,6 +137,13 @@ button.hl-do {
 }
 button.hl-do:hover { filter: brightness(1.08); }
 
+.hl-again {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--jeopardy-gold-light, #f5d76e);
+}
+
 .hl-judge { display: flex; flex-direction: column; gap: 10px; }
 
 .hl-buzzed {

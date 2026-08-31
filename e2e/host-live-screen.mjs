@@ -43,6 +43,7 @@ const rail = (b) => b.evaluate("document.querySelector('.hl-stage')?.textContent
 
 const b = await launch({ width: 1440, height: 900, dpr: 2 });
 let player;
+let other;
 try {
   await b.onNewDocument(`localStorage.setItem('jeopardy-user-storage', ${JSON.stringify(
     JSON.stringify({ state: { token, isAuthenticated: true, isGuest: false }, version: 0 })
@@ -66,11 +67,16 @@ try {
   await b.until("document.querySelectorAll('.ge-cell.is-written').length === 30", { timeout: 10000 });
 
   // A player, over a socket, before the game starts.
-  player = io('http://127.0.0.1:3995', { auth: { sessionId: `p-${STAMP}` }, transports: ['websocket'] });
-  await new Promise((r, j) => { player.on('connect', r); player.on('connect_error', j); });
-  await new Promise((r, j) => player.emit('room:join',
-    { roomCode, displayName: 'Ada', signature: null },
-    (res) => (res?.success ? r(res) : j(new Error(res?.error ?? 'join refused')))));
+  const join = async (sessionId, displayName) => {
+    const socket = io('http://127.0.0.1:3995', { auth: { sessionId }, transports: ['websocket'] });
+    await new Promise((r, j) => { socket.on('connect', r); socket.on('connect_error', j); });
+    await new Promise((r, j) => socket.emit('room:join',
+      { roomCode, displayName, signature: null },
+      (res) => (res?.success ? r(res) : j(new Error(res?.error ?? 'join refused')))));
+    return socket;
+  };
+  player = await join(`p-${STAMP}`, 'Ada');
+  other = await join(`q-${STAMP}`, 'Bo');
 
   await b.until("!document.querySelector('.host-start').disabled", { timeout: 10000 });
   await b.click('.host-start');
@@ -90,7 +96,7 @@ try {
     await b.evaluate("!!document.querySelector('.hl-board .game-board, .hl-board')") === true);
   check('the rail says what to do', (await rail(b)) === 'Pick a clue', await rail(b));
   check('the host has no score of their own',
-    await b.evaluate("[...document.querySelectorAll('.hl-name')].map(e=>e.textContent).join('|')") === 'Ada',
+    await b.evaluate("[...document.querySelectorAll('.hl-name')].map(e=>e.textContent).join('|')") === 'Ada|Bo',
     await b.evaluate("[...document.querySelectorAll('.hl-name')].map(e=>e.textContent).join('|')"));
   await b.shot('host-live-picking.png');
 
@@ -138,18 +144,45 @@ try {
     await b.evaluate("document.querySelector('.hl-right').textContent"));
   await b.shot('host-live-judging.png');
 
+  // ---------- wrong, and the clue stays up ----------
+  console.log('\n-- a wrong answer --');
+  await b.click('.hl-wrong');
+  await b.until("document.querySelector('.hl-stage')?.textContent === 'Waiting for a buzz'", { timeout: 10000 });
+  check('a wrong answer does not end the clue', true, 'the buzzer reopened');
+  check('the rail says why it is waiting again',
+    (await b.evaluate("document.querySelector('.hl-again')?.textContent ?? ''")).includes('Ada was wrong'),
+    await b.evaluate("document.querySelector('.hl-again')?.textContent"));
+  check('and who is left to try',
+    (await b.evaluate("document.querySelector('.hl-again')?.textContent ?? ''")).includes('Bo can still buzz'));
+  check('the wrong answer cost them',
+    (await b.evaluate("[...document.querySelectorAll('.hl-money')].map(e=>e.textContent).join('|')")) === '$0|-$200',
+    await b.evaluate("[...document.querySelectorAll('.hl-money')].map(e=>e.textContent).join('|')"));
+  await b.shot('host-live-rebound.png');
+
+  // The one who was wrong is locked out; the other is not.
+  player.emit('game:buzz-in', { roomCode, reactionTime: 300 });
+  await wait(600);
+  check('the player who was wrong cannot buzz again',
+    (await b.evaluate("document.querySelector('.hl-stage')?.textContent")) === 'Waiting for a buzz');
+
+  other.emit('game:buzz-in', { roomCode, reactionTime: 300 });
+  await b.until("document.querySelector('.hl-stage')?.textContent === 'Was that right?'", { timeout: 10000 });
+  check('somebody who has not had a go still can', true);
+  check('and the rail is about them now',
+    (await b.evaluate("document.querySelector('.hl-buzzed')?.textContent ?? ''")).includes('Bo'));
+
   // ---------- the verdict ----------
   console.log('\n-- the verdict --');
   await b.click('.hl-right');
   await b.until("document.querySelector('.hl-stage')?.textContent === 'Pick a clue'", { timeout: 8000 });
   check('judging returns the host to the board', true);
   check('the score moved',
-    (await b.evaluate("document.querySelector('.hl-money')?.textContent ?? ''")) === '$200',
-    await b.evaluate("document.querySelector('.hl-money')?.textContent"));
+    (await b.evaluate("[...document.querySelectorAll('.hl-money')].map(e=>e.textContent).join('|')")) === '$200|-$200',
+    await b.evaluate("[...document.querySelectorAll('.hl-money')].map(e=>e.textContent).join('|')"));
 
   // ---------- fixing a score ----------
   console.log('\n-- fixing a score --');
-  await b.evaluate(`[...document.querySelectorAll('.hl-adjust button')].find(e=>e.textContent==='Adjust').click()`);
+  await b.evaluate(`[...document.querySelectorAll('.hl-score')][0].querySelector('.hl-adjust button').click()`);
   await b.until("!!document.querySelector('.hl-delta')");
   await b.evaluate("document.querySelector('.hl-delta').focus()");
   await b.type('.hl-delta', '-50');
@@ -158,16 +191,17 @@ try {
   check('an adjustment is a change, not a replacement', true, '$200 - 50 = $150');
 
   console.log('\n-- removing somebody --');
-  await b.evaluate(`[...document.querySelectorAll('.hl-adjust button')].find(e=>e.textContent==='Remove').click()`);
+  await b.evaluate(`[...document.querySelectorAll('.hl-score')][0].querySelector('.hl-adjust button:nth-of-type(2)').click()`);
   await b.until("!!document.querySelector('.hl-sure')");
   check('removing asks first, in the page rather than the browser',
     (await b.evaluate("document.querySelector('.hl-sure').textContent")) === 'Remove them?');
   await b.evaluate(`[...document.querySelectorAll('.hl-adjust button')].find(e=>e.textContent==='Keep').click()`);
   await wait(200);
   check('and backing out leaves them alone',
-    await b.evaluate("document.querySelectorAll('.hl-score').length") === 1);
+    await b.evaluate("document.querySelectorAll('.hl-score').length") === 2);
 } finally {
   try { player?.close(); } catch { /* already gone */ }
+  try { other?.close(); } catch { /* already gone */ }
   b.kill();
 }
 process.exit(bad ? 1 : 0);

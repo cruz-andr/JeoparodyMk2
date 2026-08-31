@@ -267,6 +267,109 @@ test('an unmarked cell is an ordinary clue', () => {
   assert.notEqual(room.gameState.phase, 'dailyDouble');
 });
 
+// ------------------------------------------------- a wrong answer rebounds
+
+/** A host-run game mid clue, with the buzzer open and one player on it. */
+function mkBuzzed({ count = 4, answerMode = 'verbal' } = {}) {
+  const { gm, room, code, sockets } = mkGame({ count, type: 'host', settings: { answerMode } });
+  gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId);
+  room.gameState.phase = 'playing';
+  gm.selectQuestionHostMode(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  return { gm, room, code, sockets };
+}
+
+test('a wrong answer leaves the clue up for whoever has not buzzed', () => {
+  /* The show does not move on because the first person got it wrong, and a
+     host who wanted to would use "nobody got it, move on". */
+  const { gm, room, code, sockets } = mkBuzzed();
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+
+  const out = gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, false);
+  assert.equal(out.correct, false);
+  assert.equal(out.canBuzzAgain, true);
+  assert.equal(out.questionClosed, false);
+  assert.ok(room.gameState.currentQuestion, 'the clue is still up');
+  assert.equal(room.gameState.buzzWindowOpen, true, 'and the buzzer is open again');
+  assert.equal(room.gameState.buzzedPlayerId, null, 'with nobody on it');
+});
+
+test('the player who was wrong cannot buzz again', () => {
+  const { gm, code, sockets } = mkBuzzed();
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, false);
+
+  assert.equal(gm.recordBuzz(code, sockets[1].sessionId, 10), false, 'they had their shot');
+  assert.equal(gm.recordBuzz(code, sockets[2].sessionId, 10), true, 'somebody else has not');
+});
+
+test('somebody else can then be judged on the same clue', () => {
+  // judgedPlayers refuses a second payout per player; it must not refuse the
+  // second player.
+  const { gm, room, code, sockets } = mkBuzzed();
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, false);
+
+  gm.recordBuzz(code, sockets[2].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  const out = gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[2].sessionId, true);
+  assert.equal(out.correct, true);
+  assert.equal(out.questionClosed, true);
+  assert.equal(room.players.get(sockets[2].sessionId).score, 200);
+});
+
+test('the last player left wrong ends the clue', () => {
+  /* Three players, all wrong: there is nobody to reopen it for, so the clue
+     closes rather than waiting on a buzz that can never arrive. */
+  const { gm, room, code, sockets } = mkBuzzed({ count: 4 });
+  let out = null;
+  for (const socket of [sockets[1], sockets[2], sockets[3]]) {
+    gm.recordBuzz(code, socket.sessionId, 10);
+    gm.determineBuzzerWinner(code);
+    out = gm.hostJudgeAnswer(code, sockets[0].sessionId, socket.sessionId, false);
+  }
+  assert.equal(out.canBuzzAgain, false);
+  assert.equal(out.questionClosed, true);
+  assert.equal(room.gameState.currentQuestion, null);
+});
+
+test('a right answer still ends the clue at once', () => {
+  const { gm, room, code, sockets } = mkBuzzed();
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+
+  const out = gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, true);
+  assert.equal(out.canBuzzAgain, false);
+  assert.equal(out.questionClosed, true);
+  assert.equal(room.gameState.currentQuestion, null);
+});
+
+test('the host is never one of the people left to buzz', () => {
+  /* With one player, a wrong answer must end the clue. Counting the host as
+     somebody who could still buzz would hold it open for good. */
+  const { gm, room, code, sockets } = mkBuzzed({ count: 2 });
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+
+  const out = gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, false);
+  assert.equal(out.canBuzzAgain, false);
+  assert.equal(room.gameState.currentQuestion, null);
+});
+
+test('a typed round does not rebound, because everybody already answered', () => {
+  // There is no buzzer to reopen: the host works down the submissions.
+  const { gm, room, code, sockets } = mkBuzzed({ answerMode: 'typed' });
+  gm.submitTypedAnswer(code, sockets[1].sessionId, 'a guess');
+  assert.equal(room.gameState.typedAnswers.size, 1, 'the answer was actually recorded');
+
+  const out = gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, false);
+  assert.equal(out.canBuzzAgain, false);
+  assert.equal(out.questionClosed, true);
+});
+
 test('Final Jeopardy plays the clue the host wrote', () => {
   // It used to always pick from five hardcoded clues, so a game about the Cold
   // War ended with a question about Moby Dick.

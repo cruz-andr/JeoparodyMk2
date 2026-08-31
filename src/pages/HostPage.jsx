@@ -541,8 +541,10 @@ export default function HostPage() {
             )}
           </div>
 
+          {/* Create, not start. This hands the board to the room and opens the
+              lobby, where the host waits for people and then starts for real. */}
           <button className="btn-primary host-start" onClick={start} disabled={Boolean(notReady)}>
-            Start the game
+            Create game
           </button>
         </div>
 

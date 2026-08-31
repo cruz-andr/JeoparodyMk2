@@ -595,7 +595,7 @@ export default function GamePage() {
     });
 
     // Host judged an answer
-    const unsubHostAnswerJudged = subscribe('host:answer-judged', ({ playerId, correct, newScore, nextPickerId, questionClosed }) => {
+    const unsubHostAnswerJudged = subscribe('host:answer-judged', ({ playerId, correct, newScore, nextPickerId, questionClosed, canBuzzAgain }) => {
       useRoomStore.getState().updatePlayerScore(playerId, newScore);
       // Show full-screen feedback if this judgment is about the current player
       if (playerId === currentPlayerId) {
@@ -616,6 +616,17 @@ export default function GamePage() {
         setSubmittedPlayerIds([]);
         clearHostModeAnswers();
       }
+      /* Wrong in verbal mode, with people left who have not buzzed: the clue
+         stays up and the buzzer reopens for them. Only the person who just
+         answered is cleared, so the host's screen goes back to waiting rather
+         than sitting on a verdict about somebody already judged. */
+      if (canBuzzAgain) {
+        setBuzzerWinnerId(null);
+        setBuzzerWinnerReactionTime(null);
+        setHostBuzzerOpen(true);
+        setPlayerHasSubmitted(false);
+      }
+
       if (correct && nextPickerId) {
         setCurrentPickerId(nextPickerId);
       }

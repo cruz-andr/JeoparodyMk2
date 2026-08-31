@@ -1348,24 +1348,47 @@ export class GameStateManager {
     const pointsToApply = correct ? points : -points;
     player.score = (player.score || 0) + pointsToApply;
 
-    // In verbal mode exactly one player buzzed, so the clue is done. In typed
-    // and multiple-choice modes the host works through every submission, and
-    // clearing the clue after the first judgement dropped its point value to
-    // zero for everyone judged afterwards.
+    /* In typed and multiple-choice modes the host works through every
+       submission, and clearing the clue after the first judgement dropped its
+       point value to zero for everyone judged afterwards. */
     const answerMode = room.settings?.answerMode || 'verbal';
-    const submitted = answerMode === 'verbal'
-      ? null
-      : new Set([
+    const windowed = answerMode !== 'verbal';
+
+    /* Verbal, and they were wrong: the clue is not over. Whoever has not had a
+       shot at it yet gets one, the way the show works. Only players who can
+       actually act count, so a disconnected player cannot leave the clue open
+       forever waiting on a buzz that will never arrive. */
+    let canBuzzAgain = false;
+    if (!windowed && !correct) {
+      const activeIds = this.getActivePlayerIds(room);
+      const buzzed = room.gameState.playersWhoBuzzed || new Set();
+      const skipped = room.gameState.skippedPlayers || new Set();
+      canBuzzAgain = activeIds.some((id) => !buzzed.has(id) && !skipped.has(id));
+    }
+
+    const submitted = windowed
+      ? new Set([
           ...room.gameState.typedAnswers.keys(),
           ...room.gameState.mcSelections.keys(),
-        ]);
-    const questionClosed = submitted === null
-      || Array.from(submitted).every(id => judged.has(id));
+        ])
+      : null;
+    const questionClosed = canBuzzAgain
+      ? false
+      : (submitted === null || Array.from(submitted).every(id => judged.has(id)));
 
     if (questionClosed) {
       room.gameState.currentQuestion = null;
       room.gameState.phase = 'playing';
       this.resetBuzzState(room.gameState);
+    } else if (canBuzzAgain) {
+      /* The window reopens for the others. playersWhoBuzzed deliberately
+         survives, so the person who just got it wrong cannot buzz again, and
+         a fresh judgement is allowed for whoever comes next. */
+      room.gameState.buzzedPlayerId = null;
+      room.gameState.buzzes = {};
+      room.gameState.buzzWindowOpen = true;
+      room.gameState.buzzReceived = false;
+      room.gameState.buzzWindowStartTime = Date.now();
     }
 
     return {
@@ -1375,6 +1398,7 @@ export class GameStateManager {
       points: pointsToApply,
       newScore: player.score,
       questionClosed,
+      canBuzzAgain,
       // Host always picks next in host mode
       nextPickerId: hostId,
     };

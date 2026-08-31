@@ -684,6 +684,13 @@ export function initializeSocketHandlers(io) {
 
       if (result) {
         io.to(roomCode).emit('host:answer-judged', result);
+
+        /* Wrong, and somebody else has not had a go: the clue stays up and the
+           buzzer reopens for them. hostJudgeAnswer has already reopened the
+           window on the server, so this only tells the room. */
+        if (result.canBuzzAgain) {
+          io.to(roomCode).emit('host:buzzer-opened');
+        }
       }
     });
 
