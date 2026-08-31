@@ -72,6 +72,7 @@ export default function GamePage() {
   /* A hosted game carries its own second round and its own final clue. */
   const hostRound2 = useRef(null);
   const hostFinal = useRef(null); // True when host mode questions are pre-loaded
+  const hostDailyDoubles = useRef(null); // Cells the host marked, if they did
   questionsRef.current = questions;
 
   // Game state (shared)
@@ -104,6 +105,7 @@ export default function GamePage() {
   const [isDailyDouble, setIsDailyDouble] = useState(false);
   const [dailyDoubleWager, setDailyDoubleWager] = useState(0);
   const [dailyDoublePhase, setDailyDoublePhase] = useState(null); // 'wager' | 'question' | null
+  const [dailyDoubleOwnerId, setDailyDoubleOwnerId] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
 
   // Final Jeopardy state
@@ -151,7 +153,7 @@ export default function GamePage() {
     if (location.state?.hostModeQuestions) {
       const {
         categories: hostCategories, questions: hostQuestions,
-        round2, finalJeopardy,
+        round2, finalJeopardy, dailyDoubles,
       } = location.state.hostModeQuestions;
       setLocalCategories(hostCategories);
       setLocalQuestions(hostQuestions);
@@ -160,6 +162,7 @@ export default function GamePage() {
          not one of five hardcoded clues about Moby Dick. */
       hostRound2.current = round2 ?? null;
       hostFinal.current = finalJeopardy ?? null;
+      hostDailyDoubles.current = dailyDoubles ?? null;
       setQuestionsReady(true);
       // Clear the state to prevent re-triggering on refresh
       window.history.replaceState({}, document.title);
@@ -493,10 +496,12 @@ export default function GamePage() {
     });
 
     // Daily Double wager confirmed - show question to everyone
-    const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ wager, question }) => {
+    const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ wager, playerId }) => {
       setDailyDoubleWager(wager);
       setDailyDoublePhase('question');
-
+      /* Who it belongs to. In a hosted room the host names them, so this is the
+         only way the screens learn whose wager is riding on the clue. */
+      if (playerId) setDailyDoubleOwnerId(playerId);
     });
 
     // Daily Double result - update scores and reset
@@ -512,6 +517,7 @@ export default function GamePage() {
       setIsDailyDouble(false);
       setDailyDoublePhase(null);
       setDailyDoubleWager(0);
+      setDailyDoubleOwnerId(null);
       setCurrentQuestion(null);
       setCurrentPickerId(nextPickerId);
     });
@@ -814,6 +820,10 @@ export default function GamePage() {
       questions,
       categories,
       firstPickerId: currentPlayerId, // Host picks first in host mode
+      /* Where the host marked them while writing the board. Without this the
+         server placed round one's at random here, overwriting the ones the
+         host had already sent. */
+      dailyDoubles: hostDailyDoubles.current,
     });
     setCurrentPickerId(currentPlayerId);
     /* The buzzer is deliberately NOT opened here. There is no clue yet, so
@@ -1259,6 +1269,8 @@ export default function GamePage() {
         submittedPlayerIds={submittedPlayerIds}
         isDailyDouble={isDailyDouble}
         dailyDoublePhase={dailyDoublePhase}
+        dailyDoubleWager={dailyDoubleWager}
+        dailyDoubleOwnerId={dailyDoubleOwnerId}
         showAnswer={showAnswer}
         onQuestionSelect={handleQuestionSelect}
         onLeave={handleLeave}

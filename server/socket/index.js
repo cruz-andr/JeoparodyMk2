@@ -189,10 +189,10 @@ export function initializeSocketHandlers(io) {
     });
 
     // Host sets questions and starts game
-    socket.on('game:set-questions', ({ roomCode, questions, categories, firstPickerId }) => {
+    socket.on('game:set-questions', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Questions set for room ${roomCode}, first picker: ${firstPickerId}`);
-      gameManager.setQuestions(roomCode, questions, categories, firstPickerId);
+      gameManager.setQuestions(roomCode, questions, categories, firstPickerId, dailyDoubles);
       io.to(roomCode).emit('game:questions-ready', { questions, categories, firstPickerId });
     });
 
@@ -692,6 +692,19 @@ export function initializeSocketHandlers(io) {
           io.to(roomCode).emit('host:buzzer-opened');
         }
       }
+    });
+
+    /* A Daily Double in a hosted room. The host names the player it belongs to
+       and enters their wager, because the host picked the clue and has no score
+       of their own for the usual rule to land on. */
+    socket.on('host:daily-double-wager', ({ roomCode, playerId, wager }) => {
+      const result = gameManager.hostDailyDoubleWager(roomCode, socket.sessionId, playerId, wager);
+      if (result) io.to(roomCode).emit('game:daily-double-wager-confirmed', result);
+    });
+
+    socket.on('host:daily-double-answer', ({ roomCode, correct }) => {
+      const result = gameManager.hostDailyDoubleAnswer(roomCode, socket.sessionId, correct);
+      if (result) io.to(roomCode).emit('game:daily-double-result', result);
     });
 
     // Host overrides score

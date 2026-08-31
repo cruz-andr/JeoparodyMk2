@@ -525,6 +525,66 @@ export class GameStateManager {
     };
   }
 
+  /**
+   * A Daily Double in a host-run room.
+   *
+   * Every other path ties a Daily Double to whoever picked the clue and scores
+   * them. In a hosted room the host picks every clue and has no score, so there
+   * is nobody for that rule to land on: the host names the player it belongs
+   * to, and that player is the one who is scored.
+   */
+  hostDailyDoubleWager(roomCode, hostId, playerId, wager) {
+    const room = this.rooms.get(roomCode);
+    if (room?.hostId !== hostId) return null;
+    if (!room.gameState?.isDailyDouble) return null;
+
+    const player = room.players.get(playerId);
+    if (!player || playerId === hostId) return null;
+
+    const clamped = this.clampDailyDoubleWager(room, playerId, wager);
+    room.gameState.dailyDoubleOwnerId = playerId;
+    room.gameState.dailyDoubleWager = clamped;
+    room.gameState.phase = 'dailyDoubleQuestion';
+
+    return {
+      playerId,
+      playerName: player.displayName || player.name,
+      wager: clamped,
+      question: room.gameState.currentQuestion,
+    };
+  }
+
+  /** The verdict on a Daily Double, which pays the wager rather than the clue. */
+  hostDailyDoubleAnswer(roomCode, hostId, correct) {
+    const room = this.rooms.get(roomCode);
+    if (room?.hostId !== hostId) return null;
+    if (!room.gameState?.isDailyDouble) return null;
+
+    const playerId = room.gameState.dailyDoubleOwnerId;
+    const player = playerId && room.players.get(playerId);
+    if (!player) return null;
+
+    const wager = room.gameState.dailyDoubleWager || 0;
+    player.score = (player.score || 0) + (correct ? wager : -wager);
+
+    room.gameState.isDailyDouble = false;
+    room.gameState.dailyDoubleWager = 0;
+    room.gameState.dailyDoubleOwnerId = null;
+    room.gameState.currentQuestion = null;
+    room.gameState.phase = 'playing';
+    this.resetBuzzState(room.gameState);
+
+    return {
+      playerId,
+      playerName: player.displayName || player.name,
+      correct,
+      wager,
+      newScore: player.score,
+      // The host picks next in a hosted room, as they do after every clue.
+      nextPickerId: hostId,
+    };
+  }
+
   // Jeopardy rule: a Daily Double wager is at least $5 and at most the greater
   // of the player's score and the highest clue value on the current board.
   clampDailyDoubleWager(room, playerId, wager) {
@@ -1050,6 +1110,11 @@ export class GameStateManager {
       room.gameState.dailyDoubles = this.resolveDailyDoubles(
         dailyDoubles, questions.length, questions[0]?.length || 5, 1
       );
+    } else {
+      /* Emptied rather than left alone, the way the other two paths do it. A
+         host who turned Daily Doubles off after a board was already handed
+         over would otherwise keep the placements from the first one. */
+      room.gameState.dailyDoubles = [];
     }
 
     // Initialize host mode tracking

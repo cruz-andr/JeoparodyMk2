@@ -34,7 +34,9 @@ export function hostStage({
   judgedPlayerIds = [],
 } = {}) {
   if (!currentQuestion) return 'picking';
-  if (isDailyDouble && dailyDoublePhase === 'wager') return 'wagering';
+  /* A Daily Double is not buzzed for. One player owns it, so it goes straight
+     from naming them and their wager to judging them. */
+  if (isDailyDouble) return dailyDoublePhase === 'wager' ? 'wagering' : 'judging';
 
   if (isWindowMode(answerMode)) {
     /* An answer already judged is not waiting on anything, so a host who has
@@ -59,7 +61,7 @@ export function stageHeading(stage, answerMode = 'verbal') {
     case 'reading': return 'Read the clue out';
     case 'waiting': return isWindowMode(answerMode) ? 'Waiting for answers' : 'Waiting for a buzz';
     case 'judging': return 'Was that right?';
-    case 'wagering': return 'Waiting for the wager';
+    case 'wagering': return 'Daily Double';
     default: return '';
   }
 }

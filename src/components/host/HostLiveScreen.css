@@ -22,6 +22,8 @@
 
 .hl-top-right { display: flex; align-items: center; gap: 8px; }
 
+.hl-end-sure { display: flex; align-items: center; gap: 6px; }
+
 .hl-where,
 .hl-room {
   font-family: var(--font-board);
@@ -147,6 +149,53 @@ button.hl-do:hover { filter: brightness(1.08); }
   line-height: 1.5;
   color: var(--jeopardy-gold-light, #f5d76e);
 }
+
+.hl-wager { display: flex; flex-direction: column; gap: 10px; }
+
+.hl-who { display: flex; flex-wrap: wrap; gap: 6px; }
+
+button.hl-who-btn {
+  padding: 10px 12px;
+  min-height: 44px;
+  border-radius: 7px;
+  background: rgba(242, 236, 224, 0.06);
+  color: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+button.hl-who-btn:hover { background: rgba(242, 236, 224, 0.12); }
+button.hl-who-btn.is-on { background: var(--jeopardy-gold); color: #10121f; }
+
+.hl-who-score {
+  font-family: var(--font-board);
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.hl-wager-field { display: flex; flex-direction: column; gap: 5px; }
+.hl-wager-field span {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 1.2px;
+  color: rgba(242, 236, 224, 0.45);
+}
+.hl-wager-field input {
+  padding: 11px 12px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(242, 236, 224, 0.1);
+  color: var(--text-primary, #f2ece0);
+  font-family: var(--font-board);
+  font-size: 1.05rem;
+}
+.hl-wager-field input:focus { outline: 2px solid var(--jeopardy-gold); outline-offset: 1px; }
+
+button.hl-do:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .hl-judge { display: flex; flex-direction: column; gap: 10px; }
 

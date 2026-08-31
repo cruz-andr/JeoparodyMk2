@@ -46,10 +46,16 @@ test('a wager comes before anything else about the clue', () => {
   }), 'wagering');
 });
 
-test('a Daily Double past its wager is an ordinary clue again', () => {
+test('a Daily Double past its wager goes straight to a verdict', () => {
+  /* Nobody buzzes for a Daily Double: one player owns it, so there is no
+     window to open and nothing to wait for but their answer. */
   assert.equal(hostStage({
     currentQuestion: CLUE, isDailyDouble: true, dailyDoublePhase: 'question',
-  }), 'reading');
+  }), 'judging');
+  assert.equal(hostStage({
+    currentQuestion: CLUE, isDailyDouble: true, dailyDoublePhase: 'question',
+    answerMode: 'typed', answerWindowOpen: true,
+  }), 'judging', 'in every answer mode');
 });
 
 // ------------------------------------------------------------ typed and tapped
@@ -105,7 +111,7 @@ test('every stage names the moment, not the screen', () => {
   assert.equal(stageHeading('picking'), 'Pick a clue');
   assert.equal(stageHeading('reading'), 'Read the clue out');
   assert.equal(stageHeading('judging'), 'Was that right?');
-  assert.equal(stageHeading('wagering'), 'Waiting for the wager');
+  assert.equal(stageHeading('wagering'), 'Daily Double');
 });
 
 test('waiting says what it is waiting for', () => {

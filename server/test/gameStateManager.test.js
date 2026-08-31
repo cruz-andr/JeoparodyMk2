@@ -229,6 +229,17 @@ test('a host who marks one of two still gets two', () => {
   assert.ok(room.gameState.dailyDoubles.some((d) => d.categoryIndex === 0 && d.pointIndex === 4));
 });
 
+test('handing the board over a second time keeps the placements', () => {
+  /* The lobby's Start sends the board again through setQuestions. Without the
+     placements travelling with it, that call replaced the cells the host had
+     marked with random ones and the marking feature did nothing at all. */
+  const { gm, room, code, sockets } = mkGame({ type: 'host', settings: { enableDailyDouble: true } });
+  const chosen = [{ categoryIndex: 4, pointIndex: 3 }];
+  gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId, chosen);
+  gm.setQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId, chosen);
+  assert.deepEqual(room.gameState.dailyDoubles, chosen);
+});
+
 test('placing none still places them at random', () => {
   const { gm, room, code, sockets } = mkGame({ type: 'host', settings: { enableDailyDouble: true } });
   gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId, null);
@@ -240,6 +251,20 @@ test('with Daily Doubles off, a placement is ignored entirely', () => {
   gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId,
     [{ categoryIndex: 1, pointIndex: 1 }]);
   assert.deepEqual(room.gameState.dailyDoubles ?? [], []);
+});
+
+test('turning Daily Doubles off clears placements already made', () => {
+  /* Emptied rather than left alone: the two non-host paths do this, and a
+     stale placement would make a clue a Daily Double in a game that is not
+     supposed to have any. */
+  const { gm, room, code, sockets } = mkGame({ type: 'host', settings: { enableDailyDouble: true } });
+  gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId,
+    [{ categoryIndex: 1, pointIndex: 1 }]);
+  assert.equal(room.gameState.dailyDoubles.length, 1);
+
+  room.settings.enableDailyDouble = false;
+  gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId, null);
+  assert.deepEqual(room.gameState.dailyDoubles, []);
 });
 
 test('a marked cell is the one that plays as a Daily Double', () => {
@@ -368,6 +393,94 @@ test('a typed round does not rebound, because everybody already answered', () =>
   const out = gm.hostJudgeAnswer(code, sockets[0].sessionId, sockets[1].sessionId, false);
   assert.equal(out.canBuzzAgain, false);
   assert.equal(out.questionClosed, true);
+});
+
+// ------------------------------------- a Daily Double in a hosted room
+
+/** A hosted game sitting on an open Daily Double. */
+function mkDaily({ count = 3 } = {}) {
+  const { gm, room, code, sockets } = mkGame({ count, type: 'host', settings: { enableDailyDouble: true } });
+  gm.setHostQuestions(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId,
+    [{ categoryIndex: 0, pointIndex: 0 }]);
+  room.gameState.phase = 'playing';
+  gm.selectQuestionHostMode(sockets[0], code, 0, 0);
+  return { gm, room, code, sockets };
+}
+
+test('a hosted Daily Double opens as one', () => {
+  const { room } = mkDaily();
+  assert.equal(room.gameState.isDailyDouble, true);
+  assert.equal(room.gameState.phase, 'dailyDouble');
+});
+
+test('the host names who it belongs to and enters their wager', () => {
+  /* Every other path scores whoever picked the clue. The host picks every clue
+     and has no score, so there has to be somebody else to land on. */
+  const { gm, room, code, sockets } = mkDaily();
+  const out = gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[1].sessionId, 600);
+  assert.equal(out.playerId, sockets[1].sessionId);
+  assert.equal(out.wager, 600);
+  assert.equal(room.gameState.dailyDoubleOwnerId, sockets[1].sessionId);
+  assert.equal(room.gameState.phase, 'dailyDoubleQuestion');
+});
+
+test('the wager pays out to the player, not the host', () => {
+  const { gm, room, code, sockets } = mkDaily();
+  gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[1].sessionId, 600);
+  const out = gm.hostDailyDoubleAnswer(code, sockets[0].sessionId, true);
+
+  assert.equal(out.playerId, sockets[1].sessionId);
+  assert.equal(out.wager, 600);
+  assert.equal(room.players.get(sockets[1].sessionId).score, 600);
+  assert.equal(room.players.get(sockets[0].sessionId).score || 0, 0, 'the host is not paid');
+});
+
+test('a wrong Daily Double takes the wager away', () => {
+  const { gm, room, code, sockets } = mkDaily();
+  gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[1].sessionId, 400);
+  gm.hostDailyDoubleAnswer(code, sockets[0].sessionId, false);
+  assert.equal(room.players.get(sockets[1].sessionId).score, -400);
+});
+
+test('the clue is over either way, because nobody else was offered it', () => {
+  const { gm, room, code, sockets } = mkDaily();
+  gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[1].sessionId, 400);
+  gm.hostDailyDoubleAnswer(code, sockets[0].sessionId, false);
+  assert.equal(room.gameState.currentQuestion, null);
+  assert.equal(room.gameState.isDailyDouble, false);
+  assert.equal(room.gameState.phase, 'playing');
+});
+
+test('the wager is clamped, not trusted', () => {
+  // It comes from a client like any other number.
+  const { gm, room, code, sockets } = mkDaily();
+  const out = gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[1].sessionId, 999999);
+  assert.ok(out.wager <= 1000, `clamped to the board, got ${out.wager}`);
+  assert.equal(room.gameState.dailyDoubleWager, out.wager);
+});
+
+test('the host cannot give the Daily Double to themselves', () => {
+  const { gm, code, sockets } = mkDaily();
+  assert.equal(gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[0].sessionId, 400), null);
+});
+
+test('somebody who is not the host cannot set the wager', () => {
+  const { gm, code, sockets } = mkDaily();
+  assert.equal(gm.hostDailyDoubleWager(code, sockets[1].sessionId, sockets[1].sessionId, 400), null);
+});
+
+test('judging a Daily Double nobody was given does nothing', () => {
+  // Rather than paying out a wager to undefined.
+  const { gm, code, sockets } = mkDaily();
+  assert.equal(gm.hostDailyDoubleAnswer(code, sockets[0].sessionId, true), null);
+});
+
+test('a second verdict on the same Daily Double pays nothing twice', () => {
+  const { gm, room, code, sockets } = mkDaily();
+  gm.hostDailyDoubleWager(code, sockets[0].sessionId, sockets[1].sessionId, 400);
+  gm.hostDailyDoubleAnswer(code, sockets[0].sessionId, true);
+  assert.equal(gm.hostDailyDoubleAnswer(code, sockets[0].sessionId, true), null);
+  assert.equal(room.players.get(sockets[1].sessionId).score, 400);
 });
 
 test('Final Jeopardy plays the clue the host wrote', () => {

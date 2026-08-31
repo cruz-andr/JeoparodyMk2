@@ -359,6 +359,10 @@ export default function HostPage() {
           questions: one.questions,
           answerMode,
           projectorMode,
+          /* Carried as well as sent over the socket. The lobby's Start hands the
+             board over a second time through game:set-questions, which placed
+             Daily Doubles at random and threw away the ones marked here. */
+          dailyDoubles: placing ? doubles[1] : null,
           /* Carried so the game never has to invent a second round or reach for
              one of five hardcoded finals. See GamePage. */
           round2: doubleOn

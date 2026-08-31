@@ -40,6 +40,8 @@ export default function HostLiveScreen({
   submittedPlayerIds = [],
   isDailyDouble = false,
   dailyDoublePhase = null,
+  dailyDoubleWager = 0,
+  dailyDoubleOwnerId = null,
   showAnswer = false,
   onQuestionSelect,
   onLeave,
@@ -48,10 +50,15 @@ export default function HostLiveScreen({
   const [delta, setDelta] = useState('');
   const [confirmKick, setConfirmKick] = useState(null);
   const [revealed, setRevealed] = useState(false);
-  /* Who has already had their shot at this clue and got it wrong. The server
-     keeps the buzzer shut to them; this is so the host can see why the rail
-     went back to waiting instead of moving on. */
+  /* Who has already had their shot at this clue and got it wrong, by id. The
+     server keeps the buzzer shut to them; this is so the host can see why the
+     rail went back to waiting instead of moving on. Ids rather than names,
+     because two people called Ada would otherwise be the same person here. */
   const [wrongSoFar, setWrongSoFar] = useState([]);
+  const [ddPlayerId, setDdPlayerId] = useState(null);
+  const [ddWager, setDdWager] = useState('');
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
   const projector = useRef(null);
   const channelRef = useRef(null);
 
@@ -68,18 +75,30 @@ export default function HostLiveScreen({
 
   const send = (event, extra = {}) => socketClient.emit(event, { roomCode, ...extra });
 
-  const judge = (player, correct) => {
-    if (!correct) {
-      const name = player.displayName || player.name || player.playerName;
-      if (name) setWrongSoFar((prev) => (prev.includes(name) ? prev : [...prev, name]));
-    }
-    send('host:judge-answer', { playerId: player.id ?? player.playerId, correct });
+  const ddOwner = players.find((p) => p.id === dailyDoubleOwnerId) ?? null;
+
+  const setWager = () => {
+    const amount = Number(ddWager);
+    if (!ddPlayerId || !Number.isFinite(amount) || amount <= 0) return;
+    send('host:daily-double-wager', { playerId: ddPlayerId, wager: amount });
   };
 
-  /* Everyone who has not answered wrong yet. The server decides who may buzz;
-     this only names them, because "waiting for a buzz" a second time is
-     confusing without saying who is left. */
-  const stillIn = rows.filter((p) => !wrongSoFar.includes(p.displayName || p.name));
+  const judge = (player, correct) => {
+    const playerId = player.id ?? player.playerId;
+    if (!correct && playerId) {
+      setWrongSoFar((prev) => (prev.includes(playerId) ? prev : [...prev, playerId]));
+    }
+    send('host:judge-answer', { playerId, correct });
+  };
+
+  const named = (player) => player?.displayName || player?.name || player?.playerName || '';
+
+  /* The server decides who may buzz; these only name them, because "waiting for
+     a buzz" a second time is confusing without saying who it is waiting on. */
+  const wrongNames = wrongSoFar
+    .map((id) => named(players.find((p) => p.id === id)))
+    .filter(Boolean);
+  const stillIn = rows.filter((p) => !wrongSoFar.includes(p.id));
 
   /* Anything half-finished belongs to the clue it was started on. Carrying an
      open adjust field or a half-typed kick across to the next clue put the
@@ -90,6 +109,8 @@ export default function HostLiveScreen({
     setConfirmKick(null);
     setRevealed(false);
     setWrongSoFar([]);
+    setDdPlayerId(null);
+    setDdWager('');
   }, [currentQuestion?.category, currentQuestion?.points]);
 
   /* What the wall is shown, rebuilt whenever anything it depends on moves.
@@ -138,6 +159,9 @@ export default function HostLiveScreen({
     const url = `${window.location.origin}/project/${roomCode}`;
     if (projector.current && !projector.current.closed) { projector.current.focus(); return; }
     projector.current = window.open(url, `projector-${roomCode}`, 'width=1280,height=800');
+    /* A blocked popup returns null. Without this the button did nothing at all
+       and there was no way to tell that from a window opening behind this one. */
+    setPopupBlocked(!projector.current);
   };
 
   return (
@@ -145,9 +169,22 @@ export default function HostLiveScreen({
        board is not needed and cannot be picked from anyway, so it goes. */
     <div className={`hl ${currentQuestion ? 'is-clue' : ''}`}>
       <header className="hl-top">
-        <button className="plain-btn quiet-action hl-leave" onClick={onLeave}>
-          &lsaquo; End the game
-        </button>
+        {/* Ending the game closes the room for everybody in it and cannot be
+            undone, and this button sits where a back button usually does, so
+            it asks first. */}
+        {confirmEnd ? (
+          <span className="hl-end-sure">
+            <span className="hl-sure">End it for everyone?</span>
+            <button className="plain-btn quiet-action hl-yes" onClick={onLeave}>End the game</button>
+            <button className="plain-btn quiet-action" onClick={() => setConfirmEnd(false)}>
+              Keep playing
+            </button>
+          </span>
+        ) : (
+          <button className="plain-btn quiet-action hl-leave" onClick={() => setConfirmEnd(true)}>
+            &lsaquo; End the game
+          </button>
+        )}
 
         <span className="hl-where">
           {ROUND_NAME[currentRound] ?? `Round ${currentRound}`}
@@ -158,7 +195,7 @@ export default function HostLiveScreen({
         <div className="hl-top-right">
           {projectorMode && (
             <button className="plain-btn quiet-action hl-project" onClick={openProjector}>
-              Open the board on the projector
+              {popupBlocked ? 'Allow pop-ups, then try again' : 'Open the board on the projector'}
             </button>
           )}
           <span className="hl-room">
@@ -211,11 +248,11 @@ export default function HostLiveScreen({
               {/* A wrong answer does not end the clue: whoever has not buzzed
                   gets a go. Without saying so, the rail dropping back to
                   "waiting for a buzz" looks like nothing happened. */}
-              {stage === 'waiting' && !windowed && wrongSoFar.length > 0 && (
+              {stage === 'waiting' && !windowed && wrongNames.length > 0 && (
                 <p className="hl-again">
-                  {wrongSoFar.join(' and ')} {wrongSoFar.length === 1 ? 'was' : 'were'} wrong.
+                  {wrongNames.join(' and ')} {wrongNames.length === 1 ? 'was' : 'were'} wrong.
                   {stillIn.length
-                    ? ` ${stillIn.map((p) => p.displayName || p.name).join(', ')} can still buzz.`
+                    ? ` ${stillIn.map(named).join(', ')} can still buzz.`
                     : ' Nobody else can buzz.'}
                 </p>
               )}
@@ -226,15 +263,69 @@ export default function HostLiveScreen({
                 </button>
               )}
 
+              {/* A Daily Double belongs to one player. The host picks every
+                  clue in this room and has no score, so there is nobody for the
+                  usual "whoever picked it" rule to land on: the host says whose
+                  it is and enters the wager they called out. */}
               {stage === 'wagering' && (
-                <p className="hl-quiet">
-                  The player is choosing what to risk. The clue opens once they
-                  have.
-                </p>
+                <div className="hl-wager">
+                  <p className="hl-quiet">Whose is it?</p>
+                  <div className="hl-who">
+                    {rows.map((player) => (
+                      <button
+                        key={player.id}
+                        className={`plain-btn hl-who-btn ${ddPlayerId === player.id ? 'is-on' : ''}`}
+                        aria-pressed={ddPlayerId === player.id}
+                        onClick={() => setDdPlayerId(player.id)}
+                      >
+                        {named(player)} <span className="hl-who-score">{money(player.score)}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <label className="hl-wager-field">
+                    <span>What did they wager?</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={ddWager}
+                      placeholder="600"
+                      onChange={(e) => setDdWager(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setWager(); }}
+                    />
+                  </label>
+
+                  <button
+                    className="hl-do"
+                    disabled={!ddPlayerId || !Number(ddWager)}
+                    onClick={setWager}
+                  >
+                    Read the clue out
+                  </button>
+                </div>
+              )}
+
+              {/* A Daily Double: the player who owns it answers, and the
+                  verdict pays their wager rather than the clue's value. */}
+              {stage === 'judging' && isDailyDouble && ddOwner && (
+                <div className="hl-judge">
+                  <p className="hl-buzzed">
+                    <b>{named(ddOwner)}</b>
+                    <span className="hl-react">wagered {money(dailyDoubleWager)}</span>
+                  </p>
+                  <div className="hl-verdict">
+                    <button className="hl-right" onClick={() => send('host:daily-double-answer', { correct: true })}>
+                      Right <span className="hl-worth">+{money(dailyDoubleWager)}</span>
+                    </button>
+                    <button className="hl-wrong" onClick={() => send('host:daily-double-answer', { correct: false })}>
+                      Wrong <span className="hl-worth">-{money(dailyDoubleWager)}</span>
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Verbal: one person buzzed, and the verdict is about them. */}
-              {stage === 'judging' && !windowed && buzzed && (
+              {stage === 'judging' && !isDailyDouble && !windowed && buzzed && (
                 <div className="hl-judge">
                   <p className="hl-buzzed">
                     <b>{buzzed.displayName || buzzed.name}</b>
@@ -254,7 +345,7 @@ export default function HostLiveScreen({
               )}
 
               {/* Typed, tapped and auto graded: a verdict per submission. */}
-              {windowed && answers.length > 0 && (
+              {windowed && !isDailyDouble && answers.length > 0 && (
                 <div className="hl-answers">
                   {answers.map((entry) => {
                     const who = players.find((p) => p.id === entry.playerId);
@@ -295,7 +386,7 @@ export default function HostLiveScreen({
 
               {/* Who is still out. Named, because "3 of 5" does not tell a host
                   whose name to say out loud. */}
-              {windowed && answerWindowOpen && waitingOn.length > 0 && (
+              {windowed && !isDailyDouble && answerWindowOpen && waitingOn.length > 0 && (
                 <p className="hl-waiting">
                   Still answering: {waitingOn.map((p) => p.displayName || p.name).join(', ')}
                 </p>
