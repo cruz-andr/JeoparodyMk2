@@ -45,6 +45,9 @@ export default function HostPage() {
   const { isConnected } = useSocket();
 
   const { token } = useUserStore();
+  /* Read from the store rather than counted separately, so the number on screen
+     and the people the game will start with are the same list. */
+  const waiting = useRoomStore((s) => s.players.filter((p) => !p.isHost).length);
   const settings = useSettingsStore();
   const {
     answerMode, projectorMode,
@@ -72,7 +75,6 @@ export default function HostPage() {
      happened. */
   const [doubles, setDoubles] = useState({ 1: [], 2: [] });
   const [marking, setMarking] = useState(false);
-  const [waiting, setWaiting] = useState(0);
   const [copied, setCopied] = useState(false);
 
   const creating = useRef(false);
@@ -112,14 +114,47 @@ export default function HostPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected]);
 
-  /* Players arriving while the board is being written. */
+  /* Game Settings, pushed to the room every time they change.
+     The room is opened the moment this page loads, with whatever the settings
+     were then, and nothing sent the changes afterwards: the answer mode, the
+     clocks and projector mode were all read from the room, so every choice
+     made in the settings sheet was dropped on the floor. The server ignores
+     this once the game is running, which is the right moment to stop. */
   useEffect(() => {
-    const onPlayers = ({ players }) => setWaiting(Math.max((players?.length ?? 1) - 1, 0));
-    socketClient.on('player-joined', onPlayers);
-    socketClient.on('player-left', onPlayers);
+    if (!roomCode) return;
+    const rules = { answerMode, projectorMode, ...roomRulesFromSettings(settings) };
+    socketClient.emit('room:update-settings', { roomCode, settings: rules });
+    /* Written locally as well as sent. The game screen reads these from the
+       room store and only starts listening for the update once it has mounted,
+       by which time this one has already been and gone. */
+    useRoomStore.getState().updateSettings(rules);
+  }, [roomCode, answerMode, projectorMode, settings]);
+
+  /* Players arriving while the board is being written.
+     These go into the shared room store rather than a local count. The count
+     alone left everyone who joined during setup invisible for the whole game:
+     the game screen only starts listening once it mounts, by which time their
+     arrival has already been and gone. */
+  useEffect(() => {
+    const onJoin = ({ playerId, displayName, signature }) => {
+      useRoomStore.getState().addPlayer({
+        id: playerId,
+        name: displayName,
+        displayName,
+        signature: signature || null,
+        score: 0,
+        isReady: false,
+        isConnected: true,
+        isHost: false,
+      });
+    };
+    const onLeave = ({ playerId }) => useRoomStore.getState().removePlayer(playerId);
+
+    socketClient.on('room:player-joined', onJoin);
+    socketClient.on('room:player-left', onLeave);
     return () => {
-      socketClient.off('player-joined', onPlayers);
-      socketClient.off('player-left', onPlayers);
+      socketClient.off('room:player-joined', onJoin);
+      socketClient.off('room:player-left', onLeave);
     };
   }, []);
 

@@ -14,6 +14,7 @@ import GameResults from '../components/game/GameResults';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
+import HostLiveScreen from '../components/host/HostLiveScreen';
 import MediaClueDisplay from '../components/media/MediaClueDisplay';
 import ControllerView from '../components/player/ControllerView';
 import AnswerFeedback from '../components/player/AnswerFeedback';
@@ -620,6 +621,13 @@ export default function GamePage() {
       }
     });
 
+    /* Host corrected a score by hand. Nothing listened for this, so an
+       adjustment reached the server and changed nothing on screen until the
+       next judged answer happened to redraw the number. */
+    const unsubHostScoreOverridden = subscribe('host:score-overridden', ({ playerId, newScore }) => {
+      useRoomStore.getState().updatePlayerScore(playerId, newScore);
+    });
+
     // Host skipped question
     const unsubHostQuestionSkipped = subscribe('host:question-skipped', ({ nextPickerId }) => {
       setCurrentQuestion(null);
@@ -721,6 +729,7 @@ export default function GamePage() {
       unsubHostAnswerWindowOpened();
       unsubHostAnswerWindowClosed();
       unsubHostAnswerJudged();
+      unsubHostScoreOverridden();
       unsubHostQuestionSkipped();
       unsubTypedAnswersUpdate();
       unsubAnswerSubmitted();
@@ -796,9 +805,12 @@ export default function GamePage() {
       firstPickerId: currentPlayerId, // Host picks first in host mode
     });
     setCurrentPickerId(currentPlayerId);
-    setHostBuzzerOpen(true);  // Default buzzer to open in host mode
-    // Also broadcast to all players that buzzer is open by default
-    socketClient.emit('host:open-buzzer', { roomCode });
+    /* The buzzer is deliberately NOT opened here. There is no clue yet, so
+       there is nothing to buzz on, and the server closes the buzz window again
+       the moment one is picked. Opening it at the start left the host's screen
+       claiming the buzzer was open while the server refused every buzz, for
+       the whole first clue of every game. The server opens it a few seconds
+       after each clue goes up, and the host can open it early. */
     setPhase('playing');
   };
 
@@ -1000,6 +1012,15 @@ export default function GamePage() {
       setCurrentQuestion({ ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
 
+      /* The server resets the buzz window for the new clue, so the host's
+         screen has to follow it down or it will show the last clue's state. */
+      if (isHostMode) {
+        setHostBuzzerOpen(false);
+        setHostAnswerWindowOpen(false);
+        setBuzzerWinnerId(null);
+        setBuzzerWinnerReactionTime(null);
+      }
+
       // In host mode, host controls buzzer via control panel, not auto-buzz
       if (!isHostMode) {
         setSignalArrivedTime(Date.now());
@@ -1199,6 +1220,38 @@ export default function GamePage() {
         score={myScore}
       />
       </>
+    );
+  }
+
+  /* The host is not a player: no score, no buzzer, nothing to answer. They used
+     to get the player screen with a draggable panel floating over the board,
+     which covered whatever was underneath and put every control on screen at
+     once. This is their own screen instead. Everything below stays exactly as
+     it was for players. */
+  if (isHostMode && isHost && phase === 'playing') {
+    return (
+      <HostLiveScreen
+        roomCode={roomCode}
+        players={players}
+        categories={categories}
+        questions={questions}
+        revealedQuestions={revealedQuestions}
+        currentRound={currentRound}
+        currentQuestion={currentQuestion}
+        answerMode={answerMode}
+        projectorMode={projectorMode}
+        buzzerOpen={hostBuzzerOpen}
+        answerWindowOpen={hostAnswerWindowOpen}
+        buzzedPlayerId={buzzerWinnerId}
+        buzzedReactionTime={buzzerWinnerReactionTime}
+        answers={typedAnswersForHost}
+        submittedPlayerIds={submittedPlayerIds}
+        isDailyDouble={isDailyDouble}
+        dailyDoublePhase={dailyDoublePhase}
+        showAnswer={showAnswer}
+        onQuestionSelect={handleQuestionSelect}
+        onLeave={handleLeave}
+      />
     );
   }
 

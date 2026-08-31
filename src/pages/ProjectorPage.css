@@ -1,0 +1,145 @@
+/* The screen behind the host. Read from across a room, so everything is large
+   and nothing is interactive. */
+
+.pj {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 2vh;
+  padding: 3vh 3vw;
+  background: var(--jeopardy-dark, #0b0d1f);
+  color: var(--text-primary, #f2ece0);
+}
+
+.pj-empty {
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(242, 236, 224, 0.5);
+}
+.pj-small { font-size: 0.8rem; opacity: 0.6; }
+
+/* ---------------------------------------------------------------- board */
+
+.pj-board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 6), 1fr);
+  gap: 0.6vw;
+  align-content: stretch;
+}
+
+.pj-head,
+.pj-cell {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background: #060ce9;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+}
+
+.pj-head {
+  padding: 1.2vh 0.5vw;
+  font-size: clamp(0.8rem, 1.5vw, 1.9rem);
+  letter-spacing: 0.5px;
+  line-height: 1.15;
+}
+
+.pj-cell {
+  font-size: clamp(1.4rem, 3.4vw, 4.6rem);
+  color: var(--jeopardy-gold, #d4a437);
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* A played cell stays on the board as a hole, so the room can see what is
+   left without counting. */
+.pj-cell.is-gone { background: #04086b; }
+
+/* ----------------------------------------------------------------- clue */
+
+.pj-clue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5vh;
+  text-align: center;
+  background: #060ce9;
+  padding: 4vh 5vw;
+}
+
+.pj-clue-where {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: clamp(0.8rem, 1.6vw, 1.7rem);
+  letter-spacing: 2px;
+  color: var(--jeopardy-gold, #d4a437);
+}
+
+.pj-clue-text {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: clamp(1.5rem, 4.4vw, 5rem);
+  line-height: 1.2;
+  text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  max-width: 22ch;
+}
+
+.pj-media { max-height: 40vh; max-width: 70vw; object-fit: contain; }
+
+.pj-options {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5vh 2vw;
+  font-size: clamp(1rem, 2.2vw, 2.4rem);
+}
+
+.pj-response {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: clamp(1.2rem, 3vw, 3.4rem);
+  color: var(--jeopardy-gold, #d4a437);
+}
+
+.pj-buzz {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: clamp(1rem, 2.4vw, 2.6rem);
+  color: var(--jeopardy-gold-light, #f5d76e);
+}
+.pj-buzz.is-open { opacity: 0.55; }
+
+/* --------------------------------------------------------------- scores */
+
+.pj-scores {
+  display: flex;
+  justify-content: center;
+  gap: 4vw;
+  flex-wrap: wrap;
+}
+
+.pj-score { display: flex; flex-direction: column; align-items: center; gap: 0.4vh; }
+
+.pj-name {
+  font-size: clamp(0.75rem, 1.3vw, 1.5rem);
+  color: rgba(242, 236, 224, 0.7);
+}
+
+.pj-money {
+  font-family: var(--font-board);
+  font-size: clamp(1.2rem, 2.6vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--jeopardy-gold, #d4a437);
+}
+.pj-money.is-negative { color: #e08792; }

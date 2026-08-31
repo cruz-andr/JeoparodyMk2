@@ -1,0 +1,310 @@
+/* The host's screen while the game runs. A fixed rail beside the board, not a
+   panel floating over it. */
+
+.hl {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--jeopardy-dark, #0b0d1f);
+  color: var(--text-primary, #f2ece0);
+}
+
+/* ---------------------------------------------------------------- top */
+
+.hl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.08);
+}
+
+.hl-top-right { display: flex; align-items: center; gap: 8px; }
+
+.hl-where,
+.hl-room {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1.2px;
+  color: rgba(242, 236, 224, 0.55);
+}
+
+.hl-room b { color: var(--jeopardy-gold); letter-spacing: 2px; font-size: 0.95rem; }
+
+.hl-dot { margin: 0 7px; opacity: 0.4; }
+
+/* ---------------------------------------------------------------- body */
+
+.hl-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  padding: 18px 20px;
+  align-items: start;
+  min-height: 0;
+}
+
+.hl-board { min-width: 0; }
+
+/* The board is the host's main instrument, so it uses the height it has rather
+   than sitting at its default size with the screen empty underneath. Scoped
+   here so the shared board is unchanged everywhere else. */
+.hl-board .game-board {
+  --cell-height: clamp(58px, calc((100vh - 310px) / 5), 132px);
+}
+
+.hl-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 10px;
+  background: rgba(242, 236, 224, 0.04);
+  position: sticky;
+  top: 18px;
+}
+
+/* The line that answers "what now?". It is the largest thing in the rail
+   because it is the thing a host glances at. */
+.hl-stage {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.02rem;
+  letter-spacing: 1.4px;
+  color: var(--jeopardy-gold);
+}
+
+.hl-quiet {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: rgba(242, 236, 224, 0.5);
+}
+
+/* ---------------------------------------------------------------- clue */
+
+.hl-clue-where {
+  margin: 0 0 6px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 1.2px;
+  color: rgba(242, 236, 224, 0.55);
+}
+
+.hl-clue-text {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.hl-answer-label {
+  margin: 0 0 2px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 1.2px;
+  color: rgba(242, 236, 224, 0.45);
+}
+
+.hl-answer {
+  margin: 0;
+  font-size: 1.16rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--jeopardy-gold-light, #f5d76e);
+}
+
+/* ------------------------------------------------------------- actions */
+
+/* The one thing to do now, so it is the only filled button in the rail. */
+button.hl-do {
+  width: 100%;
+  padding: 13px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--jeopardy-gold);
+  color: #10121f;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 1.3px;
+  cursor: pointer;
+  transition: filter 0.14s ease;
+}
+button.hl-do:hover { filter: brightness(1.08); }
+
+.hl-judge { display: flex; flex-direction: column; gap: 10px; }
+
+.hl-buzzed {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 1.1rem;
+}
+.hl-react {
+  font-family: var(--font-board);
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: rgba(242, 236, 224, 0.5);
+}
+
+.hl-verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Right and wrong are the same size on purpose. Making the good outcome
+   bigger nudges a host toward it, and the host is the referee. */
+button.hl-right,
+button.hl-wrong {
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 8px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 1.2px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: filter 0.14s ease;
+}
+button.hl-right { background: #1f7a4d; color: #f2ece0; }
+button.hl-wrong { background: #8c2f39; color: #f2ece0; }
+button.hl-right:hover,
+button.hl-wrong:hover { filter: brightness(1.14); }
+
+.hl-verdict.is-small button { padding: 8px 10px; font-size: 0.72rem; }
+
+.hl-worth {
+  font-size: 0.68rem;
+  letter-spacing: 0.8px;
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------- answers */
+
+.hl-answers { display: flex; flex-direction: column; gap: 12px; }
+
+.hl-answer-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.08);
+}
+.hl-answer-row:last-of-type { border-bottom: 0; padding-bottom: 0; }
+
+.hl-answer-who {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* A reading, not a verdict: the host still decides. Said in words rather than
+   a coloured badge for exactly that reason. */
+.hl-graded {
+  font-family: var(--font-board);
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.9px;
+}
+.hl-graded.is-right { color: #6fd39b; }
+.hl-graded.is-wrong { color: #e08792; }
+
+.hl-answer-said { margin: 0; font-size: 1rem; }
+
+.hl-waiting,
+button.hl-reveal,
+button.hl-skip {
+  font-size: 0.82rem;
+  color: rgba(242, 236, 224, 0.55);
+}
+.hl-waiting { margin: 0; line-height: 1.45; }
+
+button.hl-skip { align-self: flex-start; margin-top: 2px; }
+
+/* -------------------------------------------------------------- scores */
+
+.hl-scores {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(242, 236, 224, 0.08);
+}
+
+.hl-score { display: flex; align-items: center; gap: 9px; }
+
+.hl-name { font-size: 0.92rem; }
+
+.hl-money {
+  font-family: var(--font-board);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--jeopardy-gold);
+}
+.hl-money.is-negative { color: #e08792; }
+
+.hl-adjust { display: flex; align-items: center; gap: 4px; }
+
+.hl-adjust button {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  font-family: var(--font-board);
+  color: rgba(242, 236, 224, 0.45);
+}
+
+button.hl-yes { color: #e08792 !important; }
+
+.hl-sure {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.9px;
+  color: rgba(242, 236, 224, 0.55);
+}
+
+input.hl-delta {
+  width: 72px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(242, 236, 224, 0.1);
+  color: var(--text-primary, #f2ece0);
+  font-family: var(--font-board);
+  font-size: 0.85rem;
+}
+input.hl-delta:focus { outline: 2px solid var(--jeopardy-gold); outline-offset: 1px; }
+
+/* --------------------------------------------------------------- phone */
+
+/* One breakpoint. On a phone the board is a thing you scroll past and the rail
+   is the whole point, so the rail comes first. */
+@media (max-width: 900px) {
+  .hl-main {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+    gap: 14px;
+  }
+  .hl-rail { position: static; order: -1; }
+  /* On a phone the board is scrolled past, not filled, so it goes back to the
+     shared size. */
+  .hl-board .game-board { --cell-height: unset; }
+  .hl-top { flex-wrap: wrap; gap: 8px; }
+  .hl-scores { gap: 14px; padding: 10px 14px; }
+  button.hl-do { padding: 16px; font-size: 0.92rem; }
+  button.hl-right,
+  button.hl-wrong { padding: 18px 10px; }
+}
