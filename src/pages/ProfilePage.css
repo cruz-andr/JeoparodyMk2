@@ -1,7 +1,9 @@
+/* Navy, not near black. The profile belongs to the same board the rest of the
+   game is played on; the darker ground made it read as a different product. */
 .profile-page {
   min-height: 100vh;
   min-height: 100dvh;
-  background: #05081c;
+  background: #050a24;
   color: var(--text-primary);
 }
 
@@ -35,9 +37,11 @@
 .profile-top-spacer { cursor: default; }
 
 .profile-body {
-  max-width: 720px;
+  /* Room to breathe on a wide screen. At 720 the whole page sat as a narrow
+     column adrift in a large dark field. */
+  max-width: 1020px;
   margin: 0 auto;
-  padding: 28px 20px 72px;
+  padding: 34px 40px 72px;
 }
 
 .profile-head {
@@ -57,13 +61,15 @@
 
 .profile-card img {
   display: block;
-  width: 200px;
+  width: 260px;
+  max-width: 100%;
   height: auto;
 }
 
 .profile-nodrawing {
   margin: 0;
-  width: 200px;
+  width: 260px;
+  max-width: 100%;
   text-align: center;
   font-size: 0.84rem;
   color: rgba(242, 236, 224, 0.6);
@@ -141,6 +147,7 @@
 .profile-row {
   display: flex;
   align-items: center;
+  gap: 14px;
   justify-content: space-between;
   width: 100%;
   padding: 15px 18px;
@@ -168,7 +175,25 @@
   color: var(--text-muted);
 }
 
-.profile-row-go { color: var(--text-muted); }
+.profile-row-go { color: var(--text-muted); margin-left: auto; }
+
+.profile-row-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  color: var(--jeopardy-gold);
+}
+
+.profile-row-main { flex: 1; }
+
+/* Present, and honestly not ready. */
+.profile-row.is-soon {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.profile-row.is-soon:hover { background: none; }
 
 @media (max-width: 640px) {
   .profile-head { flex-direction: column; align-items: stretch; gap: 16px; }
@@ -176,4 +201,5 @@
   .profile-nodrawing { width: 100%; }
   .profile-who h1 { font-size: 1.4rem; }
   .profile-record { grid-template-columns: repeat(2, 1fr); }
+  .profile-body { padding: 24px 16px 64px; }
 }

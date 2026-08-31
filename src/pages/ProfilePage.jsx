@@ -91,6 +91,7 @@ export default function ProfilePage() {
 
         <nav className="profile-rows">
           <Link className="profile-row" to="/settings">
+            <span className="profile-row-icon"><Icon name="settings" size={20} /></span>
             <span className="profile-row-main">
               <span className="profile-row-name">Settings</span>
               <span className="profile-row-note">Timers, sound, text size, colours</span>
@@ -99,6 +100,7 @@ export default function ProfilePage() {
           </Link>
 
           <Link className="profile-row" to="/account">
+            <span className="profile-row-icon"><Icon name="mail" size={20} /></span>
             <span className="profile-row-main">
               <span className="profile-row-name">Account</span>
               <span className="profile-row-note">Email, password, how you sign in</span>
@@ -106,10 +108,21 @@ export default function ProfilePage() {
             <span className="profile-row-go">&rsaquo;</span>
           </Link>
 
+          {/* Shown before it works, because the shape of this page is the
+              argument for building friends here rather than somewhere else. */}
+          <span className="profile-row is-soon" aria-disabled="true">
+            <span className="profile-row-icon"><Icon name="user-round-plus" size={20} /></span>
+            <span className="profile-row-main">
+              <span className="profile-row-name">Friends</span>
+              <span className="profile-row-note">Coming next</span>
+            </span>
+          </span>
+
           <button
             className="profile-row"
             onClick={() => { leaving.current = true; logout(); navigate('/menu'); }}
           >
+            <span className="profile-row-icon"><Icon name="log-out" size={20} /></span>
             <span className="profile-row-main">
               <span className="profile-row-name">Sign out</span>
             </span>
