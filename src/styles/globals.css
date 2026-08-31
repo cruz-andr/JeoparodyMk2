@@ -108,9 +108,7 @@ button:focus-visible {
    at 0,1,0 loses on hover and the thing flares gold. That is how a Back link
    became a full width gold bar across the header. Qualified with the element
    so it wins, and stated for both states so neither can drift. */
-button.plain-btn,
-button.plain-btn:hover:not(:disabled),
-button.plain-btn:focus {
+button.plain-btn {
   background: none;
   border: none;
   transform: none;
@@ -121,6 +119,26 @@ button.plain-btn:focus {
      button had to remember to set a colour or vanish. A plain button should
      read as the text around it. */
   color: inherit;
+}
+
+/* Only the two the hover state actually sets.
+
+   These used to be one rule with the selectors above, which made every
+   declaration in it 0,3,1 on hover. text-transform: none then outweighed the
+   0,1,1 uppercase on quiet-action and every other button class, so a label
+   written "Game Settings" and shown as GAME SETTINGS dropped back to Game
+   Settings under the pointer. Nothing here may list a property that
+   button:hover does not set, or it will stomp the component's own. */
+@media (hover: hover) and (pointer: fine) {
+  button.plain-btn:hover:not(:disabled) {
+    background: none;
+    transform: none;
+  }
+}
+
+button.plain-btn:focus {
+  background: none;
+  transform: none;
 }
 
 /* A secondary action is a word, not a box.
