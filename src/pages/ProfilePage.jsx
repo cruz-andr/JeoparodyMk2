@@ -100,6 +100,15 @@ export default function ProfilePage() {
             <span className="profile-row-go">&rsaquo;</span>
           </Link>
 
+          <Link className="plain-btn profile-row" to="/boards/mine">
+            <span className="profile-row-icon"><Icon name="layout-grid" size={20} /></span>
+            <span className="profile-row-main">
+              <span className="profile-row-name">My boards</span>
+              <span className="profile-row-note">Boards you have written</span>
+            </span>
+            <span className="profile-row-go">&rsaquo;</span>
+          </Link>
+
           <Link className="plain-btn profile-row" to="/account">
             <span className="profile-row-icon"><Icon name="mail" size={20} /></span>
             <span className="profile-row-main">

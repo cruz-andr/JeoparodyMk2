@@ -1,0 +1,292 @@
+/* One board. The page frame is in components/boards/BoardsChrome.css. */
+.board-page {
+  min-height: 100vh;
+  background: #050a24;
+  color: var(--text-primary);
+}
+
+.board-main { max-width: 860px; }
+
+.board-gone { max-width: 46ch; padding-top: 22px; }
+.board-gone h1 {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: 1.9rem;
+  line-height: 0.95;
+  margin: 0 0 12px;
+  color: var(--jeopardy-gold);
+}
+.board-gone p { color: var(--text-secondary); margin: 0; }
+
+/* ---- the head ---- */
+.board-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
+}
+
+.board-head-text { flex: 1; min-width: 0; }
+
+.board-title {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: clamp(1.7rem, 4.4vw, 2.5rem);
+  line-height: 0.92;
+  letter-spacing: -0.3px;
+  margin: 0 0 10px;
+  color: var(--jeopardy-gold);
+}
+
+.board-by {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+/* The signature sits on the colour the canvas baked into it, or it reads as a
+   patch of a different blue. */
+.board-sig {
+  display: block;
+  height: 26px;
+  width: auto;
+  max-width: 130px;
+  border-radius: 2px;
+  background: var(--signature-ground);
+}
+
+.board-by-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.board-desc {
+  margin: 0 0 10px;
+  max-width: 58ch;
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-size: 0.96rem;
+}
+
+.board-adapted {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.board-adapted a { color: var(--jeopardy-gold-light); }
+
+/* ---- the six categories ---- */
+.board-cats {
+  list-style: none;
+  margin: 22px 0 26px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(242, 236, 224, 0.1);
+  border: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+.board-cats li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  background: #050a24;
+}
+
+.board-cat-name {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-cat-count {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---- actions ---- */
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* Matched at element+class weight, because globals.css sets `button.plain-btn`
+   at 0,1,1 and a bare class here loses to it: the border and the uppercase
+   both silently disappeared. Anything on a .plain-btn that globals also sets
+   (background, border, transform, text-transform) has to be matched this way. */
+button.board-action {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.8px;
+  padding: 12px 16px;
+  color: var(--jeopardy-gold-light);
+  border: 1px solid rgba(242, 236, 224, 0.2);
+  cursor: pointer;
+}
+
+button.board-action:hover:not(:disabled) {
+  border-color: var(--jeopardy-gold);
+  color: var(--jeopardy-gold);
+}
+
+button.board-action:disabled { color: var(--text-muted); cursor: default; }
+
+.board-incomplete {
+  margin: 0 0 8px;
+  font-size: 0.87rem;
+  color: var(--color-warning);
+}
+
+/* ---- who can see this ---- */
+.board-share {
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(242, 236, 224, 0.12);
+}
+
+.board-share h2 {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.9px;
+  margin: 0 0 12px;
+}
+
+.board-dial {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  border-top: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+.board-dial li { border-bottom: 1px solid rgba(242, 236, 224, 0.1); }
+
+/* The chosen one is marked by the app's own gold bar, the same one the header
+   menu uses. A ring of outlined pills is somebody else's interface. */
+.board-choice {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-choice.is-on {
+  background: rgba(214, 159, 76, 0.09);
+  box-shadow: inset 3px 0 0 var(--jeopardy-gold);
+}
+
+.board-choice:focus-visible {
+  outline: none;
+  background: rgba(214, 159, 76, 0.14);
+  box-shadow: inset 3px 0 0 var(--jeopardy-gold);
+}
+
+.board-choice:disabled { cursor: default; }
+
+.board-choice-name {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.board-choice.is-on .board-choice-name { color: var(--jeopardy-gold-light); }
+.board-choice:disabled .board-choice-name { color: var(--text-muted); }
+
+.board-choice-note {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* A blocked option explains itself in the place the note would have been,
+   rather than in a message somewhere else on the page. */
+.board-choice:disabled .board-choice-note { color: var(--color-warning); }
+
+.board-dial-error {
+  margin: 0 0 14px;
+  font-size: 0.87rem;
+  color: var(--color-error);
+}
+
+/* ---- the link ---- */
+.board-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.board-link-label {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+
+.board-link-field {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+}
+
+button.board-link-copy {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 1px;
+  padding: 11px 15px;
+  color: var(--jeopardy-gold-light);
+  border: 1px solid rgba(242, 236, 224, 0.2);
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .board-head { gap: 16px; flex-direction: column; }
+  .board-cats { grid-template-columns: 1fr; }
+  .board-actions { flex-direction: column; align-items: stretch; }
+  .board-actions .btn-primary,
+  button.board-action { width: 100%; }
+}

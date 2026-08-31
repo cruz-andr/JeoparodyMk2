@@ -115,6 +115,12 @@ button.plain-btn:focus {
   border: none;
   transform: none;
   text-transform: none;
+  /* The bare `button` rule above paints text black to sit on the gold fill.
+     Dropping the fill without dropping the colour leaves black text on a navy
+     ground, which is invisible rather than merely wrong, and every plain
+     button had to remember to set a colour or vanish. A plain button should
+     read as the text around it. */
+  color: inherit;
 }
 
 /* Button Variants */

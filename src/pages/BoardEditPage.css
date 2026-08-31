@@ -1,0 +1,93 @@
+/* The editor. The page frame is in components/boards/BoardsChrome.css. */
+
+/* Saved state sits where the header's third column already is, so it reads as
+   a status rather than a control. It is quiet by design: a save that worked is
+   not news, and only a save that failed should catch the eye. */
+.board-save {
+  justify-self: end;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+
+.board-save.is-saving { color: var(--text-secondary); }
+.board-save.is-failed { color: var(--color-error); }
+
+.board-edit-body { max-width: 1020px; }
+
+.board-edit-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding-bottom: 18px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
+}
+
+.board-edit-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.board-edit-label {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+
+/* An underline rather than a box. The title is the biggest thing on the page
+   and a full outlined field around it turns it into a form. */
+.board-edit-title input {
+  width: 100%;
+  padding: 4px 0 7px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.25);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: 0.3px;
+  color: var(--jeopardy-gold);
+}
+
+.board-edit-title input::placeholder {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.board-edit-title input:focus {
+  outline: none;
+  border-bottom-color: var(--jeopardy-gold);
+}
+
+.board-edit-count {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1.1px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .board-edit-head {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Title takes the full second line so it is not a 90px input next to a
+     thumbnail. */
+  .board-edit-title { order: 3; flex-basis: 100%; }
+  .board-edit-title input { font-size: 1.25rem; }
+  .board-edit-count { padding-bottom: 0; }
+}

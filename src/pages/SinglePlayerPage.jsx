@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { useAudio } from '../hooks';
@@ -13,10 +13,13 @@ import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import FinalJeopardyModal from '../components/game/FinalJeopardyModal';
 import GameResults from '../components/game/GameResults';
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
+import { boardToHost } from '../stores/boardShape';
+import { countPlay } from '../services/api/boardsService';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     phase,
     genre,
@@ -49,7 +52,7 @@ export default function SinglePlayerPage() {
     questionsCorrect,
   } = useGameStore();
 
-  const { updateStats, addHighscore } = useUserStore();
+  const { updateStats, addHighscore, token } = useUserStore();
   const { playCorrect, playWrong } = useAudio();
   const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy, difficulty } =
     useSettingsStore();
@@ -61,11 +64,41 @@ export default function SinglePlayerPage() {
   const [remainingRolls, setRemainingRolls] = useState(5);
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
 
+  /* One effect, not two.
+
+     A board handed over from its own page used to be applied in a second
+     effect that ran after this one. Under StrictMode React mounts, unmounts
+     and mounts again, so on the second pass this effect reset the phase back
+     to setup while the guard in the other one stopped it re-applying: the
+     board arrived and the genre picker appeared anyway. Doing both here means
+     there is no order to get wrong.
+
+     A saved board is a third content source rather than a second game. It
+     fills the same store the AI path fills and skips the steps that exist only
+     to produce one, so nothing downstream knows the difference. */
   useEffect(() => {
     setMode('single');
-    setPhase('setup');
+
+    const handed = location.state?.board;
+    if (handed) {
+      const { categories: names, questions: grid } = boardToHost(handed);
+      setGenre(handed.title || 'Community board');
+      setCategories(names);
+      setQuestions(grid, enableDailyDouble);
+      setPhase('playing');
+
+      /* Never awaited and never surfaced. A board that played fine but failed
+         to increment a counter is not worth interrupting anyone over. */
+      if (location.state.boardSlug) countPlay(location.state.boardSlug, token);
+    } else {
+      setPhase('setup');
+    }
+
     return () => resetGame();
-  }, [setMode, setPhase, resetGame]);
+  }, [
+    location.state, setMode, setPhase, resetGame,
+    setGenre, setCategories, setQuestions, enableDailyDouble, token,
+  ]);
 
   const handleGenerateCategories = async (selectedGenre) => {
     setLoading(true);

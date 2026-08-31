@@ -29,6 +29,10 @@
      image reads as a patch of a different blue. */
   --signature-ground: #1a1a6e;
 
+  /* The board tile. Defined here rather than only inside .menu, because the
+     boards pages draw the same rectangle and two hard-coded blues drift. */
+  --tile: #1a2080;
+
   --font-board: 'Big Shoulders Display', Impact, 'Haettenschweiler', 'Arial Narrow', sans-serif;
   --font-clue: 'Petrona', Georgia, 'Times New Roman', serif;
   --font-display: Impact, "Arial Narrow", sans-serif;

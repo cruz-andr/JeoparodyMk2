@@ -1,0 +1,166 @@
+/* The shelf. The page frame is in components/boards/BoardsChrome.css. */
+/* ---- empty shelf ---- */
+.boards-empty { max-width: 46ch; padding-top: 22px; }
+
+.boards-empty h1 {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: 2.1rem;
+  line-height: 0.95;
+  margin: 0 0 12px;
+  color: var(--jeopardy-gold);
+}
+
+.boards-empty p {
+  margin: 0 0 22px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ---- the list ---- */
+.boards-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.boards-count,
+.boards-new {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  letter-spacing: 1.2px;
+  margin: 0;
+}
+
+.boards-count { color: var(--text-muted); }
+
+.boards-new {
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.boards-new:disabled { color: var(--text-muted); cursor: default; }
+
+.boards-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+/* Rows separated by a hairline, not cards floating in space. The board itself
+   is flat rectangles with black gutters and this is the same geometry. */
+.boards-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+.boards-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 6px 15px 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.boards-row:hover .boards-row-name { color: var(--jeopardy-gold-light); }
+
+/* The app's own mark for "you are on this one", the same inset bar the header
+   menu uses, rather than an outline drawn around a full-width row. */
+.boards-row:focus-visible {
+  outline: none;
+  background: rgba(214, 159, 76, 0.1);
+  box-shadow: inset 3px 0 0 var(--jeopardy-gold);
+}
+
+.boards-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.boards-row-name {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.06rem;
+  letter-spacing: 0.4px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boards-row-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 7px;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+}
+
+/* Separators drawn rather than typed, so there is never one left dangling at
+   the end of a wrapped line. */
+.boards-row-note span { white-space: nowrap; }
+.boards-row-note span + span::before {
+  content: '·';
+  margin-right: 7px;
+  color: var(--text-muted);
+}
+
+.boards-row-go {
+  font-size: 1.3rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+/* ---- delete ---- */
+.boards-delete,
+.boards-confirm button {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1.1px;
+  padding: 7px 9px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.boards-delete:hover { color: var(--color-error); }
+
+.boards-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.boards-confirm button.is-danger { color: var(--color-error); }
+.boards-confirm button:not(.is-danger) { color: var(--jeopardy-gold-light); }
+
+@media (max-width: 640px) {
+  .boards-body { padding: 20px 16px 80px; }
+
+  .boards-row { gap: 12px; padding: 13px 4px; }
+  .boards-row-name { font-size: 0.98rem; }
+
+  /* The chevron and a Delete button on the same row is two targets a thumb
+     will confuse. The chevron goes; the row is still the way in. */
+  .boards-row-go { display: none; }
+
+  .boards-confirm { font-size: 0.72rem; }
+}

@@ -1,0 +1,31 @@
+/* Columns, not rows, because a board is read down a category. */
+.board-mini {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.board-mini-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board-mini span {
+  display: block;
+  width: 7px;
+  height: 5px;
+  /* An empty cell is the absence of a tile rather than a tile of a different
+     colour, so a half-built board reads as half built at a glance. */
+  background: rgba(242, 236, 224, 0.09);
+}
+
+.board-mini span.is-written { background: var(--tile); }
+
+.board-mini.is-large span {
+  width: 13px;
+  height: 9px;
+}
+
+.board-mini.is-large,
+.board-mini.is-large .board-mini-col { gap: 3px; }

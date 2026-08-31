@@ -36,6 +36,13 @@ async function call(path, { method = 'GET', body, token } = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    /* The rate limiter answers with a bare { error: "..." } string rather than
+       the { error: { message, code } } every other endpoint uses, so it fell
+       through to the generic sentence. It is worth its own words: it is not a
+       thing that went wrong, it is a thing to wait out. */
+    if (response.status === 429) {
+      throw new BoardsError('Too many requests just now. Wait a moment and try again.', 'RATE_LIMITED', 429);
+    }
     throw new BoardsError(
       data?.error?.message || 'Something went wrong. Try again.',
       data?.error?.code,
@@ -75,6 +82,18 @@ export const deleteBoard = (token, slug) =>
 export const browse = ({ row = 'popular', topic, q, limit } = {}, token) =>
   call(query({ row, topic, q, limit }), { token });
 
+/* Slugs already counted on this page load.
+
+   React mounts, unmounts and mounts again under StrictMode, so the effect that
+   starts a game runs twice and counted the same play twice. Guarding here
+   rather than in the page means every caller gets it, including whatever
+   starts a game next.
+
+   This is not anti-gaming. A reload gets a fresh module and counts again; what
+   stops someone running up their own number is the server refusing to count
+   the owner. Proper deduplication belongs with the ranking that reads it. */
+const counted = new Set();
+
 /**
  * Count a play.
  *
@@ -82,5 +101,8 @@ export const browse = ({ row = 'popular', topic, q, limit } = {}, token) =>
  * played fine but failed to increment a counter is not something to interrupt
  * someone's game over.
  */
-export const countPlay = (slug, token) =>
-  call(`/${slug}/played`, { method: 'POST', token }).catch(() => null);
+export const countPlay = (slug, token) => {
+  if (counted.has(slug)) return Promise.resolve(null);
+  counted.add(slug);
+  return call(`/${slug}/played`, { method: 'POST', token }).catch(() => null);
+};

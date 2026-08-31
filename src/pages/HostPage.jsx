@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useSettingsStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
@@ -18,6 +18,7 @@ const POINT_VALUES = [200, 400, 600, 800, 1000];
 
 export default function HostPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isConnected } = useSocket();
   const {
     setupPhase,
@@ -38,16 +39,37 @@ export default function HostPage() {
     reset: resetHost,
     isGenerating,
     setIsGenerating,
+    setImportedData,
   } = useHostStore();
 
   const settings = useSettingsStore();
   const [error, setError] = useState(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
-  // Reset host store on mount
+  /* Reset on mount, then take the handed board if there is one.
+
+     These were two effects and the reset ran second, wiping the board. Under
+     StrictMode that happens on every mount anyway, so ordering two effects was
+     never going to hold. One effect has no order to get wrong.
+
+     setImportedData already turns a stored board into the two things this
+     store holds, because a file import and a saved board are the same object.
+     So this skips the "AI or a file?" question and lands on the clues, where a
+     host can still change anything before going live. */
   useEffect(() => {
     resetHost();
-  }, [resetHost]);
+
+    const handed = location.state?.board;
+    if (!handed) return;
+
+    setContentSource('import');
+    setImportedData(handed);
+    setSetupPhase('content');
+    setContentSubPhase('questionEdit');
+  }, [
+    location.state, resetHost,
+    setContentSource, setImportedData, setSetupPhase, setContentSubPhase,
+  ]);
 
   // Handle settings complete
   const handleSettingsComplete = () => {

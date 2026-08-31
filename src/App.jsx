@@ -27,6 +27,9 @@ const AccountUsernamePage = lazy(() => import('./pages/AccountUsernamePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProfileEditPage = lazy(() => import('./pages/ProfileEditPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const BoardsMinePage = lazy(() => import('./pages/BoardsMinePage'));
+const BoardPage = lazy(() => import('./pages/BoardPage'));
+const BoardEditPage = lazy(() => import('./pages/BoardEditPage'));
 
 function PageLoader() {
   return (
@@ -60,6 +63,12 @@ const router = createBrowserRouter([
   { path: '/profile', element: <ProfilePage /> },
   { path: '/profile/edit', element: <ProfileEditPage /> },
   { path: '/settings', element: <SettingsPage /> },
+
+  /* Community Boards. /boards/mine before /boards/:slug, or "mine" is read as
+     a slug and the shelf becomes a 404. */
+  { path: '/boards/mine', element: <BoardsMinePage /> },
+  { path: '/boards/:slug', element: <BoardPage /> },
+  { path: '/boards/:slug/edit', element: <BoardEditPage /> },
 ]);
 
 function App() {

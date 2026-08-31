@@ -1,0 +1,64 @@
+/* The page frame every Community Boards screen shares: the ground, the header
+   with a back link, and the body column.
+
+   It lives in its own file rather than in one page's stylesheet because the
+   pages are lazily loaded and each one is its own chunk. A board opened from a
+   shared link never loads the shelf, so a header styled over there would
+   arrive unstyled over here.
+*/
+/* The shelf, the board page and the editor share a ground and a header, so
+   moving between them does not feel like moving between three sites. */
+.boards-page {
+  min-height: 100vh;
+  background: #050a24;
+  color: var(--text-primary);
+}
+
+.boards-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
+}
+
+.boards-back {
+  justify-self: start;
+  width: fit-content;
+  padding: 4px 2px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.6px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+}
+
+.boards-top-title {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.8px;
+}
+
+.boards-body {
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.boards-error {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--color-error);
+  background: rgba(255, 107, 107, 0.08);
+  font-size: 0.92rem;
+}
+
+.boards-quiet {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
