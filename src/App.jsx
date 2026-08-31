@@ -14,6 +14,7 @@ const MultiplayerPage = lazy(() => import('./pages/MultiplayerPage'));
 const HostPage = lazy(() => import('./pages/HostPage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const GamePage = lazy(() => import('./pages/GamePage'));
+const ProjectorPage = lazy(() => import('./pages/ProjectorPage'));
 const HighscoresPage = lazy(() => import('./pages/HighscoresPage'));
 const DailyPage = lazy(() => import('./pages/DailyPage'));
 const DailyBoardPage = lazy(() => import('./pages/DailyBoardPage'));
@@ -54,6 +55,9 @@ const router = createBrowserRouter([
   { path: '/join', element: <JoinPage /> },
   { path: '/join/:roomCode', element: <JoinPage /> },
   { path: '/game/:roomCode', element: <GamePage /> },
+  /* The screen behind the host in projector mode: a second window, driven by
+     the host's window, that never carries an answer. */
+  { path: '/project/:roomCode', element: <ProjectorPage /> },
   { path: '/highscores', element: <HighscoresPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
   { path: '/signup', element: <SignUpPage /> },

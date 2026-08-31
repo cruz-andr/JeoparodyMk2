@@ -35,6 +35,7 @@ export default function HostSettingsSheet({ onClose }) {
     questionTimeLimit, setQuestionTimeLimit,
     enableDoubleJeopardy, toggleDoubleJeopardy,
     enableDailyDouble, toggleDailyDouble,
+    dailyDoublePlacement, setDailyDoublePlacement,
     enableFinalJeopardy, toggleFinalJeopardy,
   } = useSettingsStore();
 
@@ -109,11 +110,32 @@ export default function HostSettingsSheet({ onClose }) {
             <label className="hs-toggle">
               <span>
                 Daily Doubles
-                <small>One in round one, two in round two. Placed at random.</small>
+                <small>One in round one, two in round two.</small>
               </span>
               <input type="checkbox" checked={enableDailyDouble} onChange={toggleDailyDouble} />
               <span className="hs-switch" aria-hidden="true" />
             </label>
+
+            {/* Only worth asking once they are on. A quiz night host wants the
+                Daily Double on the last clue of the hardest category; a
+                classroom mostly does not care. */}
+            {enableDailyDouble && (
+              <div className="hs-seg hs-under">
+                {[
+                  { value: 'random', label: 'Placed at random' },
+                  { value: 'chosen', label: 'I will place them' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    className={`plain-btn hs-seg-btn ${dailyDoublePlacement === option.value ? 'is-on' : ''}`}
+                    aria-pressed={dailyDoublePlacement === option.value}
+                    onClick={() => setDailyDoublePlacement(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <label className="hs-toggle">
               <span>

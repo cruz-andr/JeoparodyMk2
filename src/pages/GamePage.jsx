@@ -14,6 +14,7 @@ import GameResults from '../components/game/GameResults';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
+import HostLiveScreen from '../components/host/HostLiveScreen';
 import MediaClueDisplay from '../components/media/MediaClueDisplay';
 import ControllerView from '../components/player/ControllerView';
 import AnswerFeedback from '../components/player/AnswerFeedback';
@@ -71,6 +72,7 @@ export default function GamePage() {
   /* A hosted game carries its own second round and its own final clue. */
   const hostRound2 = useRef(null);
   const hostFinal = useRef(null); // True when host mode questions are pre-loaded
+  const hostDailyDoubles = useRef(null); // Cells the host marked, if they did
   questionsRef.current = questions;
 
   // Game state (shared)
@@ -103,6 +105,7 @@ export default function GamePage() {
   const [isDailyDouble, setIsDailyDouble] = useState(false);
   const [dailyDoubleWager, setDailyDoubleWager] = useState(0);
   const [dailyDoublePhase, setDailyDoublePhase] = useState(null); // 'wager' | 'question' | null
+  const [dailyDoubleOwnerId, setDailyDoubleOwnerId] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
 
   // Final Jeopardy state
@@ -150,7 +153,7 @@ export default function GamePage() {
     if (location.state?.hostModeQuestions) {
       const {
         categories: hostCategories, questions: hostQuestions,
-        round2, finalJeopardy,
+        round2, finalJeopardy, dailyDoubles,
       } = location.state.hostModeQuestions;
       setLocalCategories(hostCategories);
       setLocalQuestions(hostQuestions);
@@ -159,6 +162,7 @@ export default function GamePage() {
          not one of five hardcoded clues about Moby Dick. */
       hostRound2.current = round2 ?? null;
       hostFinal.current = finalJeopardy ?? null;
+      hostDailyDoubles.current = dailyDoubles ?? null;
       setQuestionsReady(true);
       // Clear the state to prevent re-triggering on refresh
       window.history.replaceState({}, document.title);
@@ -492,10 +496,12 @@ export default function GamePage() {
     });
 
     // Daily Double wager confirmed - show question to everyone
-    const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ wager, question }) => {
+    const unsubDDWagerConfirmed = subscribe('game:daily-double-wager-confirmed', ({ wager, playerId }) => {
       setDailyDoubleWager(wager);
       setDailyDoublePhase('question');
-
+      /* Who it belongs to. In a hosted room the host names them, so this is the
+         only way the screens learn whose wager is riding on the clue. */
+      if (playerId) setDailyDoubleOwnerId(playerId);
     });
 
     // Daily Double result - update scores and reset
@@ -511,6 +517,7 @@ export default function GamePage() {
       setIsDailyDouble(false);
       setDailyDoublePhase(null);
       setDailyDoubleWager(0);
+      setDailyDoubleOwnerId(null);
       setCurrentQuestion(null);
       setCurrentPickerId(nextPickerId);
     });
@@ -594,7 +601,7 @@ export default function GamePage() {
     });
 
     // Host judged an answer
-    const unsubHostAnswerJudged = subscribe('host:answer-judged', ({ playerId, correct, newScore, nextPickerId, questionClosed }) => {
+    const unsubHostAnswerJudged = subscribe('host:answer-judged', ({ playerId, correct, newScore, nextPickerId, questionClosed, canBuzzAgain }) => {
       useRoomStore.getState().updatePlayerScore(playerId, newScore);
       // Show full-screen feedback if this judgment is about the current player
       if (playerId === currentPlayerId) {
@@ -615,9 +622,27 @@ export default function GamePage() {
         setSubmittedPlayerIds([]);
         clearHostModeAnswers();
       }
+      /* Wrong in verbal mode, with people left who have not buzzed: the clue
+         stays up and the buzzer reopens for them. Only the person who just
+         answered is cleared, so the host's screen goes back to waiting rather
+         than sitting on a verdict about somebody already judged. */
+      if (canBuzzAgain) {
+        setBuzzerWinnerId(null);
+        setBuzzerWinnerReactionTime(null);
+        setHostBuzzerOpen(true);
+        setPlayerHasSubmitted(false);
+      }
+
       if (correct && nextPickerId) {
         setCurrentPickerId(nextPickerId);
       }
+    });
+
+    /* Host corrected a score by hand. Nothing listened for this, so an
+       adjustment reached the server and changed nothing on screen until the
+       next judged answer happened to redraw the number. */
+    const unsubHostScoreOverridden = subscribe('host:score-overridden', ({ playerId, newScore }) => {
+      useRoomStore.getState().updatePlayerScore(playerId, newScore);
     });
 
     // Host skipped question
@@ -721,6 +746,7 @@ export default function GamePage() {
       unsubHostAnswerWindowOpened();
       unsubHostAnswerWindowClosed();
       unsubHostAnswerJudged();
+      unsubHostScoreOverridden();
       unsubHostQuestionSkipped();
       unsubTypedAnswersUpdate();
       unsubAnswerSubmitted();
@@ -794,11 +820,18 @@ export default function GamePage() {
       questions,
       categories,
       firstPickerId: currentPlayerId, // Host picks first in host mode
+      /* Where the host marked them while writing the board. Without this the
+         server placed round one's at random here, overwriting the ones the
+         host had already sent. */
+      dailyDoubles: hostDailyDoubles.current,
     });
     setCurrentPickerId(currentPlayerId);
-    setHostBuzzerOpen(true);  // Default buzzer to open in host mode
-    // Also broadcast to all players that buzzer is open by default
-    socketClient.emit('host:open-buzzer', { roomCode });
+    /* The buzzer is deliberately NOT opened here. There is no clue yet, so
+       there is nothing to buzz on, and the server closes the buzz window again
+       the moment one is picked. Opening it at the start left the host's screen
+       claiming the buzzer was open while the server refused every buzz, for
+       the whole first clue of every game. The server opens it a few seconds
+       after each clue goes up, and the host can open it early. */
     setPhase('playing');
   };
 
@@ -940,6 +973,9 @@ export default function GamePage() {
           questions: hostRound2.current.questions,
           categories: hostRound2.current.categories,
           firstPickerId: playerIds[Math.floor(Math.random() * playerIds.length)],
+          /* Where the host marked them while writing the board. Absent means
+             the server places them at random, as it always has. */
+          dailyDoubles: hostRound2.current.dailyDoubles ?? null,
         });
         return;
       }
@@ -996,6 +1032,15 @@ export default function GamePage() {
     if (question) {
       setCurrentQuestion({ ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
+
+      /* The server resets the buzz window for the new clue, so the host's
+         screen has to follow it down or it will show the last clue's state. */
+      if (isHostMode) {
+        setHostBuzzerOpen(false);
+        setHostAnswerWindowOpen(false);
+        setBuzzerWinnerId(null);
+        setBuzzerWinnerReactionTime(null);
+      }
 
       // In host mode, host controls buzzer via control panel, not auto-buzz
       if (!isHostMode) {
@@ -1196,6 +1241,40 @@ export default function GamePage() {
         score={myScore}
       />
       </>
+    );
+  }
+
+  /* The host is not a player: no score, no buzzer, nothing to answer. They used
+     to get the player screen with a draggable panel floating over the board,
+     which covered whatever was underneath and put every control on screen at
+     once. This is their own screen instead. Everything below stays exactly as
+     it was for players. */
+  if (isHostMode && isHost && phase === 'playing') {
+    return (
+      <HostLiveScreen
+        roomCode={roomCode}
+        players={players}
+        categories={categories}
+        questions={questions}
+        revealedQuestions={revealedQuestions}
+        currentRound={currentRound}
+        currentQuestion={currentQuestion}
+        answerMode={answerMode}
+        projectorMode={projectorMode}
+        buzzerOpen={hostBuzzerOpen}
+        answerWindowOpen={hostAnswerWindowOpen}
+        buzzedPlayerId={buzzerWinnerId}
+        buzzedReactionTime={buzzerWinnerReactionTime}
+        answers={typedAnswersForHost}
+        submittedPlayerIds={submittedPlayerIds}
+        isDailyDouble={isDailyDouble}
+        dailyDoublePhase={dailyDoublePhase}
+        dailyDoubleWager={dailyDoubleWager}
+        dailyDoubleOwnerId={dailyDoubleOwnerId}
+        showAnswer={showAnswer}
+        onQuestionSelect={handleQuestionSelect}
+        onLeave={handleLeave}
+      />
     );
   }
 

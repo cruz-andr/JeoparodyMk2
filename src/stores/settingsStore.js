@@ -10,6 +10,9 @@ const initialState = {
   // Round Settings
   enableDoubleJeopardy: true,
   enableDailyDouble: true,
+  /* 'random' is what has always happened. 'chosen' lets a host mark the cells,
+     which a quiz night wants and a classroom mostly does not. */
+  dailyDoublePlacement: 'random',
   enableFinalJeopardy: true,
 
   // Audio Settings
@@ -139,7 +142,9 @@ export const useSettingsStore = create(
         enableDoubleJeopardy: !state.enableDoubleJeopardy
       })),
 
-      toggleDailyDouble: () => set(state => ({
+      setDailyDoublePlacement: (dailyDoublePlacement) => set({ dailyDoublePlacement }),
+
+  toggleDailyDouble: () => set(state => ({
         enableDailyDouble: !state.enableDailyDouble
       })),
 

@@ -26,15 +26,25 @@ const DB = join(here, 'tmp-e2e.sqlite');
 /* Alphabetical, and each file creates its own account and its own board. A
    suite that reads "whatever board is first" passes or fails on whatever ran
    before it, which cost three debugging rounds before this rule existed. */
+/* ONLY=<substring> runs one suite and prints everything it said, which is how
+   you debug one without waiting for the other sixteen. */
+const only = process.env.ONLY ?? '';
+
 const suites = readdirSync(here)
   .filter((f) => f.endsWith('.mjs') && !['run.mjs', 'driver.mjs', 'ws.mjs'].includes(f))
+  .filter((f) => !only || f.includes(only))
   .sort();
 
-const wipe = () => {
+/* The shots are the only way to look at what a suite saw, and wiping them on
+   the way out means you have to re-run to see anything. KEEP_SHOTS=1 leaves
+   them behind. */
+const keepShots = process.env.KEEP_SHOTS === '1';
+
+const wipe = ({ shots = true } = {}) => {
   for (const suffix of ['', '-wal', '-shm']) {
     try { rmSync(`${DB}${suffix}`); } catch { /* not there */ }
   }
-  try { rmSync(join(here, 'shots'), { recursive: true }); } catch { /* not there */ }
+  if (shots) try { rmSync(join(here, 'shots'), { recursive: true }); } catch { /* not there */ }
 };
 
 const started = [];
@@ -99,7 +109,19 @@ for (const suite of suites) {
     child.stderr.on('data', (d) => { out += d; });
     child.on('exit', (c) => {
       console.log(c === 0 ? 'passed' : 'FAILED');
-      if (c !== 0) console.log(out.split('\n').filter((l) => /FAIL|THREW|Error/.test(l)).slice(0, 6).join('\n'));
+      /* A suite that prints its own diagnosis on the way down is worth more
+         than six greppable lines, so ONLY=<suite> shows everything it said. */
+      /* With ONLY set you are looking at one suite on purpose, so its own
+         output is worth seeing whether or not it passed. */
+      if (only && c === 0) console.log(out);
+      if (c !== 0) {
+        console.log(only
+          ? out
+          : out.split('\n').filter((l) => /FAIL|THREW|Error/.test(l)).slice(0, 6).join('\n'));
+        /* The server's own account of what it did. Half of a failing suite's
+           causes are on this side, and guessing from the browser is slow. */
+        if (only) console.log(`\n--- api log ---\n${api.log.split('\n').slice(-40).join('\n')}`);
+      }
       resolve(c);
     });
   });
@@ -107,6 +129,6 @@ for (const suite of suites) {
 }
 
 stop();
-wipe();
+wipe({ shots: !keepShots });
 console.log(`\n${suites.length - failed} of ${suites.length} suites passed\n`);
 process.exit(failed ? 1 : 0);

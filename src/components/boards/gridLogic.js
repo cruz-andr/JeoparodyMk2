@@ -125,3 +125,18 @@ export const emptyClue = () => ({
   audioOnly: false,
   altText: null,
 });
+
+/**
+ * Marking a cell as a Daily Double.
+ *
+ * Clicking a marked cell unmarks it. Clicking a new one when the round already
+ * has all it needs moves the oldest marker, because a fixed number of markers
+ * is what a host is holding in their head, and clear-then-place is two moves
+ * for what reads as one.
+ */
+export function toggleDouble(list, c, r, wanted) {
+  const held = Array.isArray(list) ? list : [];
+  const at = held.findIndex((d) => d.categoryIndex === c && d.pointIndex === r);
+  if (at >= 0) return held.filter((_, i) => i !== at);
+  return [...held, { categoryIndex: c, pointIndex: r }].slice(-Math.max(1, wanted));
+}

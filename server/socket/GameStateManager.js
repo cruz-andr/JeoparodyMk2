@@ -159,7 +159,45 @@ export class GameStateManager {
     }
   }
 
-  setQuestions(roomCode, questions, categories, firstPickerId) {
+  /**
+   * Daily Doubles a host chose, checked before they are trusted.
+   *
+   * They arrive from a client, so they are filtered to cells that exist and
+   * de-duplicated: a pair pointing at the same cell would place one Daily
+   * Double and silently lose the other. Anything short of what the round wants
+   * is topped up at random, so a host who marked one of two still gets two.
+   */
+  resolveDailyDoubles(chosen, categoryCount, rowCount, round) {
+    const wanted = round === 2 ? 2 : 1;
+    const seen = new Set();
+    const kept = [];
+
+    for (const spot of Array.isArray(chosen) ? chosen : []) {
+      const c = Number(spot?.categoryIndex);
+      const r = Number(spot?.pointIndex);
+      if (!Number.isInteger(c) || !Number.isInteger(r)) continue;
+      if (c < 0 || c >= categoryCount || r < 0 || r >= rowCount) continue;
+      const key = `${c}:${r}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      kept.push({ categoryIndex: c, pointIndex: r });
+      if (kept.length === wanted) break;
+    }
+
+    if (kept.length === wanted) return kept;
+
+    /* Top up from a random placement, skipping anything already taken. */
+    for (const spot of placeDailyDoubles(categoryCount, round, rowCount)) {
+      const key = `${spot.categoryIndex}:${spot.pointIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      kept.push(spot);
+      if (kept.length === wanted) break;
+    }
+    return kept;
+  }
+
+  setQuestions(roomCode, questions, categories, firstPickerId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
     if (room) {
       room.status = 'in_progress';
@@ -174,10 +212,10 @@ export class GameStateManager {
       room.gameState.playersWhoBuzzed = new Set();
       room.gameState.currentRound = 1;
 
-      // Place Daily Doubles if setting enabled
+      // Placed by the host if they chose to, at random if they did not.
       if (room.settings.enableDailyDouble) {
-        room.gameState.dailyDoubles = this.placeDailyDoubles(
-          questions.length, 1, questions[0]?.length || 5
+        room.gameState.dailyDoubles = this.resolveDailyDoubles(
+          dailyDoubles, questions.length, questions[0]?.length || 5, 1
         );
       } else {
         room.gameState.dailyDoubles = [];
@@ -487,6 +525,66 @@ export class GameStateManager {
     };
   }
 
+  /**
+   * A Daily Double in a host-run room.
+   *
+   * Every other path ties a Daily Double to whoever picked the clue and scores
+   * them. In a hosted room the host picks every clue and has no score, so there
+   * is nobody for that rule to land on: the host names the player it belongs
+   * to, and that player is the one who is scored.
+   */
+  hostDailyDoubleWager(roomCode, hostId, playerId, wager) {
+    const room = this.rooms.get(roomCode);
+    if (room?.hostId !== hostId) return null;
+    if (!room.gameState?.isDailyDouble) return null;
+
+    const player = room.players.get(playerId);
+    if (!player || playerId === hostId) return null;
+
+    const clamped = this.clampDailyDoubleWager(room, playerId, wager);
+    room.gameState.dailyDoubleOwnerId = playerId;
+    room.gameState.dailyDoubleWager = clamped;
+    room.gameState.phase = 'dailyDoubleQuestion';
+
+    return {
+      playerId,
+      playerName: player.displayName || player.name,
+      wager: clamped,
+      question: room.gameState.currentQuestion,
+    };
+  }
+
+  /** The verdict on a Daily Double, which pays the wager rather than the clue. */
+  hostDailyDoubleAnswer(roomCode, hostId, correct) {
+    const room = this.rooms.get(roomCode);
+    if (room?.hostId !== hostId) return null;
+    if (!room.gameState?.isDailyDouble) return null;
+
+    const playerId = room.gameState.dailyDoubleOwnerId;
+    const player = playerId && room.players.get(playerId);
+    if (!player) return null;
+
+    const wager = room.gameState.dailyDoubleWager || 0;
+    player.score = (player.score || 0) + (correct ? wager : -wager);
+
+    room.gameState.isDailyDouble = false;
+    room.gameState.dailyDoubleWager = 0;
+    room.gameState.dailyDoubleOwnerId = null;
+    room.gameState.currentQuestion = null;
+    room.gameState.phase = 'playing';
+    this.resetBuzzState(room.gameState);
+
+    return {
+      playerId,
+      playerName: player.displayName || player.name,
+      correct,
+      wager,
+      newScore: player.score,
+      // The host picks next in a hosted room, as they do after every clue.
+      nextPickerId: hostId,
+    };
+  }
+
   // Jeopardy rule: a Daily Double wager is at least $5 and at most the greater
   // of the player's score and the highest clue value on the current board.
   clampDailyDoubleWager(room, playerId, wager) {
@@ -532,7 +630,7 @@ export class GameStateManager {
     };
   }
 
-  startRound2(roomCode, questions, categories, firstPickerId) {
+  startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
     if (!room) return;
 
@@ -547,10 +645,10 @@ export class GameStateManager {
     room.gameState.playersWhoBuzzed = new Set();
     room.gameState.currentRound = 2;
 
-    // Place Daily Doubles for round 2 if setting enabled (2 for Double Jeopardy)
+    // Two in Double Jeopardy, placed by the host if they chose to.
     if (room.settings.enableDailyDouble) {
-      room.gameState.dailyDoubles = this.placeDailyDoubles(
-        questions.length, 2, questions[0]?.length || 5
+      room.gameState.dailyDoubles = this.resolveDailyDoubles(
+        dailyDoubles, questions.length, questions[0]?.length || 5, 2
       );
     } else {
       room.gameState.dailyDoubles = [];
@@ -996,7 +1094,7 @@ export class GameStateManager {
   // =====================
 
   // Set custom questions from host
-  setHostQuestions(roomCode, questions, categories, hostId) {
+  setHostQuestions(roomCode, questions, categories, hostId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
     if (!room || room.hostId !== hostId) return null;
 
@@ -1004,6 +1102,20 @@ export class GameStateManager {
     room.gameState.questions = questions;
     room.gameState.categories = categories;
     room.gameState.customQuestions = true;
+
+    /* A host who marked their own Daily Doubles. setQuestions places them for
+       every other path; this one hands the board over separately, so it has to
+       place them too or a hosted game would quietly get random ones. */
+    if (room.settings.enableDailyDouble) {
+      room.gameState.dailyDoubles = this.resolveDailyDoubles(
+        dailyDoubles, questions.length, questions[0]?.length || 5, 1
+      );
+    } else {
+      /* Emptied rather than left alone, the way the other two paths do it. A
+         host who turned Daily Doubles off after a board was already handed
+         over would otherwise keep the placements from the first one. */
+      room.gameState.dailyDoubles = [];
+    }
 
     // Initialize host mode tracking
     room.gameState.typedAnswers = new Map();
@@ -1301,24 +1413,47 @@ export class GameStateManager {
     const pointsToApply = correct ? points : -points;
     player.score = (player.score || 0) + pointsToApply;
 
-    // In verbal mode exactly one player buzzed, so the clue is done. In typed
-    // and multiple-choice modes the host works through every submission, and
-    // clearing the clue after the first judgement dropped its point value to
-    // zero for everyone judged afterwards.
+    /* In typed and multiple-choice modes the host works through every
+       submission, and clearing the clue after the first judgement dropped its
+       point value to zero for everyone judged afterwards. */
     const answerMode = room.settings?.answerMode || 'verbal';
-    const submitted = answerMode === 'verbal'
-      ? null
-      : new Set([
+    const windowed = answerMode !== 'verbal';
+
+    /* Verbal, and they were wrong: the clue is not over. Whoever has not had a
+       shot at it yet gets one, the way the show works. Only players who can
+       actually act count, so a disconnected player cannot leave the clue open
+       forever waiting on a buzz that will never arrive. */
+    let canBuzzAgain = false;
+    if (!windowed && !correct) {
+      const activeIds = this.getActivePlayerIds(room);
+      const buzzed = room.gameState.playersWhoBuzzed || new Set();
+      const skipped = room.gameState.skippedPlayers || new Set();
+      canBuzzAgain = activeIds.some((id) => !buzzed.has(id) && !skipped.has(id));
+    }
+
+    const submitted = windowed
+      ? new Set([
           ...room.gameState.typedAnswers.keys(),
           ...room.gameState.mcSelections.keys(),
-        ]);
-    const questionClosed = submitted === null
-      || Array.from(submitted).every(id => judged.has(id));
+        ])
+      : null;
+    const questionClosed = canBuzzAgain
+      ? false
+      : (submitted === null || Array.from(submitted).every(id => judged.has(id)));
 
     if (questionClosed) {
       room.gameState.currentQuestion = null;
       room.gameState.phase = 'playing';
       this.resetBuzzState(room.gameState);
+    } else if (canBuzzAgain) {
+      /* The window reopens for the others. playersWhoBuzzed deliberately
+         survives, so the person who just got it wrong cannot buzz again, and
+         a fresh judgement is allowed for whoever comes next. */
+      room.gameState.buzzedPlayerId = null;
+      room.gameState.buzzes = {};
+      room.gameState.buzzWindowOpen = true;
+      room.gameState.buzzReceived = false;
+      room.gameState.buzzWindowStartTime = Date.now();
     }
 
     return {
@@ -1328,6 +1463,7 @@ export class GameStateManager {
       points: pointsToApply,
       newScore: player.score,
       questionClosed,
+      canBuzzAgain,
       // Host always picks next in host mode
       nextPickerId: hostId,
     };

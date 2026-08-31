@@ -8,7 +8,7 @@ import { hostToBoard, boardToHost } from '../stores/boardShape';
 import socketClient from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import { emptyBoard, countClues, POINT_VALUES } from '@shared/boardFormat.js';
-import { finalState } from '../components/boards/gridLogic';
+import { finalState, toggleDouble } from '../components/boards/gridLogic';
 import BoardGridEditor from '../components/boards/BoardGridEditor';
 import HostSettingsSheet from '../components/host/HostSettingsSheet';
 import HostFillPanel from '../components/host/HostFillPanel';
@@ -45,6 +45,9 @@ export default function HostPage() {
   const { isConnected } = useSocket();
 
   const { token } = useUserStore();
+  /* Read from the store rather than counted separately, so the number on screen
+     and the people the game will start with are the same list. */
+  const waiting = useRoomStore((s) => s.players.filter((p) => !p.isHost).length);
   const settings = useSettingsStore();
   const {
     answerMode, projectorMode,
@@ -67,7 +70,11 @@ export default function HostPage() {
      Both are per round: two rounds can come from two different topics. */
   const [topics, setTopics] = useState({ 1: '', 2: '' });
   const [rerolls, setRerolls] = useState({ 1: 5, 2: 5 });
-  const [waiting, setWaiting] = useState(0);
+  /* Which cells the host marked, per round, when they chose to place the Daily
+     Doubles themselves. Empty means the server picks, which is what has always
+     happened. */
+  const [doubles, setDoubles] = useState({ 1: [], 2: [] });
+  const [marking, setMarking] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const creating = useRef(false);
@@ -107,14 +114,47 @@ export default function HostPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected]);
 
-  /* Players arriving while the board is being written. */
+  /* Game Settings, pushed to the room every time they change.
+     The room is opened the moment this page loads, with whatever the settings
+     were then, and nothing sent the changes afterwards: the answer mode, the
+     clocks and projector mode were all read from the room, so every choice
+     made in the settings sheet was dropped on the floor. The server ignores
+     this once the game is running, which is the right moment to stop. */
   useEffect(() => {
-    const onPlayers = ({ players }) => setWaiting(Math.max((players?.length ?? 1) - 1, 0));
-    socketClient.on('player-joined', onPlayers);
-    socketClient.on('player-left', onPlayers);
+    if (!roomCode) return;
+    const rules = { answerMode, projectorMode, ...roomRulesFromSettings(settings) };
+    socketClient.emit('room:update-settings', { roomCode, settings: rules });
+    /* Written locally as well as sent. The game screen reads these from the
+       room store and only starts listening for the update once it has mounted,
+       by which time this one has already been and gone. */
+    useRoomStore.getState().updateSettings(rules);
+  }, [roomCode, answerMode, projectorMode, settings]);
+
+  /* Players arriving while the board is being written.
+     These go into the shared room store rather than a local count. The count
+     alone left everyone who joined during setup invisible for the whole game:
+     the game screen only starts listening once it mounts, by which time their
+     arrival has already been and gone. */
+  useEffect(() => {
+    const onJoin = ({ playerId, displayName, signature }) => {
+      useRoomStore.getState().addPlayer({
+        id: playerId,
+        name: displayName,
+        displayName,
+        signature: signature || null,
+        score: 0,
+        isReady: false,
+        isConnected: true,
+        isHost: false,
+      });
+    };
+    const onLeave = ({ playerId }) => useRoomStore.getState().removePlayer(playerId);
+
+    socketClient.on('room:player-joined', onJoin);
+    socketClient.on('room:player-left', onLeave);
     return () => {
-      socketClient.off('player-joined', onPlayers);
-      socketClient.off('player-left', onPlayers);
+      socketClient.off('room:player-joined', onJoin);
+      socketClient.off('room:player-left', onLeave);
     };
   }, []);
 
@@ -133,6 +173,34 @@ export default function HostPage() {
   const doubleOn = settings.enableDoubleJeopardy;
   const finalOn = settings.enableFinalJeopardy;
   const finalIs = finalState({ finalJeopardy: final });
+
+  /* Placing them by hand is only on offer when Daily Doubles are on and the
+     host asked for it in Game Settings. */
+  const placing = settings.enableDailyDouble && settings.dailyDoublePlacement === 'chosen';
+  const wanted = round === 2 ? 2 : 1;
+  /* Only drawn while the host is placing them. The marks are kept rather than
+     thrown away, so turning it off and on again gives back what they placed,
+     but a marker on screen has to mean the game will use it. */
+  const placed = placing && typeof round === 'number' ? doubles[round] ?? [] : [];
+
+  /* Marking is a mode on one board, so it ends when that board leaves the
+     screen. A host who switches to Double Jeopardy is usually going there to
+     write it, and their first click landing a marker instead of opening a clue
+     is the kind of surprise a mode has to avoid. */
+  useEffect(() => { setMarking(false); }, [round]);
+  useEffect(() => { if (!placing) setMarking(false); }, [placing]);
+
+  /**
+   * Marking a cell. Clicking a marked cell unmarks it; clicking a new one when
+   * the round is already full moves the oldest, which is what people expect
+   * from a fixed number of markers and saves a clear-then-place.
+   */
+  const markDouble = useCallback((c, r) => {
+    setDoubles((prev) => ({
+      ...prev,
+      [round]: toggleDouble(prev[round], c, r, round === 2 ? 2 : 1),
+    }));
+  }, [round]);
 
   /* A round that is switched off is not a round you can be looking at. */
   useEffect(() => {
@@ -280,6 +348,7 @@ export default function HostPage() {
       roomCode,
       categories: one.categories,
       questions: one.questions,
+      dailyDoubles: placing ? doubles[1] : null,
     });
 
     sessionStorage.setItem('jeopardy_fresh_join', 'true');
@@ -290,9 +359,19 @@ export default function HostPage() {
           questions: one.questions,
           answerMode,
           projectorMode,
+          /* Carried as well as sent over the socket. The lobby's Start hands the
+             board over a second time through game:set-questions, which placed
+             Daily Doubles at random and threw away the ones marked here. */
+          dailyDoubles: placing ? doubles[1] : null,
           /* Carried so the game never has to invent a second round or reach for
              one of five hardcoded finals. See GamePage. */
-          round2: doubleOn ? { categories: two.categories, questions: two.questions } : null,
+          round2: doubleOn
+            ? {
+              categories: two.categories,
+              questions: two.questions,
+              dailyDoubles: placing ? doubles[2] : null,
+            }
+            : null,
           finalJeopardy: finalOn ? final : null,
         },
       },
@@ -406,7 +485,7 @@ export default function HostPage() {
         ) : (
           <>
             <div className="host-write-line">
-              <span className="host-write">Click any cell and write it</span>
+              <span className="host-write">Pick any cell and write it</span>
               <button
                 className="plain-btn quiet-action host-ai"
                 onClick={() => setFill('ai')}
@@ -419,6 +498,18 @@ export default function HostPage() {
                 </svg>
                 {busy || 'Or use AI to create the board'}
               </button>
+
+              {placing && (
+                <button
+                  className={`plain-btn quiet-action host-ai ${marking ? 'is-on' : ''}`}
+                  aria-pressed={marking}
+                  onClick={() => setMarking((on) => !on)}
+                >
+                  {marking
+                    ? 'Done placing'
+                    : `Place the Daily ${wanted === 1 ? 'Double' : 'Doubles'}`}
+                </button>
+              )}
             </div>
 
             <BoardGridEditor
@@ -429,6 +520,9 @@ export default function HostPage() {
               onReroll={topics[round] ? rerollCategory : undefined}
               rerollsLeft={rerolls[round]}
               onSuggestWrong={suggestWrong}
+              dailyDoubles={placed}
+              dailyDoublesWanted={wanted}
+              onToggleDailyDouble={marking ? markDouble : undefined}
             />
           </>
         )}
@@ -451,8 +545,10 @@ export default function HostPage() {
             )}
           </div>
 
+          {/* Create, not start. This hands the board to the room and opens the
+              lobby, where the host waits for people and then starts for real. */}
           <button className="btn-primary host-start" onClick={start} disabled={Boolean(notReady)}>
-            Start the game
+            Create game
           </button>
         </div>
 

@@ -143,6 +143,16 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
       await api.evaluate(`document.querySelector(${JSON.stringify(sel)})
         .dispatchEvent(new Event('change', { bubbles: true }))`);
     },
+    /* Become a different device without reloading. A suite that has to reach a
+       screen through several steps can walk there once and then look at it at
+       both sizes, instead of driving the whole flow twice. */
+    async resize({ width, height, dpr = 2 }) {
+      await send('Emulation.setDeviceMetricsOverride', {
+        width, height, deviceScaleFactor: dpr, mobile: dpr > 1,
+      });
+      /* Give a ResizeObserver or a container query a frame to notice. */
+      await new Promise((r) => setTimeout(r, 250));
+    },
     /* Into e2e/shots/, which is ignored and wiped by the runner. Written to
        the repo root by default, a failing suite leaves debris behind that the
        next person has to work out the provenance of. */

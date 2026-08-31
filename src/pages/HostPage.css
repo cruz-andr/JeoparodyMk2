@@ -236,10 +236,33 @@ button.host-alt {
 }
 
 @media (max-width: 820px) {
-  .host-top { flex-wrap: wrap; padding: 10px 14px; gap: 8px; }
-  .host-title { order: -1; flex-basis: 100%; text-align: left; font-size: 0.92rem; }
-  .host-back { order: -2; }
-  .host-right { margin-left: auto; }
+  /* Two rows, not three. The desktop bar wrapped into a stack with the title
+     stranded on its own line and the room code crammed against the settings
+     button under a strip of empty space.
+
+     display:contents dissolves .host-right so the code and the settings button
+     can be ordered independently: the code is what a host reads out for the
+     first minute, so it gets the second row to itself. */
+  .host-top { flex-wrap: wrap; padding: 4px 14px 2px; gap: 2px 10px; }
+  .host-back { order: 1; }
+
+  /* Everything on this screen is tapped rather than clicked, so nothing that
+     does something is smaller than a fingertip. The bar was full of 24 to 34
+     pixel targets sized for a cursor. */
+  .host-back,
+  button.host-settings,
+  .host-room,
+  button.host-ai,
+  button.host-alt {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .host-title { display: none; }
+  .host-right { display: contents; }
+  button.host-settings { order: 2; margin-left: auto; }
+  .host-room { order: 3; flex-basis: 100%; padding: 4px 0 6px; }
+  .host-room-code { font-size: 1.2rem; }
 
   .host-body { padding: 14px 14px 70px; }
 
@@ -247,12 +270,16 @@ button.host-alt {
   .host-rounds::-webkit-scrollbar { display: none; }
   button.host-round { flex: 0 0 auto; padding: 8px 12px 9px; }
 
-  .host-write-line { align-items: stretch; flex-direction: column; gap: 8px; }
-  button.host-ai { justify-content: center; }
+  /* Stacked, and both lines start at the same place. Centring only the second
+     one made the pair look accidental. */
+  .host-write-line { align-items: flex-start; flex-direction: column; gap: 8px; }
+  button.host-ai { justify-content: flex-start; padding-left: 0; }
 
   .host-foot { flex-direction: column; align-items: stretch; }
   .host-foot-alts { flex-direction: column; }
-  button.host-alt { justify-content: center; }
+  /* Left, so the two icons line up under each other. Centred, each row put its
+     icon in a different place and the pair looked unrelated. */
+  button.host-alt { justify-content: flex-start; }
   .host-start { width: 100%; }
   .host-notready { text-align: center; }
 }
