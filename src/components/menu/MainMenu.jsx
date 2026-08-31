@@ -22,8 +22,12 @@ const CATEGORIES = [
   { id: 'host', label: 'Host\nA Game', path: '/host' },
   { id: 'single', label: 'Single\nPlayer', path: '/singleplayer' },
   { id: 'quickplay', label: 'Quickplay', path: '/quickplay' },
-  { id: 'join', label: 'Join\nA Room', path: '/join' },
 ];
+
+/* There is no Join A Room tile. The code field further down the page already
+   goes straight to /join/CODE, so the tile was a second door to the same room
+   that took a detour through a page asking for the code you had just been
+   given. The /join route stays: a shared link still has to land somewhere. */
 
 function formatDate(dateString) {
   const date = dateString ? new Date(`${dateString}T00:00:00Z`) : new Date();
@@ -201,7 +205,8 @@ export default function MainMenu() {
         </div>
       </header>
 
-      {/* Six categories are the six ways to play */}
+      {/* The ways to play. The Sixer leads because it is the one that changes
+          every day and is the reason to come back. */}
       <nav className="menu-categories" aria-label="Game modes">
         {CATEGORIES.map((cat) => (
           <button
