@@ -49,8 +49,7 @@ try {
     JSON.stringify({ state: { token, isAuthenticated: true, isGuest: false }, version: 0 })
   )});`);
   await b.goto(`${APP}/host`);
-  await b.until("/^[A-Z0-9]{4,8}$/.test(document.querySelector('.host-room-code')?.textContent ?? '')", { timeout: 15000 });
-  const roomCode = (await b.evaluate("document.querySelector('.host-room-code').textContent")).trim();
+  await b.until("!!document.querySelector('.ge-cell')", { timeout: 15000 });
 
   // One round only, so the game can start from a single board.
   await b.click('.host-settings');
@@ -66,8 +65,7 @@ try {
   await b.click('.hf-board');
   await b.until("document.querySelectorAll('.ge-cell.is-written').length === 30", { timeout: 10000 });
 
-  // A player, over a socket, before the game starts.
-  const join = async (sessionId, displayName) => {
+  const join = async (roomCode, sessionId, displayName) => {
     const socket = io('http://127.0.0.1:3995', { auth: { sessionId }, transports: ['websocket'] });
     await new Promise((r, j) => { socket.on('connect', r); socket.on('connect_error', j); });
     await new Promise((r, j) => socket.emit('room:join',
@@ -75,14 +73,16 @@ try {
       (res) => (res?.success ? r(res) : j(new Error(res?.error ?? 'join refused')))));
     return socket;
   };
-  player = await join(`p-${STAMP}`, 'Ada');
-  other = await join(`q-${STAMP}`, 'Bo');
 
+  /* The room does not exist until the game is created, so the code comes from
+     the lobby and the players arrive there. */
   await b.until("!document.querySelector('.host-start').disabled", { timeout: 10000 });
   await b.click('.host-start');
+  await b.until("!!document.querySelector('.room-code-badge span')", { timeout: 15000 });
+  const roomCode = (await b.evaluate("document.querySelector('.room-code-badge span').textContent")).trim();
+  player = await join(roomCode, `p-${STAMP}`, 'Ada');
+  other = await join(roomCode, `q-${STAMP}`, 'Bo');
 
-  /* Host mode lands in the lobby first, where the host waits for people and
-     then starts for real. */
   await b.until("[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Start Game')", { timeout: 15000 });
   await b.evaluate(`[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Start Game').click()`);
   await b.until("!!document.querySelector('.hl')", { timeout: 15000 });

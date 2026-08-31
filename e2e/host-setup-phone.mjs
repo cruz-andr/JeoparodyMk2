@@ -50,7 +50,7 @@ try {
     JSON.stringify({ state: { token, isAuthenticated: true, isGuest: false }, version: 0 })
   )});`);
   await b.goto(`${APP}/host`);
-  await b.until("/^[A-Z0-9]{4,8}$/.test(document.querySelector('.host-room-code')?.textContent ?? '')", { timeout: 15000 });
+  await b.until("!!document.querySelector('.ge-board')", { timeout: 15000 });
   await wait(600);
 
   const fits = async (what) => {
@@ -63,10 +63,9 @@ try {
   console.log('\n-- the top bar --');
   await fits('the setup screen');
   const top = await box(b, '.host-top');
-  check('the bar is two rows, not three', top.h < 105, `${top.h}px tall`);
-  check('the room code has a line of its own, because it is what gets read out',
-    (await box(b, '.host-room')).x < 30 && (await box(b, '.host-room')).y > (await box(b, '.host-back')).y,
-    'under the back button');
+  check('the bar is one row now the code has gone', top.h < 80, `${top.h}px tall`);
+  check('no room code here, because there is no game yet',
+    (await box(b, '.host-room')) === null);
   check('the title gives up its line rather than stranding one',
     (await b.evaluate("!!document.querySelector('.host-title')?.offsetParent")) === false);
   check('Game Settings is still on the first row',
