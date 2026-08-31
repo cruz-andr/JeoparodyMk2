@@ -47,14 +47,17 @@ try {
     return bad;
   })()`);
 
-  for (const [path, name] of [
-    [`/boards`, 'Community Boards'],
-    [`/boards/${slug}`, 'a board page'],
-    [`/boards/${slug}/edit`, 'the editor'],
-    ['/boards/mine', 'my shelf'],
+  /* Waits for each screen to be there rather than guessing how long it takes.
+     A fixed pause passed alone and failed in the full run, where the server is
+     answering twenty other suites and a page takes longer than the guess. */
+  for (const [path, name, ready] of [
+    [`/boards`, 'Community Boards', '.boards-body'],
+    [`/boards/${slug}`, 'a board page', 'button.quiet-action'],
+    [`/boards/${slug}/edit`, 'the editor', '.ge-board'],
+    ['/boards/mine', 'my shelf', '.boards-body'],
   ]) {
     await b.goto(`${APP}${path}`);
-    await new Promise((r) => setTimeout(r, 1100));
+    await b.until(`!!document.querySelector(${JSON.stringify(ready)})`, { timeout: 15000 });
     const outlined = await noOutlines(path);
     const count = await b.evaluate("document.querySelectorAll('button.quiet-action, .board-cover-pick').length");
     check(`${name}: no outlined secondary buttons`, outlined.length === 0,
@@ -63,7 +66,7 @@ try {
 
   // One filled button per screen, and it is the one that matters.
   await b.goto(`${APP}/boards/${slug}`);
-  await new Promise((r) => setTimeout(r, 900));
+  await b.until("!!document.querySelector('button.quiet-action')", { timeout: 15000 });
   const filled = await b.evaluate(`[...document.querySelectorAll('button')]
     .filter(el => {
       const bg = getComputedStyle(el).backgroundColor;

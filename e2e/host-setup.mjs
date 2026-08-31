@@ -39,11 +39,13 @@ try {
   )});`);
   await b.goto(`${APP}/host`);
 
-  // ---------- one screen, and a room from the first second ----------
+  // ---------- one screen, and nothing made until it is asked for ----------
   console.log('\n-- the screen --');
-  await b.until("/^[A-Z0-9]{4,8}$/.test(document.querySelector('.host-room-code')?.textContent ?? '')", { timeout: 15000 });
-  check('a room opens before anything is written', true,
-    await b.evaluate("document.querySelector('.host-room-code').textContent"));
+  await b.until("!!document.querySelector('.ge-cell')", { timeout: 15000 });
+  /* The room used to be opened the moment this page loaded, so a code existed
+     for a game that did not and every visit left a room behind. */
+  check('no room code before there is a game to join',
+    await b.evaluate("!document.querySelector('.host-room-code')") === true);
   check('the board is editable immediately',
     await b.evaluate("document.querySelectorAll('.ge-cell').length") === 30);
   check('settings is a labelled button in the corner',
@@ -164,7 +166,7 @@ try {
   check('the two board fills are hidden on a round that is not a board',
     await b.evaluate("document.querySelectorAll('.host-alt').length") === 0);
 
-  check('and start is finally allowed',
+  check('and create is finally allowed',
     await b.evaluate("document.querySelector('.host-start').disabled") === false,
     await b.evaluate("document.querySelector('.host-notready')?.textContent ?? 'nothing missing'"));
   await b.shot('host-ready.png');

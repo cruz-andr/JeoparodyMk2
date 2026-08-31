@@ -47,7 +47,6 @@ export default function HostPage() {
   const { token } = useUserStore();
   /* Read from the store rather than counted separately, so the number on screen
      and the people the game will start with are the same list. */
-  const waiting = useRoomStore((s) => s.players.filter((p) => !p.isHost).length);
   const settings = useSettingsStore();
   const {
     answerMode, projectorMode,
@@ -64,8 +63,8 @@ export default function HostPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [fill, setFill] = useState(null); // 'ai' | 'file' | 'board'
   const [busy, setBusy] = useState('');
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState('');
-  const [roomCode, setRoomCode] = useState('');
   /* What the board was generated from, and how many re-rolls are left on it.
      Both are per round: two rounds can come from two different topics. */
   const [topics, setTopics] = useState({ 1: '', 2: '' });
@@ -75,88 +74,17 @@ export default function HostPage() {
      happened. */
   const [doubles, setDoubles] = useState({ 1: [], 2: [] });
   const [marking, setMarking] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  const creating = useRef(false);
 
   useEffect(() => () => resetHost(), [resetHost]);
 
-  /* The room opens before the board is written, so a code can be read out while
-     people are still arriving. Guarded because StrictMode mounts twice and two
-     rooms would be two codes, one of them dead. */
-  useEffect(() => {
-    /* Waits for the socket. The old flow opened the room after five screens,
-       by which time it was always connected; opening it on the first screen
-       means arriving before the connection does. */
-    if (!isConnected || creating.current) return;
-    creating.current = true;
+  /* No room is opened here.
 
-    (async () => {
-      try {
-        const { roomCode: code } = await socketClient.createRoom('host', {
-          maxPlayers: 30,
-          answerMode,
-          projectorMode,
-          ...roomRulesFromSettings(settings),
-        });
-        setRoomCode(code);
-        useRoomStore.getState().setRoomCode(code);
-        useRoomStore.getState().setIsHost(true);
-        useRoomStore.getState().setRoomType('host');
-
-        const joined = await socketClient.joinRoom(code, 'Host', null);
-        if (joined?.players) useRoomStore.getState().setPlayers(joined.players);
-      } catch (err) {
-        setError(err.message || 'Could not open a room. Check your connection.');
-      }
-    })();
-    // Once, on connect. The settings it reads are only the opening values.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected]);
-
-  /* Game Settings, pushed to the room every time they change.
-     The room is opened the moment this page loads, with whatever the settings
-     were then, and nothing sent the changes afterwards: the answer mode, the
-     clocks and projector mode were all read from the room, so every choice
-     made in the settings sheet was dropped on the floor. The server ignores
-     this once the game is running, which is the right moment to stop. */
-  useEffect(() => {
-    if (!roomCode) return;
-    const rules = { answerMode, projectorMode, ...roomRulesFromSettings(settings) };
-    socketClient.emit('room:update-settings', { roomCode, settings: rules });
-    /* Written locally as well as sent. The game screen reads these from the
-       room store and only starts listening for the update once it has mounted,
-       by which time this one has already been and gone. */
-    useRoomStore.getState().updateSettings(rules);
-  }, [roomCode, answerMode, projectorMode, settings]);
-
-  /* Players arriving while the board is being written.
-     These go into the shared room store rather than a local count. The count
-     alone left everyone who joined during setup invisible for the whole game:
-     the game screen only starts listening once it mounts, by which time their
-     arrival has already been and gone. */
-  useEffect(() => {
-    const onJoin = ({ playerId, displayName, signature }) => {
-      useRoomStore.getState().addPlayer({
-        id: playerId,
-        name: displayName,
-        displayName,
-        signature: signature || null,
-        score: 0,
-        isReady: false,
-        isConnected: true,
-        isHost: false,
-      });
-    };
-    const onLeave = ({ playerId }) => useRoomStore.getState().removePlayer(playerId);
-
-    socketClient.on('room:player-joined', onJoin);
-    socketClient.on('room:player-left', onLeave);
-    return () => {
-      socketClient.off('room:player-joined', onJoin);
-      socketClient.off('room:player-left', onLeave);
-    };
-  }, []);
+     This screen used to create one the moment it loaded, so a code existed for
+     a game that did not, "Create game" created nothing because the room was
+     already made, and every visit to this page left a room behind whether or
+     not a game followed. The room is made when the host creates the game, and
+     the lobby is where its code lives. */
 
   // ------------------------------------------------------------- the board
 
@@ -332,58 +260,76 @@ export default function HostPage() {
         ? 'Final Jeopardy is half written. Finish it or clear it.'
         : 'Final Jeopardy is not written, or turn it off in Game Settings';
     }
-    if (!roomCode) return 'Opening the room';
+    if (!isConnected) return 'Connecting';
     return null;
   })();
 
-  const start = () => {
-    if (notReady) return;
-    const one = boardToHost(rounds[1]);
-    const two = boardToHost(rounds[2]);
+  /**
+   * Make the room, then hand it the board.
+   *
+   * Everything happens here rather than on arrival: the code belongs to a game
+   * that exists, the settings the room is created with are the ones the host
+   * finished choosing, and a host who changes their mind and leaves has not
+   * left a room behind.
+   */
+  const start = async () => {
+    if (notReady || opening) return;
+    setOpening(true);
+    setError('');
 
-    setCategories(one.categories);
-    setQuestions(one.questions);
-
-    socketClient.emit('host:set-custom-questions', {
-      roomCode,
-      categories: one.categories,
-      questions: one.questions,
-      dailyDoubles: placing ? doubles[1] : null,
-    });
-
-    sessionStorage.setItem('jeopardy_fresh_join', 'true');
-    navigate(`/game/${roomCode}`, {
-      state: {
-        hostModeQuestions: {
-          categories: one.categories,
-          questions: one.questions,
-          answerMode,
-          projectorMode,
-          /* Carried as well as sent over the socket. The lobby's Start hands the
-             board over a second time through game:set-questions, which placed
-             Daily Doubles at random and threw away the ones marked here. */
-          dailyDoubles: placing ? doubles[1] : null,
-          /* Carried so the game never has to invent a second round or reach for
-             one of five hardcoded finals. See GamePage. */
-          round2: doubleOn
-            ? {
-              categories: two.categories,
-              questions: two.questions,
-              dailyDoubles: placing ? doubles[2] : null,
-            }
-            : null,
-          finalJeopardy: finalOn ? final : null,
-        },
-      },
-    });
-  };
-
-  const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/join/${roomCode}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
-    } catch { /* refused; the code is on screen to read out */ }
+      const rules = { answerMode, projectorMode, ...roomRulesFromSettings(settings) };
+      const { roomCode: code } = await socketClient.createRoom('host', { maxPlayers: 30, ...rules });
+
+      const room = useRoomStore.getState();
+      room.setRoomCode(code);
+      room.setIsHost(true);
+      room.setRoomType('host');
+      /* Written locally as well as sent, because the game screen reads these
+         from the store and mounts after the room already has them. */
+      room.updateSettings(rules);
+
+      const joined = await socketClient.joinRoom(code, 'Host', null);
+      if (joined?.players) room.setPlayers(joined.players);
+
+      const one = boardToHost(rounds[1]);
+      const two = boardToHost(rounds[2]);
+      setCategories(one.categories);
+      setQuestions(one.questions);
+
+      socketClient.emit('host:set-custom-questions', {
+        roomCode: code,
+        categories: one.categories,
+        questions: one.questions,
+        dailyDoubles: placing ? doubles[1] : null,
+      });
+
+      sessionStorage.setItem('jeopardy_fresh_join', 'true');
+      navigate(`/game/${code}`, {
+        state: {
+          hostModeQuestions: {
+            categories: one.categories,
+            questions: one.questions,
+            answerMode,
+            projectorMode,
+            dailyDoubles: placing ? doubles[1] : null,
+            /* Carried so the game never has to invent a second round or reach
+               for one of five hardcoded finals. See GamePage. */
+            round2: doubleOn
+              ? {
+                categories: two.categories,
+                questions: two.questions,
+                dailyDoubles: placing ? doubles[2] : null,
+              }
+              : null,
+            finalJeopardy: finalOn ? final : null,
+          },
+        },
+      });
+    } catch (err) {
+      setError(err.message || 'Could not open a room. Check your connection.');
+      setOpening(false);
+    }
   };
 
   // ------------------------------------------------------------- render
@@ -406,17 +352,6 @@ export default function HostPage() {
         </button>
         <span className="host-title">Host a game</span>
         <div className="host-right">
-          {roomCode ? (
-            <button className="plain-btn host-room" onClick={copyLink} title="Copy the link to join">
-              <span className="host-room-k">Room</span>
-              <span className="host-room-code">{roomCode}</span>
-              <span className="host-room-n">
-                {copied ? 'Link copied' : waiting > 0 ? `${waiting} waiting` : 'Nobody yet'}
-              </span>
-            </button>
-          ) : (
-            <span className="host-room is-opening"><span className="host-room-k">Opening a room</span></span>
-          )}
           <button
             className="plain-btn quiet-action host-settings"
             onClick={() => setShowSettings(true)}
@@ -552,8 +487,12 @@ export default function HostPage() {
 
           {/* Create, not start. This hands the board to the room and opens the
               lobby, where the host waits for people and then starts for real. */}
-          <button className="btn-primary host-start" onClick={start} disabled={Boolean(notReady)}>
-            Create game
+          <button
+            className="btn-primary host-start"
+            onClick={start}
+            disabled={Boolean(notReady) || opening}
+          >
+            {opening ? 'Opening the room' : 'Create game'}
           </button>
         </div>
 
