@@ -83,7 +83,7 @@ function AiMark() {
 
 export default function BoardGridEditor({
   board, onChange, onCleared, onBeforeClear, onReroll, rerollsLeft, onSuggestWrong,
-  dailyDoubles, onToggleDailyDouble, dailyDoublesWanted = 0,
+  dailyDoubles, onToggleDailyDouble, dailyDoublesWanted = 0, showFinal = true,
 }) {
   const [at, setAt] = useState({ kind: 'clue', c: 0, r: 0 });
   const [showChoices, setShowChoices] = useState(false);
@@ -191,7 +191,7 @@ export default function BoardGridEditor({
   // ---------------------------------------------------------------- keys
 
   const onBoardKey = (event) => {
-    const moved = moveSelection(at, event.key);
+    const moved = moveSelection(at, event.key, { hasFinal: showFinal });
     if (moved) {
       event.preventDefault();
       byKeyboard.current = true;
@@ -361,7 +361,7 @@ export default function BoardGridEditor({
 
   /* One tile the width of the board, under it: where Final Jeopardy is on the
      show, and honest about not being part of the 6x5. */
-  const finalTile = (
+  const finalTile = !showFinal ? null : (
     <button
       {...cell({ kind: 'final', c: at.c ?? 0 }, `ge-final is-${finalIs}`)}
       onKeyDown={onBoardKey}

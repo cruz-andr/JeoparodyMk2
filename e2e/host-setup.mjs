@@ -129,6 +129,24 @@ try {
 
   // ---------- final ----------
   console.log('\n-- final jeopardy --');
+  /* One way in, not two. The editor carries its own Final Jeopardy tile under
+     the board, for Community Boards where a board is one grid plus a final.
+     Host mode has a Final tab instead, and the tile wrote into the round's
+     board, which this screen never reads: a Final written there showed on the
+     tile as saved and was thrown away when the game started. */
+  await b.evaluate(`[...document.querySelectorAll('.host-round')].find(e=>/Round one/.test(e.textContent)).click()`);
+  await new Promise((r) => setTimeout(r, 300));
+  check('no second way to write Final Jeopardy under the board',
+    await b.evaluate("!!document.querySelector('.ge-final')") === false);
+  check('and arrow keys do not walk off the bottom row to it',
+    await b.evaluate(`(() => {
+      const cells = [...document.querySelectorAll('.ge-cell')];
+      const last = cells[cells.length - 1];
+      last.focus();
+      last.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      return document.activeElement === last || document.activeElement.classList.contains('ge-cell');
+    })()`) === true);
+
   await b.evaluate(`[...document.querySelectorAll('.host-round')].find(e=>/Final/.test(e.textContent)).click()`);
   await b.until("!!document.querySelector('.host-final')");
   check('final is three fields, not a board',
