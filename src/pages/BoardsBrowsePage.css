@@ -24,20 +24,7 @@
 .bb-search::placeholder { color: var(--text-muted); }
 .bb-search:focus { outline: none; border-color: var(--jeopardy-gold); }
 
-button.bb-make {
-  padding: 11px 16px;
-  border: 1px solid rgba(242, 236, 224, 0.2);
-  border-radius: 3px;
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.9px;
-  color: var(--jeopardy-gold-light);
-  cursor: pointer;
-  white-space: nowrap;
-}
-button.bb-make:hover { border-color: var(--jeopardy-gold); }
+button.bb-make { padding: 11px 16px; font-size: 0.78rem; white-space: nowrap; }
 
 /* ---- topics ----
    A row of words with the chosen one underlined, the way a newspaper marks

@@ -247,7 +247,7 @@ export default function BoardPage() {
             Play it solo
           </button>
           <button
-            className="plain-btn board-action"
+            className="plain-btn quiet-action board-action"
             disabled={!playable}
             onClick={() => navigate('/host', { state: { board: board.board, boardSlug: slug } })}
           >
@@ -255,13 +255,13 @@ export default function BoardPage() {
           </button>
           {board.isOwner ? (
             <button
-              className="plain-btn board-action"
+              className="plain-btn quiet-action board-action"
               onClick={() => navigate(`/boards/${slug}/edit`)}
             >
               Edit
             </button>
           ) : board.visibility === 'public' && isAuthenticated ? (
-            <button className="plain-btn board-action" onClick={makeCopy} disabled={busy}>
+            <button className="plain-btn quiet-action board-action" onClick={makeCopy} disabled={busy}>
               Make my own copy
             </button>
           ) : null}
@@ -308,10 +308,10 @@ export default function BoardPage() {
                   onChange={(e) => setNote(e.target.value)}
                 />
                 <div className="board-report-do">
-                  <button className="plain-btn board-action" onClick={sendReport} disabled={!reason || busy}>
+                  <button className="plain-btn quiet-action board-action" onClick={sendReport} disabled={!reason || busy}>
                     Send the report
                   </button>
-                  <button className="plain-btn board-action" onClick={() => setReporting(false)}>
+                  <button className="plain-btn quiet-action board-action" onClick={() => setReporting(false)}>
                     Never mind
                   </button>
                 </div>
@@ -350,7 +350,7 @@ export default function BoardPage() {
                 </span>
               </span>
               <div className="board-cover-do">
-                <label className="plain-btn board-action board-cover-pick">
+                <label className="plain-btn quiet-action board-action board-cover-pick">
                   {board.hasCover ? 'Replace' : 'Add an image'}
                   <input
                     type="file"
@@ -360,7 +360,7 @@ export default function BoardPage() {
                   />
                 </label>
                 {board.hasCover && (
-                  <button className="plain-btn board-action" onClick={removeCover} disabled={busy}>
+                  <button className="plain-btn quiet-action board-action" onClick={removeCover} disabled={busy}>
                     Remove
                   </button>
                 )}
@@ -408,7 +408,7 @@ export default function BoardPage() {
                   value={`${window.location.origin}/boards/${slug}`}
                   onFocus={(e) => e.target.select()}
                 />
-                <button className="plain-btn board-link-copy" onClick={copyLink}>
+                <button className="plain-btn quiet-action board-link-copy" onClick={copyLink}>
                   {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>

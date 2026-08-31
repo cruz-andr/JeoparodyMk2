@@ -398,7 +398,7 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
 
         {finalIs !== 'none' && (
           <div className="ge-panel-actions">
-            <button type="button" className="plain-btn ge-action is-quiet" onClick={clearFinal}>
+            <button type="button" className="plain-btn quiet-action ge-action is-quiet" onClick={clearFinal}>
               Clear Final Jeopardy
             </button>
           </div>
@@ -489,7 +489,7 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
         <div className="ge-panel-actions">
           <button
             type="button"
-            className="plain-btn ge-action"
+            className="plain-btn quiet-action ge-action"
             onClick={goNextEmpty}
             disabled={written === CLUES}
           >
@@ -497,7 +497,7 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
           </button>
           <button
             type="button"
-            className="plain-btn ge-action is-quiet"
+            className="plain-btn quiet-action ge-action is-quiet"
             onClick={clearClue}
             disabled={!here?.answer?.trim() && !here?.question?.trim() && !here?.mediaType}
           >

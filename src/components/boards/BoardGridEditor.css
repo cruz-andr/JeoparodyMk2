@@ -249,23 +249,12 @@ button.ge-final.is-on .ge-final-text { color: #10121f; }
   border-top: 1px solid rgba(242, 236, 224, 0.12);
 }
 
-button.ge-action {
-  padding: 9px 13px;
-  border: 1px solid rgba(242, 236, 224, 0.2);
-  border-radius: 3px;
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.9px;
-  color: var(--jeopardy-gold-light);
-  cursor: pointer;
-}
-
-button.ge-action:hover:not(:disabled) { border-color: var(--jeopardy-gold); }
+button.ge-action { padding: 9px 13px; font-size: 0.72rem; }
 button.ge-action.is-quiet { color: var(--text-secondary); }
-button.ge-action.is-quiet:hover:not(:disabled) { color: var(--color-error); border-color: var(--color-error); }
-button.ge-action:disabled { color: var(--text-muted); border-color: rgba(242, 236, 224, 0.1); cursor: default; }
+button.ge-action.is-quiet:hover:not(:disabled) {
+  color: var(--color-error);
+  background: rgba(232, 119, 107, 0.12);
+}
 
 /* ---- multiple choice ----
    Collapsed until wanted. Most clues are not multiple choice, and three empty

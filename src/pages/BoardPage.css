@@ -137,28 +137,9 @@
   margin-bottom: 12px;
 }
 
-/* Matched at element+class weight, because globals.css sets `button.plain-btn`
-   at 0,1,1 and a bare class here loses to it: the border and the uppercase
-   both silently disappeared. Anything on a .plain-btn that globals also sets
-   (background, border, transform, text-transform) has to be matched this way. */
-button.board-action {
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: 0.8px;
-  padding: 12px 16px;
-  color: var(--jeopardy-gold-light);
-  border: 1px solid rgba(242, 236, 224, 0.2);
-  cursor: pointer;
-}
-
-button.board-action:hover:not(:disabled) {
-  border-color: var(--jeopardy-gold);
-  color: var(--jeopardy-gold);
-}
-
-button.board-action:disabled { color: var(--text-muted); cursor: default; }
+/* Everything about how it looks is in button.quiet-action. Only the size is
+   particular to this screen. */
+button.board-action { padding: 12px 16px; font-size: 0.8rem; }
 
 .board-incomplete {
   margin: 0 0 8px;
@@ -271,17 +252,7 @@ button.board-action:disabled { color: var(--text-muted); cursor: default; }
   font-size: 0.85rem;
 }
 
-button.board-link-copy {
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.74rem;
-  letter-spacing: 1px;
-  padding: 11px 15px;
-  color: var(--jeopardy-gold-light);
-  border: 1px solid rgba(242, 236, 224, 0.2);
-  cursor: pointer;
-}
+button.board-link-copy { padding: 11px 15px; font-size: 0.74rem; }
 
 @media (max-width: 640px) {
   .board-head { gap: 16px; flex-direction: column; }
@@ -360,8 +331,20 @@ button.board-link-copy {
 }
 
 /* A label wearing the button's clothes, because a file input cannot be styled
-   and a button that opens one is a lie about what it is. */
-.board-cover-pick { display: inline-block; cursor: pointer; }
+   and a button that opens one is a lie about what it is. It is not a <button>,
+   so button.quiet-action does not reach it and the same look is restated. */
+.board-cover-pick {
+  display: inline-block;
+  padding: 12px 16px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.9px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+}
+.board-cover-pick:hover { background: rgba(214, 159, 76, 0.14); color: var(--jeopardy-gold); }
 .board-cover-pick input { display: none; }
 
 .board-cover-note {

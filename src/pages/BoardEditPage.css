@@ -78,21 +78,7 @@
   padding-bottom: 8px;
 }
 
-button.board-edit-done {
-  padding: 10px 16px;
-  border: 1px solid rgba(242, 236, 224, 0.2);
-  border-radius: 3px;
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.76rem;
-  letter-spacing: 0.9px;
-  color: var(--jeopardy-gold-light);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-button.board-edit-done:hover { border-color: var(--jeopardy-gold); }
+button.board-edit-done { white-space: nowrap; }
 
 button.board-edit-undo {
   padding: 10px 13px;

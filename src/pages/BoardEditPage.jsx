@@ -283,7 +283,7 @@ export default function BoardEditPage() {
           Undo
         </button>
 
-        <button className="plain-btn board-edit-done" onClick={() => leave(`/boards/${slug}`)}>
+        <button className="plain-btn quiet-action board-edit-done" onClick={() => leave(`/boards/${slug}`)}>
           Done
         </button>
       </div>

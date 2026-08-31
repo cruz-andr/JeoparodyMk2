@@ -190,7 +190,7 @@ export default function BoardsBrowsePage() {
             onChange={(e) => onType(e.target.value)}
           />
           <button
-            className="plain-btn bb-make"
+            className="plain-btn quiet-action bb-make"
             onClick={() => navigate(isAuthenticated ? '/boards/mine' : '/signin')}
           >
             Build a board
@@ -222,7 +222,7 @@ export default function BoardsBrowsePage() {
         {rows === null ? (
           <p className="boards-quiet">Looking.</p>
         ) : rows === 'failed' ? (
-          <button className="plain-btn bb-make" onClick={load}>Try again</button>
+          <button className="plain-btn quiet-action bb-make" onClick={load}>Try again</button>
         ) : !anything ? (
           /* Two different nothings. Nobody has published anything yet, which
              is an invitation, or a filter matched nothing, which is a dead
@@ -232,7 +232,7 @@ export default function BoardsBrowsePage() {
               <>
                 <h1>Nothing here.</h1>
                 <p>No board matches that yet.</p>
-                <button className="plain-btn bb-make" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
+                <button className="plain-btn quiet-action bb-make" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
                   Clear the filter
                 </button>
               </>
