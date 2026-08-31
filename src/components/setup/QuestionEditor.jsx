@@ -7,26 +7,7 @@ import './QuestionEditor.css';
 
 const POINT_VALUES = [200, 400, 600, 800, 1000];
 
-/**
- * Four optional props were added so the board editor could reuse this rather
- * than fork it. They all default to what host mode already did, so host mode
- * is untouched.
- *
- * `requireComplete` is the one that matters: host mode is about to start a
- * game, so it refuses to move on with holes in the board. A draft is allowed
- * to have holes, and blocking Done would be blocking someone from leaving
- * their own unfinished work.
- */
-export default function QuestionEditor({
-  onBack,
-  onNext,
-  answerMode = 'verbal',
-  heading = 'Edit Questions',
-  subheading = 'Review and customize all questions before starting the game',
-  requireComplete = true,
-  nextLabel = 'Create Game',
-  backLabel = 'Back',
-}) {
+export default function QuestionEditor({ onBack, onNext, answerMode = 'verbal' }) {
   const { categories, questions, updateCategory, updateQuestion, validateContent, validationErrors } = useHostStore();
   const [activeTab, setActiveTab] = useState(0);
   const [showValidation, setShowValidation] = useState(false);
@@ -60,10 +41,6 @@ export default function QuestionEditor({
   };
 
   const handleNext = () => {
-    if (!requireComplete) {
-      onNext();
-      return;
-    }
     const isValid = validateContent();
     if (isValid) {
       onNext();
@@ -92,8 +69,10 @@ export default function QuestionEditor({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <h2>{heading}</h2>
-      <p className="editor-subtitle">{subheading}</p>
+      <h2>Edit Questions</h2>
+      <p className="editor-subtitle">
+        Review and customize all questions before starting the game
+      </p>
 
       {/* Category Tabs */}
       <div className="category-tabs">
@@ -236,10 +215,10 @@ export default function QuestionEditor({
       {/* Actions */}
       <div className="editor-actions">
         <button onClick={onBack} className="btn-secondary">
-          {backLabel}
+          Back
         </button>
         <button onClick={handleNext} className="btn-primary">
-          {nextLabel}
+          Create Game
         </button>
       </div>
     </motion.div>

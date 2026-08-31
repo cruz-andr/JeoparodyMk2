@@ -78,6 +78,22 @@
   padding-bottom: 8px;
 }
 
+button.board-edit-done {
+  padding: 10px 16px;
+  border: 1px solid rgba(242, 236, 224, 0.2);
+  border-radius: 3px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.76rem;
+  letter-spacing: 0.9px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.board-edit-done:hover { border-color: var(--jeopardy-gold); }
+
 @media (max-width: 640px) {
   .board-edit-head {
     flex-wrap: wrap;
@@ -88,6 +104,7 @@
   /* Title takes the full second line so it is not a 90px input next to a
      thumbnail. */
   .board-edit-title { order: 3; flex-basis: 100%; }
+  button.board-edit-done { order: 2; margin-left: auto; }
   .board-edit-title input { font-size: 1.25rem; }
   .board-edit-count { padding-bottom: 0; }
 }
