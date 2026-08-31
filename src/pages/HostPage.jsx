@@ -520,6 +520,11 @@ export default function HostPage() {
               onReroll={topics[round] ? rerollCategory : undefined}
               rerollsLeft={rerolls[round]}
               onSuggestWrong={suggestWrong}
+              /* Host mode has a Final tab of its own. The editor's own Final
+                 Jeopardy tile wrote into the round's board, which this screen
+                 never reads, so a Final written there looked saved on the tile
+                 and was thrown away at the start of the game. */
+              showFinal={false}
               dailyDoubles={placed}
               dailyDoublesWanted={wanted}
               onToggleDailyDouble={marking ? markDouble : undefined}
