@@ -481,7 +481,7 @@ export default function HostPage() {
         ) : (
           <>
             <div className="host-write-line">
-              <span className="host-write">Click any cell and write it</span>
+              <span className="host-write">Pick any cell and write it</span>
               <button
                 className="plain-btn quiet-action host-ai"
                 onClick={() => setFill('ai')}
