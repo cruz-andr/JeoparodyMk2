@@ -25,3 +25,6 @@ CLAUDE.md
 # Design canvas working files (the seeded page is ~2MB)
 .design-work/*.html
 !.design-work/*.dc.html
+
+# Throwaway databases the server test suites boot against
+server/test/tmp-*.sqlite*

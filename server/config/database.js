@@ -167,11 +167,53 @@ export async function initializeDatabase() {
       achieved_at TEXT DEFAULT (datetime('now'))
     );
 
+    /* Boards built by players.
+
+       The data column holds the board itself as the JSON that boardFormat.js
+       validates, which is the same shape questionImport.js already accepts from
+       a file. So a board on disk, a board in this column and a board being
+       played are one object with no conversion between them.
+
+       Two columns are denormalised on purpose:
+         clue_count   the publish gate and the progress meter both need it, and
+                      neither should parse 30 clues of JSON to get it.
+         plays        the only ranking signal, so it is read constantly.
+
+       cover_image and data are both large and are never selected by any list
+       query. See the SELECTs in routes/boards.js. */
+    CREATE TABLE IF NOT EXISTS boards (
+      id TEXT PRIMARY KEY,
+      /* What a shared link carries. Random, never derived from the title:
+         "anyone with the link" is only private if the link cannot be guessed. */
+      slug TEXT UNIQUE NOT NULL,
+      owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL DEFAULT '',
+      description TEXT,
+      topic TEXT,
+      cover_image TEXT,
+      visibility TEXT NOT NULL DEFAULT 'private',
+      data TEXT NOT NULL,
+      clue_count INTEGER NOT NULL DEFAULT 0,
+      plays INTEGER NOT NULL DEFAULT 0,
+      /* The attribution. A copy keeps the pointer home, and ON DELETE SET NULL
+         means deleting an original orphans its copies rather than taking them
+         down with it. */
+      copied_from TEXT REFERENCES boards(id) ON DELETE SET NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      published_at TEXT
+    );
+
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
     CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
     CREATE INDEX IF NOT EXISTS idx_highscores_score ON highscores(score DESC);
+
+    -- The two queries that run most: my shelf, and the popular row.
+    CREATE INDEX IF NOT EXISTS idx_boards_owner ON boards(owner_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_boards_public ON boards(visibility, plays DESC);
+    CREATE INDEX IF NOT EXISTS idx_boards_new ON boards(visibility, published_at DESC);
   `);
 
   for (const [table, column, definition] of migrations) {

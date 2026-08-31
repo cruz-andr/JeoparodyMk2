@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import roomRoutes from './routes/rooms.js';
 import leaderboardRoutes from './routes/leaderboard.js';
+import boardRoutes from './routes/boards.js';
 
 // Import socket handlers
 import { initializeSocketHandlers } from './socket/index.js';
@@ -63,7 +64,25 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+/* Two body parsers, because boards are a different size of thing.
+
+   The default cap is 100KB, which is right for every other endpoint and far
+   too small for a board: MediaAttachment compresses an image to 800px WebP and
+   stores it as a base64 data URL, so a single image clue can be most of that
+   budget and a board carrying several could never be saved. It would fail as a
+   bare 413 with no message we wrote, which is the hardest kind to recognise.
+
+   This has to be a fork rather than a second parser mounted on the boards
+   router: whichever parser runs first is the one that enforces the limit, and
+   a global express.json() would already have rejected the body before the
+   router ever saw it. */
+const parseJson = express.json();
+const parseBoardJson = express.json({ limit: '4mb' });
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/boards')) return parseBoardJson(req, res, next);
+  return parseJson(req, res, next);
+});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -83,6 +102,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+
+app.use('/api/boards', boardRoutes);
 
 // Daily Challenge endpoint - scrapes J-Archive
 app.get('/api/daily/challenge', async (req, res) => {
