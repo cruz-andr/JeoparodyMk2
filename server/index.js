@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
+import { apiLimiter, authLimiter, ON_FLY } from './middleware/rateLimit.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -62,6 +62,12 @@ app.use(helmet({
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
+  /* X-Player-Key is how a signed-out visitor is told apart from a reload; see
+     the play counter in routes/boards.js. */
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Player-Key'],
+  /* The RateLimit headers are useless to a browser unless they are exposed:
+     cross-origin, script can only read the handful the server names here. */
+  exposedHeaders: ['RateLimit', 'RateLimit-Policy', 'Retry-After'],
 }));
 
 /* Two body parsers, because boards are a different size of thing.
@@ -84,13 +90,20 @@ app.use((req, res, next) => {
   return parseJson(req, res, next);
 });
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: { error: 'Too many requests, please try again later.' },
-});
-app.use('/api/', limiter);
+/* Behind Fly there is exactly one proxy in front of us. Saying so is what
+   makes req.ip, req.protocol and req.secure mean anything; left at the default
+   they describe the proxy rather than the visitor.
+
+   The rate limiter does not rely on this. It reads Fly-Client-IP, which Fly
+   writes itself and a client cannot forge, precisely because X-Forwarded-For
+   can be. See middleware/rateLimit.js. */
+if (ON_FLY) app.set('trust proxy', 1);
+
+/* Signing in is limited harder than everything else, and separately, so that
+   somebody guessing passwords cannot also lock the rest of the API. */
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/', apiLimiter);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -204,6 +204,25 @@ export async function initializeDatabase() {
       published_at TEXT
     );
 
+    /* One row per person per board, which is what makes the plays column
+       mean something.
+
+       A bare counter is a reload button: the number it produces says how many
+       times a page was opened, and the thing anyone actually wants to know is
+       how many people played. Distinct players cannot be inflated by
+       refreshing, and it is the honest answer to "did anyone finish this".
+
+       viewer is 'u:<user id>' for someone signed in, and 'a:<hash>' for
+       everyone else. An account is one person wherever they sit; an anonymous
+       key is a per-browser id, which is a deduplicator rather than a security
+       boundary, and the rate limiter is what stops anyone minting them fast. */
+    CREATE TABLE IF NOT EXISTS board_plays (
+      board_id TEXT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+      viewer TEXT NOT NULL,
+      first_played_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (board_id, viewer)
+    ) WITHOUT ROWID;
+
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);

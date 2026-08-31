@@ -56,12 +56,13 @@ async function test(name, fn) {
   }
 }
 
-async function api(path, { method = 'GET', body, token } = {}) {
+async function api(path, { method = 'GET', body, token, headers } = {}) {
   const res = await fetch(`${base}/api/boards${path}`, {
     method,
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -402,18 +403,94 @@ await test('a copy of a copy credits the original author', async () => {
   assert.equal(opened.data.adaptedFrom.username, 'ada', 'not the middleman');
 });
 
-await test('plays go up for a visitor', async () => {
-  const before = (await api(`/${published}`)).data.plays;
-  const { data } = await api(`/${published}/played`, { method: 'POST', token: bob });
+// ============================================================ plays
+
+const play = (slug, { token, key } = {}) =>
+  api(`/${slug}/played`, {
+    method: 'POST', token,
+    headers: key ? { 'X-Player-Key': key } : undefined,
+  });
+
+const playsOn = async (slug) => (await api(`/${slug}`)).data.plays;
+
+await test('a play counts', async () => {
+  const before = await playsOn(published);
+  const { data } = await play(published, { token: bob });
   assert.equal(data.plays, before + 1);
+  assert.equal(data.counted, true);
 });
 
-await test('the owner cannot run up their own play count', async () => {
-  const before = (await api(`/${published}`)).data.plays;
-  await api(`/${published}/played`, { method: 'POST', token: ada });
-  await api(`/${published}/played`, { method: 'POST', token: ada });
-  const after = (await api(`/${published}`)).data.plays;
-  assert.equal(after, before);
+await test('the same person playing again does not count again', async () => {
+  // This is the whole point. A bare counter is a reload button, and the number
+  // it produces answers a question nobody asked.
+  const before = await playsOn(published);
+  for (let i = 0; i < 5; i += 1) await play(published, { token: bob });
+  assert.equal(await playsOn(published), before);
+});
+
+await test('a repeat play says so rather than lying about the total', async () => {
+  const { data } = await play(published, { token: bob });
+  assert.equal(data.counted, false);
+  assert.equal(data.plays, await playsOn(published));
+});
+
+await test('the owner cannot run up their own count', async () => {
+  const before = await playsOn(published);
+  await play(published, { token: ada });
+  await play(published, { token: ada });
+  assert.equal(await playsOn(published), before);
+});
+
+await test('a signed-out player counts once, however many reloads', async () => {
+  const before = await playsOn(published);
+  const key = 'anonymous-browser-key-0001';
+  await play(published, { key });
+  const afterFirst = await playsOn(published);
+  assert.equal(afterFirst, before + 1);
+
+  for (let i = 0; i < 4; i += 1) await play(published, { key });
+  assert.equal(await playsOn(published), afterFirst, 'refreshing is not playing again');
+});
+
+await test('a different signed-out player is a different play', async () => {
+  const before = await playsOn(published);
+  await play(published, { key: 'anonymous-browser-key-0002' });
+  assert.equal(await playsOn(published), before + 1);
+});
+
+await test('a nonsense player key is ignored rather than trusted', async () => {
+  const before = await playsOn(published);
+  // Too short to be one of ours, so it falls back to address plus user agent,
+  // which the previous test already used up.
+  await play(published, { key: 'x' });
+  await play(published, { key: '../../etc/passwd' });
+  assert.equal(await playsOn(published), before + 1, 'both fell back to the same fingerprint');
+});
+
+await test('the count survives a play by someone who then signs in', async () => {
+  // Signed out and signed in are different rows on purpose: we cannot know
+  // they are the same person, and guessing wrong loses a real play.
+  const before = await playsOn(published);
+  const carol = await signUp('dave@example.com');
+  await play(published, { token: carol });
+  assert.equal(await playsOn(published), before + 1);
+});
+
+await test('plays are per board, not per person', async () => {
+  const second = await api('/', { method: 'POST', token: ada, body: { title: 'Another board' } });
+  await api(`/${second.data.slug}`, { method: 'PUT', token: ada, body: { board: fullBoard() } });
+  await api(`/${second.data.slug}/visibility`, { method: 'PUT', token: ada, body: { visibility: 'public' } });
+
+  const { data } = await play(second.data.slug, { token: bob });
+  assert.equal(data.counted, true, 'bob has played the other board, not this one');
+});
+
+await test('deleting a board takes its plays with it', async () => {
+  const temp = await api('/', { method: 'POST', token: ada, body: { title: 'Briefly' } });
+  await api(`/${temp.data.slug}/visibility`, { method: 'PUT', token: ada, body: { visibility: 'unlisted' } });
+  await play(temp.data.slug, { token: bob });
+  await api(`/${temp.data.slug}`, { method: 'DELETE', token: ada });
+  assert.equal((await api(`/${temp.data.slug}`)).status, 404);
 });
 
 await test('my shelf lists my boards and nobody else\'s', async () => {

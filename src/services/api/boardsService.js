@@ -17,7 +17,7 @@ export class BoardsError extends Error {
   }
 }
 
-async function call(path, { method = 'GET', body, token } = {}) {
+async function call(path, { method = 'GET', body, token, headers } = {}) {
   if (!API) throw new BoardsError('The server is not configured.', 'NO_SERVER', 0);
 
   let response;
@@ -27,6 +27,7 @@ async function call(path, { method = 'GET', body, token } = {}) {
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -82,16 +83,44 @@ export const deleteBoard = (token, slug) =>
 export const browse = ({ row = 'popular', topic, q, limit } = {}, token) =>
   call(query({ row, topic, q, limit }), { token });
 
+/**
+ * A key for this browser, so a signed-out player is one player.
+ *
+ * Not an identifier for a person and not a security boundary: it is only what
+ * lets the server tell a second play from the same visitor apart from a second
+ * visitor. It is hashed before it is stored, it is never sent anywhere else,
+ * and clearing site data mints a new one, which costs nothing but one
+ * miscounted play.
+ *
+ * A signed-in player never needs it. The account is the better answer, and it
+ * makes playing on a phone and then a laptop one person rather than two.
+ */
+const PLAYER_KEY = 'jeoparody-player-key';
+
+function playerKey() {
+  try {
+    let key = localStorage.getItem(PLAYER_KEY);
+    if (!key) {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      key = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem(PLAYER_KEY, key);
+    }
+    return key;
+  } catch {
+    /* Private windows and blocked storage both land here. The server falls
+       back to the address, which is blunter but still better than counting
+       every reload. */
+    return null;
+  }
+}
+
 /* Slugs already counted on this page load.
 
    React mounts, unmounts and mounts again under StrictMode, so the effect that
-   starts a game runs twice and counted the same play twice. Guarding here
-   rather than in the page means every caller gets it, including whatever
-   starts a game next.
-
-   This is not anti-gaming. A reload gets a fresh module and counts again; what
-   stops someone running up their own number is the server refusing to count
-   the owner. Proper deduplication belongs with the ranking that reads it. */
+   starts a game runs twice. The server would refuse the second one anyway now
+   that a play is a row rather than an increment; this just saves the round
+   trip. */
 const counted = new Set();
 
 /**
@@ -104,5 +133,11 @@ const counted = new Set();
 export const countPlay = (slug, token) => {
   if (counted.has(slug)) return Promise.resolve(null);
   counted.add(slug);
-  return call(`/${slug}/played`, { method: 'POST', token }).catch(() => null);
+
+  const key = playerKey();
+  return call(`/${slug}/played`, {
+    method: 'POST',
+    token,
+    headers: key ? { 'X-Player-Key': key } : undefined,
+  }).catch(() => null);
 };

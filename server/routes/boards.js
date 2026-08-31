@@ -20,6 +20,7 @@ import crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../config/database.js';
 import { authenticateToken, optionalAuth } from '../middleware/auth.js';
+import { clientAddress } from '../middleware/rateLimit.js';
 import { AppError } from '../middleware/errorHandler.js';
 import {
   CLUE_COUNT,
@@ -398,19 +399,53 @@ router.post('/:slug/copy', authenticateToken, (req, res, next) => {
 
 // ---------------------------------------------------------------- plays
 
+/**
+ * Who is playing, for the purpose of counting them once.
+ *
+ * Signed in, it is the account, so playing on a phone and then a laptop is one
+ * person. Signed out, it is a key the browser generated and kept, hashed so
+ * the database never holds it in the clear; failing that, the address and the
+ * browser string, which is a blunter instrument but better than counting every
+ * reload.
+ */
+function playerKey(req) {
+  if (req.user?.userId) return `u:${req.user.userId}`;
+
+  const given = req.get('x-player-key');
+  const material = given && /^[A-Za-z0-9_-]{16,64}$/.test(given)
+    ? `k:${given}`
+    : `f:${clientAddress(req)}|${req.get('user-agent') ?? ''}`;
+
+  return `a:${crypto.createHash('sha256').update(material).digest('hex').slice(0, 32)}`;
+}
+
 router.post('/:slug/played', optionalAuth, (req, res, next) => {
   try {
     const db = getDatabase();
     const row = readable(db, req.params.slug, req.user?.userId);
 
     /* Your own plays do not count. Otherwise the first thing anyone learns is
-       that the ranking is a reload button. */
+       that the ranking is a reload button with your name on it. */
     if (row.owner_id && row.owner_id === req.user?.userId) {
-      return res.json({ plays: row.plays });
+      return res.json({ plays: row.plays, counted: false });
     }
 
-    db.prepare('UPDATE boards SET plays = plays + 1 WHERE id = ?').run(row.id);
-    res.json({ plays: row.plays + 1 });
+    /* The insert is the deduplication. OR IGNORE means a second play by the
+       same person changes nothing, and `changes` tells us whether this was the
+       first time, so the counter and the table can never drift apart. Both
+       statements in one transaction for the same reason. */
+    const record = db.transaction((boardId, viewer) => {
+      const result = db.prepare(
+        'INSERT OR IGNORE INTO board_plays (board_id, viewer) VALUES (?, ?)'
+      ).run(boardId, viewer);
+
+      if (result.changes === 0) return false;
+      db.prepare('UPDATE boards SET plays = plays + 1 WHERE id = ?').run(boardId);
+      return true;
+    });
+
+    const counted = record(row.id, playerKey(req));
+    res.json({ plays: row.plays + (counted ? 1 : 0), counted });
   } catch (err) {
     next(err);
   }
