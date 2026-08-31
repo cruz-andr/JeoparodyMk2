@@ -91,7 +91,12 @@ button:disabled {
   transform: none;
 }
 
-button:focus {
+/* focus-visible, not focus. :focus fires on a mouse click too, so clicking a
+   button left a ring sitting on it afterwards. :focus-visible is the browser's
+   own judgement of "this person is navigating by keyboard", which is the only
+   time the ring is doing a job. Removing it outright would leave keyboard users
+   with no idea where they are. */
+button:focus-visible {
   outline: 2px solid var(--jeopardy-gold);
   outline-offset: 2px;
 }
