@@ -69,12 +69,12 @@ export default function AccountPage() {
           <p className="account-empty">You have not drawn one yet.</p>
         )}
         <div className="account-actions">
-          <Link className="account-link" to="/account/name">
+          <Link className="plain-btn account-link" to="/account/name">
             {user.signature ? 'Redraw' : 'Draw it'}
           </Link>
           {user.signature && (
             <button
-              className="account-link" disabled={busy}
+              className="plain-btn account-link" disabled={busy}
               onClick={() => run(clearSignature)}
             >
               Clear
@@ -88,7 +88,7 @@ export default function AccountPage() {
           <dt>Username<span className="account-dt-hint">how people find you</span></dt>
           <dd>
             {user.username ?? <span className="account-unset">Not chosen</span>}{' '}
-            <Link className="account-link" to="/account/username">
+            <Link className="plain-btn account-link" to="/account/username">
               {user.username ? 'Change' : 'Pick one'}
             </Link>
           </dd>
@@ -117,7 +117,7 @@ export default function AccountPage() {
       {/* Promised by the privacy policy, so it is here and it really deletes. */}
       {!confirmingDelete ? (
         <p className="auth-foot">
-          <button className="account-danger" onClick={() => setConfirmingDelete(true)}>
+          <button className="plain-btn account-danger" onClick={() => setConfirmingDelete(true)}>
             Delete account
           </button>
         </p>
@@ -136,7 +136,7 @@ export default function AccountPage() {
           >
             {busy ? 'Deleting…' : 'Delete it permanently'}
           </button>
-          <button className="account-link" onClick={() => setConfirmingDelete(false)}>
+          <button className="plain-btn account-link" onClick={() => setConfirmingDelete(false)}>
             Keep my account
           </button>
         </div>

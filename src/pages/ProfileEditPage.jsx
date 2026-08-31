@@ -92,10 +92,10 @@ export default function ProfileEditPage() {
   return (
     <div className="edit-page">
       <header className="edit-top">
-        <button className="edit-back" onClick={() => navigate('/profile')}>Cancel</button>
+        <button className="plain-btn edit-back" onClick={() => navigate('/profile')}>Cancel</button>
         <span className="edit-title">Edit profile</span>
         <button
-          className="edit-save"
+          className="plain-btn edit-save"
           onClick={handleSave}
           disabled={busy || nothingToSave || !nameOk}
         >

@@ -24,6 +24,11 @@
   /* The show sets board categories and dollar values in Swiss 911 Ultra
      Compressed, and clues in ITC Korinna. Big Shoulders and Petrona stand in
      for those two roles. */
+  /* The ground a signature is painted on. The canvas bakes this into the PNG,
+     so anything showing a signature must sit it on the same colour or the
+     image reads as a patch of a different blue. */
+  --signature-ground: #1a1a6e;
+
   --font-board: 'Big Shoulders Display', Impact, 'Haettenschweiler', 'Arial Narrow', sans-serif;
   --font-clue: 'Petrona', Georgia, 'Times New Roman', serif;
   --font-display: Impact, "Arial Narrow", sans-serif;

@@ -55,8 +55,8 @@
 .profile-card {
   padding: 14px 18px;
   border-radius: 10px;
-  background: linear-gradient(177deg, #1b2496, #0d1466);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: var(--signature-ground);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .profile-card img {

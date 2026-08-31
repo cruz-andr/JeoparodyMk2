@@ -145,7 +145,7 @@ export default function MainMenu() {
           <div className="menu-identity-wrap" ref={identityRef}>
             <button
               ref={chipRef}
-              className="menu-player"
+              className="plain-btn menu-player"
               onClick={() => setShowIdentity((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={showIdentity}

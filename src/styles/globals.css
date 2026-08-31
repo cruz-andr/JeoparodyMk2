@@ -96,6 +96,22 @@ button:focus {
   outline-offset: 2px;
 }
 
+/* A button that is a link or a control, not a slab of gold.
+
+   The global rules above give every button a gold ground and a gold hover, and
+   button:hover:not(:disabled) is 0,2,1, so a class setting `background: none`
+   at 0,1,0 loses on hover and the thing flares gold. That is how a Back link
+   became a full width gold bar across the header. Qualified with the element
+   so it wins, and stated for both states so neither can drift. */
+button.plain-btn,
+button.plain-btn:hover:not(:disabled),
+button.plain-btn:focus {
+  background: none;
+  border: none;
+  transform: none;
+  text-transform: none;
+}
+
 /* Button Variants */
 .btn-primary {
   background-color: var(--jeopardy-gold);

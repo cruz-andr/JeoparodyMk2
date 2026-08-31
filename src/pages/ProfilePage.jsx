@@ -44,7 +44,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <header className="profile-top">
-        <button className="profile-back" onClick={() => navigate('/menu')}>&lsaquo; Menu</button>
+        <button className="plain-btn profile-back" onClick={() => navigate('/menu')}>&lsaquo; Menu</button>
         <span className="profile-top-title">You</span>
         <span className="profile-top-spacer" />
       </header>
@@ -90,7 +90,7 @@ export default function ProfilePage() {
         </div>
 
         <nav className="profile-rows">
-          <Link className="profile-row" to="/settings">
+          <Link className="plain-btn profile-row" to="/settings">
             <span className="profile-row-icon"><Icon name="settings" size={20} /></span>
             <span className="profile-row-main">
               <span className="profile-row-name">Settings</span>
@@ -99,7 +99,7 @@ export default function ProfilePage() {
             <span className="profile-row-go">&rsaquo;</span>
           </Link>
 
-          <Link className="profile-row" to="/account">
+          <Link className="plain-btn profile-row" to="/account">
             <span className="profile-row-icon"><Icon name="mail" size={20} /></span>
             <span className="profile-row-main">
               <span className="profile-row-name">Account</span>
@@ -119,7 +119,7 @@ export default function ProfilePage() {
           </span>
 
           <button
-            className="profile-row"
+            className="plain-btn profile-row"
             onClick={() => { leaving.current = true; logout(); navigate('/menu'); }}
           >
             <span className="profile-row-icon"><Icon name="log-out" size={20} /></span>

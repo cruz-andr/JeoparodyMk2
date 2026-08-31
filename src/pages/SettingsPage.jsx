@@ -15,7 +15,7 @@ export default function SettingsPage() {
   return (
     <div className="settings-page">
       <header className="settings-page-head">
-        <button className="settings-back" onClick={() => navigate(-1)}>
+        <button className="plain-btn settings-back" onClick={() => navigate(-1)}>
           &lsaquo; Back
         </button>
         <h1>Settings</h1>

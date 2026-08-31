@@ -9,7 +9,7 @@
   display: block;
   width: 100%;
   border-radius: 6px;
-  background: #0d1466;
+  background: var(--signature-ground);
 }
 
 .account-empty {

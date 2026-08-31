@@ -1,6 +1,10 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import './SignatureCanvas.css';
 
+/** Baked into the exported PNG, so every surface showing one must match it.
+    Mirrored in CSS as --signature-ground. */
+export const SIGNATURE_GROUND = '#1a1a6e';
+
 export default function SignatureCanvas({
   onSignatureChange,
   initialSignature = null,
@@ -41,7 +45,7 @@ export default function SignatureCanvas({
     ctx.scale(dpr, dpr);
 
     // Fill with Jeopardy blue background
-    ctx.fillStyle = '#1a1a6e';
+    ctx.fillStyle = SIGNATURE_GROUND;
     ctx.fillRect(0, 0, width, height);
 
     // Set drawing style
@@ -77,7 +81,7 @@ export default function SignatureCanvas({
     const dpr = window.devicePixelRatio || 1;
 
     // Clear and fill with blue background
-    ctx.fillStyle = '#1a1a6e';
+    ctx.fillStyle = SIGNATURE_GROUND;
     ctx.fillRect(0, 0, width, height);
 
     if (name.trim()) {
