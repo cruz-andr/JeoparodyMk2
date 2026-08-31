@@ -30,6 +30,19 @@ export const TOPICS = [
   'geography', 'wordplay', 'food-drink', 'games', 'everything-else',
 ];
 
+/* Why somebody is reporting. Fixed, because a free-text-only report is a
+   sentence to read rather than a thing to sort by, and the whole point of a
+   queue is being able to look at the worst of it first. */
+export const REPORT_REASONS = [
+  { key: 'offensive', label: 'Offensive or hateful' },
+  { key: 'spam', label: 'Spam or advertising' },
+  { key: 'copyright', label: 'Copied from a real episode' },
+  { key: 'broken', label: 'Wrong answers or unplayable' },
+  { key: 'other', label: 'Something else' },
+];
+
+export const MAX_REPORT_NOTE = 500;
+
 export const MAX_TITLE = 80;
 export const MAX_DESCRIPTION = 280;
 

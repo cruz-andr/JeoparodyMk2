@@ -112,6 +112,37 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
       }
       await new Promise((r) => setTimeout(r, 90));
     },
+    /* Wait for a condition rather than a length of time.
+
+       A fixed sleep is either too short, which reports the product broken when
+       it is only slow, or too long, which makes every run slower than it needs
+       to be. This has done both in this repo. */
+    async until(expression, { timeout = 10000, every = 100 } = {}) {
+      const deadline = Date.now() + timeout;
+      for (;;) {
+        try {
+          if (await api.evaluate(expression)) return true;
+        } catch { /* mid-navigation; try again */ }
+        if (Date.now() > deadline) {
+          throw new Error(`timed out after ${timeout}ms waiting for: ${expression}`);
+        }
+        await new Promise((r) => setTimeout(r, every));
+      }
+    },
+    /* Put a real file on a real <input type=file>.
+
+       DOM.setFileInputFiles puts the file there but does not fire `change`,
+       so a React onChange never runs and the upload silently does nothing.
+       Puppeteer dispatches the event by hand for the same reason. */
+    async attachFile(sel, path) {
+      await send('DOM.enable');
+      const doc = await send('DOM.getDocument');
+      const node = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector: sel });
+      if (!node.nodeId) throw new Error('no file input for ' + sel);
+      await send('DOM.setFileInputFiles', { nodeId: node.nodeId, files: [path] });
+      await api.evaluate(`document.querySelector(${JSON.stringify(sel)})
+        .dispatchEvent(new Event('change', { bubbles: true }))`);
+    },
     async shot(path) {
       const { data } = await send('Page.captureScreenshot', { format: 'png' });
       writeFileSync(path, Buffer.from(data, 'base64'));

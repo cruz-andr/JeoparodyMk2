@@ -26,6 +26,8 @@ import {
   CLUE_COUNT,
   MAX_DESCRIPTION,
   MAX_TITLE,
+  MAX_REPORT_NOTE,
+  REPORT_REASONS,
   TOPICS,
   VISIBILITIES,
   countClues,
@@ -41,7 +43,7 @@ const router = Router();
    twenty serialised boards and twenty cover images with it. */
 const CARD_COLUMNS = `
   b.id, b.slug, b.owner_id, b.title, b.description, b.topic,
-  b.visibility, b.clue_count, b.plays, b.copied_from,
+  b.visibility, b.clue_count, b.plays, b.copied_from, b.category_names,
   b.created_at, b.updated_at, b.published_at,
   b.cover_image IS NOT NULL AS has_cover
 `;
@@ -85,8 +87,16 @@ function cardFromRow(row) {
     topic: row.topic,
     visibility: row.visibility,
     clueCount: row.clue_count,
+    /* Only the named ones. A half-built board should show the three categories
+       it has rather than three blanks pretending to be categories. */
+    categories: (row.category_names ?? '').split('\u0000').filter(Boolean),
     plays: row.plays,
-    hasCover: Boolean(row.has_cover),
+    /* CARD_COLUMNS computes has_cover so a list never carries the image, but
+       the single-board query selects b.* and has the column itself. Reading
+       only the computed one made hasCover permanently false on a board's own
+       page, which is exactly the sort of thing that passes a test asserting
+       false. */
+    hasCover: Boolean(row.has_cover ?? row.cover_image),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     publishedAt: row.published_at,
@@ -188,7 +198,21 @@ router.get('/mine', authenticateToken, (req, res, next) => {
 
 // ---------------------------------------------------------------- browse
 
+/* Which boards are picked by hand, as a comma-separated list of slugs.
+
+   An env var rather than a column and an admin screen, because there is one
+   person curating and building a permissions system for an audience of one is
+   the wrong amount of machinery. Changing it is one `fly secrets set`.
+
+   Read per request rather than at boot so a test can set it and see it. */
+function featuredSlugs() {
+  return (process.env.FEATURED_SLUGS ?? '')
+    .split(',').map((slug) => slug.trim()).filter(Boolean).slice(0, 24);
+}
+
 const ROWS = {
+  /* Featured falls back to the most played finished boards when nothing is
+     picked, so the row is never an empty shelf next to two full ones. */
   featured: `AND b.clue_count = ${CLUE_COUNT} ORDER BY b.plays DESC, b.published_at DESC`,
   popular: 'ORDER BY b.plays DESC, b.published_at DESC',
   new: 'ORDER BY b.published_at DESC',
@@ -204,6 +228,17 @@ router.get('/', optionalAuth, (req, res, next) => {
     const where = ["b.visibility = 'public'"];
     const params = [];
     if (topic) { where.push('b.topic = ?'); params.push(topic); }
+
+    /* A hand-picked Featured row is an explicit list, so it is ordered by that
+       list rather than by plays: the point of picking is that the order is a
+       judgement, not a number. */
+    let order = ROWS[row];
+    const picked = row === 'featured' ? featuredSlugs() : [];
+    if (picked.length) {
+      where.push(`b.slug IN (${picked.map(() => '?').join(',')})`);
+      params.push(...picked);
+      order = `ORDER BY CASE b.slug ${picked.map((_, i) => `WHEN ? THEN ${i}`).join(' ')} END`;
+    }
     if (q) {
       /* Title or author. Searching inside `data` would mean a full scan over
          every clue on every board on every keystroke. */
@@ -215,11 +250,11 @@ router.get('/', optionalAuth, (req, res, next) => {
       SELECT ${CARD_COLUMNS}, ${AUTHOR_COLUMNS}
       FROM boards b ${AUTHOR_JOIN}
       WHERE ${where.join(' AND ')}
-      ${ROWS[row]}
+      ${order}
       LIMIT ?
-    `).all(...params, limit);
+    `).all(...params, ...(picked.length ? picked : []), limit);
 
-    res.json({ row, boards: rows.map(cardFromRow) });
+    res.json({ row, boards: rows.map(cardFromRow), curated: picked.length > 0 });
   } catch (err) {
     next(err);
   }
@@ -323,10 +358,18 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
       publishedAt = null;
     }
 
+    /* NUL as the separator, because a category can contain anything a person
+       types including a comma, and a card that splits "SALT, PEPPER" into two
+       categories is a card that lies about the board. */
+    const names = board
+      ? board.categories.map((c) => c.name.trim()).filter(Boolean).join('\u0000')
+      : null;
+
     db.prepare(`
       UPDATE boards
       SET title = ?, description = ?, topic = ?,
           data = COALESCE(?, data), clue_count = ?,
+          category_names = COALESCE(?, category_names),
           visibility = ?, published_at = ?,
           version = version + 1,
           updated_at = datetime('now')
@@ -334,6 +377,7 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
     `).run(
       title, description, topic,
       board ? JSON.stringify(board) : null, clueCount,
+      names,
       visibility, publishedAt, existing.id
     );
 
@@ -403,11 +447,11 @@ router.post('/:slug/copy', authenticateToken, (req, res, next) => {
 
     db.prepare(`
       INSERT INTO boards (id, slug, owner_id, title, description, topic,
-                          data, clue_count, visibility, copied_from)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'private', ?)
+                          data, clue_count, category_names, visibility, copied_from)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'private', ?)
     `).run(
       uuidv4(), slug, ownerId, title, source.description, source.topic,
-      source.data, source.clue_count,
+      source.data, source.clue_count, source.category_names,
       /* Credit the original author, not the person you copied from. Otherwise
          a copy of a copy quietly reassigns the work to the middleman. */
       source.copied_from ?? source.id
@@ -468,6 +512,100 @@ router.post('/:slug/played', optionalAuth, (req, res, next) => {
 
     const counted = record(row.id, playerKey(req));
     res.json({ plays: row.plays + (counted ? 1 : 0), counted });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- report
+
+router.post('/:slug/report', authenticateToken, (req, res, next) => {
+  try {
+    const reporterId = requireAccount(req);
+    const db = getDatabase();
+    const row = readable(db, req.params.slug, reporterId);
+
+    /* Only what is public. An unlisted board is one somebody chose to send
+       you, and a report button on it is a report button on a private message. */
+    if (row.visibility !== 'public') {
+      throw new AppError('That board is not in Community Boards.', 400, 'NOT_PUBLIC');
+    }
+    if (row.owner_id === reporterId) {
+      throw new AppError('You can delete your own board instead.', 400, 'OWN_BOARD');
+    }
+
+    const reason = REPORT_REASONS.find((r) => r.key === req.body?.reason)?.key;
+    if (!reason) throw new AppError('Pick a reason.', 400, 'INVALID_REASON');
+
+    /* One report each. A second one from the same person replaces the first
+       rather than adding to a count, because a count somebody can run up is
+       not a signal. */
+    db.prepare(`
+      INSERT INTO board_reports (board_id, reporter_id, reason, note)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(board_id, reporter_id)
+      DO UPDATE SET reason = excluded.reason, note = excluded.note,
+                    created_at = datetime('now')
+    `).run(row.id, reporterId, reason, text(req.body?.note, MAX_REPORT_NOTE));
+
+    /* Nothing comes down automatically. At this size the honest promise is
+       that a person will look, and pretending otherwise would be a takedown
+       button with somebody else's name on it. */
+    res.status(201).json({ reported: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- cover
+
+/* Served on its own, with cache headers, and never in a list.
+
+   A cover is a data URL of a few tens of kilobytes. Twenty-four of them inside
+   a browse response would make the shelf the heaviest page in the app, so a
+   card gets `hasCover` and comes back for the picture only if it needs it. */
+router.get('/:slug/cover', optionalAuth, (req, res, next) => {
+  try {
+    const row = readable(getDatabase(), req.params.slug, req.user?.userId);
+    if (!row.cover_image) throw new AppError('No cover.', 404, 'NOT_FOUND');
+
+    const match = /^data:(image\/[a-z+.-]+);base64,(.+)$/i.exec(row.cover_image);
+    if (!match) throw new AppError('No cover.', 404, 'NOT_FOUND');
+
+    res.set('Content-Type', match[1]);
+    /* Immutable for an hour, and revalidated after: a cover changes rarely and
+       the board's updated_at is the version that matters. */
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(Buffer.from(match[2], 'base64'));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* Below the 4MB body limit with room to spare, and well past what an 800px
+   WebP comes to. Anything larger is a photograph nobody compressed. */
+const MAX_COVER_BYTES = 512 * 1024;
+
+router.put('/:slug/cover', authenticateToken, (req, res, next) => {
+  try {
+    const db = getDatabase();
+    const existing = owned(db, req.params.slug, req.user.userId);
+    const cover = req.body?.cover;
+
+    if (cover === null) {
+      db.prepare('UPDATE boards SET cover_image = NULL WHERE id = ?').run(existing.id);
+      return res.json({ hasCover: false });
+    }
+
+    if (typeof cover !== 'string' || !/^data:image\/[a-z+.-]+;base64,/i.test(cover)) {
+      throw new AppError('That is not an image.', 400, 'INVALID_COVER');
+    }
+    if (Buffer.byteLength(cover, 'utf8') > MAX_COVER_BYTES) {
+      throw new AppError('That image is too large. Try a smaller one.', 413, 'COVER_TOO_BIG');
+    }
+
+    db.prepare('UPDATE boards SET cover_image = ? WHERE id = ?').run(cover, existing.id);
+    res.json({ hasCover: true });
   } catch (err) {
     next(err);
   }

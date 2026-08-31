@@ -86,6 +86,15 @@ export const deleteBoard = (token, slug) =>
 export const browse = ({ row = 'popular', topic, q, limit } = {}, token) =>
   call(query({ row, topic, q, limit }), { token });
 
+export const reportBoard = (token, slug, reason, note) =>
+  call(`/${slug}/report`, { method: 'POST', token, body: { reason, note } });
+
+export const setCover = (token, slug, cover) =>
+  call(`/${slug}/cover`, { method: 'PUT', token, body: { cover } });
+
+/** The URL a card or a board page points an <img> at. Never inlined in JSON. */
+export const coverUrl = (slug) => `${API}/api/boards/${slug}/cover`;
+
 /**
  * A key for this browser, so a signed-out player is one player.
  *

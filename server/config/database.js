@@ -84,6 +84,10 @@ export async function initializeDatabase() {
        would also serve, and an integer in a JSON body cannot be rewritten on
        its way through a proxy. */
     ['boards', 'version', 'INTEGER NOT NULL DEFAULT 1'],
+    /* The six names, joined, so a card can show what a board is about without
+       every list query parsing thirty clues of JSON to find out. Denormalised
+       for the same reason clue_count is. */
+    ['boards', 'category_names', 'TEXT'],
     // Google's profile picture, when they sign in that way.
     ['users', 'avatar_url', 'TEXT'],
   ];
@@ -227,6 +231,21 @@ export async function initializeDatabase() {
       viewer TEXT NOT NULL,
       first_played_at TEXT DEFAULT (datetime('now')),
       PRIMARY KEY (board_id, viewer)
+    ) WITHOUT ROWID;
+
+    /* Reports on public boards.
+
+       One row per person per board, so a report is a report rather than a
+       button somebody can lean on. Nothing is taken down automatically: this
+       is a queue for a human, which at this size is the only honest kind of
+       moderation to promise. */
+    CREATE TABLE IF NOT EXISTS board_reports (
+      board_id TEXT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+      reporter_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      reason TEXT NOT NULL,
+      note TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (board_id, reporter_id)
     ) WITHOUT ROWID;
 
     -- Create indexes

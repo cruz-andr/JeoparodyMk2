@@ -22,6 +22,7 @@ const CATEGORIES = [
   { id: 'host', label: 'Host\nA Game', path: '/host' },
   { id: 'single', label: 'Single\nPlayer', path: '/singleplayer' },
   { id: 'quickplay', label: 'Quickplay', path: '/quickplay' },
+  { id: 'community', label: 'Community\nBoards', path: '/boards' },
 ];
 
 /* There is no Join A Room tile. The code field further down the page already

@@ -29,3 +29,33 @@
 
 .board-mini.is-large,
 .board-mini.is-large .board-mini-col { gap: 3px; }
+
+
+/* Filling a 16:9 cover, where the board is the picture rather than a progress
+   meter beside a title.
+
+   Sized by height with a fixed ratio rather than by width, because a width of
+   78% made the total height depend on the card and quietly clipped the $1000
+   row. Six columns of 3:2 cells over five rows is 18:10, so the ratio is 9/5
+   and both axes then distribute themselves. */
+.board-mini.is-cover {
+  height: 100%;
+  aspect-ratio: 9 / 5;
+  gap: 2.5%;
+}
+
+.board-mini.is-cover .board-mini-col {
+  flex: 1;
+  gap: 5%;
+}
+
+.board-mini.is-cover span {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  /* Brighter than the small variant: at thumbnail size against a gradient the
+     tiles were reading as texture rather than as a board. */
+  background: rgba(242, 236, 224, 0.07);
+}
+
+.board-mini.is-cover span.is-written { background: #2b35c4; }

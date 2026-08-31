@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useUserStore } from '../stores';
-import { copyBoard, getBoard, setVisibility } from '../services/api/boardsService';
-import { publishProblem } from '@shared/boardFormat.js';
+import {
+  copyBoard, coverUrl, getBoard, reportBoard, setCover, setVisibility,
+} from '../services/api/boardsService';
+import { publishProblem, REPORT_REASONS } from '@shared/boardFormat.js';
+import { compressImage } from '../utils/imageCompressor';
 import BoardMiniature from '../components/boards/BoardMiniature';
 import '../components/boards/BoardsChrome.css';
 import './BoardPage.css';
@@ -27,6 +30,10 @@ export default function BoardPage() {
   const [dialError, setDialError] = useState('');
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -107,6 +114,50 @@ export default function BoardPage() {
       navigate(`/boards/${mine}/edit`);
     } catch (err) {
       setDialError(err.message);
+      setBusy(false);
+    }
+  };
+
+  const sendReport = async () => {
+    if (!reason) return;
+    setBusy(true);
+    setDialError('');
+    try {
+      await reportBoard(token, slug, reason, note);
+      setReported(true);
+      setReporting(false);
+    } catch (err) {
+      setDialError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pickCover = async (file) => {
+    if (!file) return;
+    setDialError('');
+    setBusy(true);
+    try {
+      /* The same 800px WebP the clue editor uses, so a cover cannot be the one
+         thing on the site somebody uploads a four megabyte photograph to. */
+      const compressed = await compressImage(file, 1200, 0.72);
+      await setCover(token, slug, compressed);
+      await load();
+    } catch (err) {
+      setDialError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeCover = async () => {
+    setBusy(true);
+    try {
+      await setCover(token, slug, null);
+      await load();
+    } catch (err) {
+      setDialError(err.message);
+    } finally {
       setBusy(false);
     }
   };
@@ -216,6 +267,64 @@ export default function BoardPage() {
           ) : null}
         </div>
 
+        {/* Quiet, at the bottom, and only on a board that is actually public
+            and not yours. A report button on an unlisted board would be a
+            report button on something somebody sent you. */}
+        {!board.isOwner && board.visibility === 'public' && (
+          <div className="board-report">
+            {reported ? (
+              <p className="board-report-done">
+                Reported. Somebody will read it. Nothing comes down
+                automatically, which is the only thing we can honestly promise.
+              </p>
+            ) : !reporting ? (
+              <button
+                className="plain-btn board-report-open"
+                onClick={() => (isAuthenticated ? setReporting(true) : navigate('/signin'))}
+              >
+                Report this board
+              </button>
+            ) : (
+              <div className="board-report-form">
+                <p className="board-report-why">Why are you reporting it?</p>
+                <ul className="board-dial">
+                  {REPORT_REASONS.map((r) => (
+                    <li key={r.key}>
+                      <button
+                        className={`plain-btn board-choice ${reason === r.key ? 'is-on' : ''}`}
+                        aria-pressed={reason === r.key}
+                        onClick={() => setReason(r.key)}
+                      >
+                        <span className="board-choice-name">{r.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <textarea
+                  className="board-report-note"
+                  value={note}
+                  maxLength={500}
+                  placeholder="Anything else worth knowing (optional)"
+                  onChange={(e) => setNote(e.target.value)}
+                />
+                <div className="board-report-do">
+                  <button className="plain-btn board-action" onClick={sendReport} disabled={!reason || busy}>
+                    Send the report
+                  </button>
+                  <button className="plain-btn board-action" onClick={() => setReporting(false)}>
+                    Never mind
+                  </button>
+                </div>
+                <p className="board-report-rules">
+                  <button className="plain-btn bb-foot-link" onClick={() => navigate('/guidelines')}>
+                    What is allowed here
+                  </button>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {!playable && (
           <p className="board-incomplete">
             This board is not finished, so it cannot be played yet.
@@ -225,7 +334,44 @@ export default function BoardPage() {
 
         {board.isOwner && (
           <section className="board-share">
-            <h2>Who can see this</h2>
+            <h2>The cover</h2>
+            <div className="board-cover">
+              <span className="board-cover-shot">
+                {board.hasCover ? (
+                  <img src={`${coverUrl(slug)}?v=${board.version}`} alt="" />
+                ) : (
+                  <span className="board-cover-none">
+                    <BoardMiniature board={board.board} size="cover" label="" />
+                  </span>
+                )}
+                <span className="board-cover-band">
+                  {board.board.categories.map((c) => c.name).filter(Boolean).join(' \u00b7 ')
+                    || 'Name your categories'}
+                </span>
+              </span>
+              <div className="board-cover-do">
+                <label className="plain-btn board-action board-cover-pick">
+                  {board.hasCover ? 'Replace' : 'Add an image'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => pickCover(e.target.files?.[0])}
+                    disabled={busy}
+                  />
+                </label>
+                {board.hasCover && (
+                  <button className="plain-btn board-action" onClick={removeCover} disabled={busy}>
+                    Remove
+                  </button>
+                )}
+                <p className="board-cover-note">
+                  Optional. Your categories sit across the bottom either way, so
+                  a board without an image still looks like a board.
+                </p>
+              </div>
+            </div>
+
+            <h2 className="board-share-second">Who can see this</h2>
 
             <ul className="board-dial">
               {CHOICES.map((choice) => {

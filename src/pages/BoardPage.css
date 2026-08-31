@@ -290,3 +290,147 @@ button.board-link-copy {
   .board-actions .btn-primary,
   button.board-action { width: 100%; }
 }
+
+
+/* ---- the cover ---- */
+.board-share-second { margin-top: 30px; }
+
+.board-cover {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.board-cover-shot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: 260px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--signature-ground);
+}
+
+.board-cover-shot img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.board-cover-none {
+  position: absolute;
+  inset: 0 0 22% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6% 8%;
+  background: linear-gradient(165deg, #141c78, #0a0f42);
+}
+
+/* Always drawn, image or no image: the decoration is the part allowed to be
+   missing, and the categories say more about a board than a photograph does. */
+.board-cover-band {
+  position: relative;
+  width: 100%;
+  padding: 5px 8px;
+  background: rgba(5, 9, 30, 0.9);
+  border-top: 2px solid var(--jeopardy-gold);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.6rem;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-cover-do {
+  flex: 1;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* A label wearing the button's clothes, because a file input cannot be styled
+   and a button that opens one is a lie about what it is. */
+.board-cover-pick { display: inline-block; cursor: pointer; }
+.board-cover-pick input { display: none; }
+
+.board-cover-note {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* ---- reporting ---- */
+.board-report {
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+button.board-report-open {
+  padding: 4px 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+button.board-report-open:hover { color: var(--color-error); }
+
+.board-report-why {
+  margin: 0 0 10px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1.1px;
+  color: var(--text-secondary);
+}
+
+.board-report-note {
+  display: block;
+  width: 100%;
+  max-width: 46ch;
+  min-height: 68px;
+  margin: 12px 0;
+  padding: 9px 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  resize: vertical;
+}
+.board-report-note:focus { outline: none; border-color: var(--jeopardy-gold); }
+
+.board-report-do { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.board-report-rules { margin: 12px 0 0; font-size: 0.83rem; color: var(--text-muted); }
+
+button.bb-foot-link {
+  padding: 0;
+  font: inherit;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.board-report-done {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

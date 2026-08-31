@@ -740,6 +740,205 @@ await test('browsing with no matches returns an empty list, not an error', async
   assert.deepEqual(data.boards, []);
 });
 
+// ============================================================ reporting
+
+await test('a public board can be reported, once', async () => {
+  const first = await api(`/${published}/report`, {
+    method: 'POST', token: bob, body: { reason: 'spam', note: 'It is an advert.' },
+  });
+  assert.equal(first.status, 201);
+
+  // A second report from the same person replaces the first rather than
+  // adding to a count somebody could run up.
+  const again = await api(`/${published}/report`, {
+    method: 'POST', token: bob, body: { reason: 'offensive' },
+  });
+  assert.equal(again.status, 201);
+});
+
+await test('a report needs a reason we recognise', async () => {
+  const { status } = await api(`/${published}/report`, {
+    method: 'POST', token: bob, body: { reason: 'i just do not like it' },
+  });
+  assert.equal(status, 400);
+});
+
+await test('reporting does not take the board down', async () => {
+  // Nothing automatic. The honest promise at this size is that a person looks.
+  const { status, data } = await api(`/${published}`);
+  assert.equal(status, 200);
+  assert.equal(data.visibility, 'public');
+});
+
+await test('you cannot report your own board', async () => {
+  const { status, data } = await api(`/${published}/report`, {
+    method: 'POST', token: ada, body: { reason: 'spam' },
+  });
+  assert.equal(status, 400);
+  assert.match(data.error.message, /delete your own/);
+});
+
+await test('an unlisted board cannot be reported', async () => {
+  // It is one somebody chose to send you. A report button on that is a report
+  // button on a private message.
+  const { status } = await api(`/${mine}/report`, { method: 'POST', token: bob, body: { reason: 'spam' } });
+  assert.equal(status, 400);
+});
+
+await test('reporting needs an account', async () => {
+  const { status } = await api(`/${published}/report`, { method: 'POST', body: { reason: 'spam' } });
+  assert.equal(status, 401);
+});
+
+await test('deleting a board takes its reports with it', async () => {
+  const temp = await api('/', { method: 'POST', token: ada, body: { title: 'Reported then gone' } });
+  await api(`/${temp.data.slug}`, { method: 'PUT', token: ada, body: { board: fullBoard() } });
+  await api(`/${temp.data.slug}/visibility`, { method: 'PUT', token: ada, body: { visibility: 'public' } });
+  await api(`/${temp.data.slug}/report`, { method: 'POST', token: bob, body: { reason: 'spam' } });
+  const { status } = await api(`/${temp.data.slug}`, { method: 'DELETE', token: ada });
+  assert.equal(status, 200, 'the foreign key must not block the delete');
+});
+
+// ============================================================ featured
+
+await test('featured falls back to most played when nothing is picked', async () => {
+  delete process.env.FEATURED_SLUGS;
+  const { status, data } = await api('/?row=featured');
+  assert.equal(status, 200);
+  assert.equal(data.curated, false);
+});
+
+await test('a curated list is used, in the order it is given', async () => {
+  // FEATURED_SLUGS is read from the environment, and the server under test was
+  // started before these boards existed. So this starts a second one on the
+  // same database with the variable set, which is exactly how production gets
+  // it: one `fly secrets set`.
+  const second = await api('/', { method: 'POST', token: ada, body: { title: 'Featured two' } });
+  await api(`/${second.data.slug}`, { method: 'PUT', token: ada, body: { board: fullBoard() } });
+  await api(`/${second.data.slug}/visibility`, { method: 'PUT', token: ada, body: { visibility: 'public' } });
+
+  // published has plays; the new one has none. Featured in the opposite order,
+  // so the list is doing the ordering rather than the play count.
+  const picked = [second.data.slug, published];
+  const PORT2 = PORT + 1;
+  const curated = spawn('node', [join(here, '..', 'index.js')], {
+    env: {
+      ...process.env,
+      SERVER_PORT: String(PORT2),
+      DATABASE_PATH: DB,
+      JWT_SECRET: 'test-secret-not-a-real-one',
+      NODE_ENV: 'test',
+      FEATURED_SLUGS: picked.join(','),
+    },
+    stdio: 'ignore',
+  });
+
+  try {
+    for (let i = 0; i < 100; i += 1) {
+      try {
+        if ((await fetch(`http://127.0.0.1:${PORT2}/health`)).ok) break;
+      } catch { /* not up yet */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    const res = await fetch(`http://127.0.0.1:${PORT2}/api/boards?row=featured`);
+    const data = await res.json();
+    assert.equal(data.curated, true);
+    assert.deepEqual(data.boards.map((b) => b.slug), picked, 'the picked order, not the play order');
+
+    // And nothing outside the list is in the row.
+    assert.equal(data.boards.length, picked.length);
+  } finally {
+    curated.kill('SIGKILL');
+  }
+});
+
+await test('a card carries the category names, and only the named ones', async () => {
+  const { data } = await api('/?row=new');
+  const card = data.boards.find((b) => b.slug === published);
+  assert.deepEqual(card.categories, [
+    'CATEGORY 1', 'CATEGORY 2', 'CATEGORY 3', 'CATEGORY 4', 'CATEGORY 5', 'CATEGORY 6',
+  ]);
+});
+
+await test('a category with a comma in it stays one category', async () => {
+  // Joined on NUL rather than a comma, or "SALT, PEPPER" becomes two.
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Commas' } });
+  const board = fullBoard();
+  board.categories[0].name = 'SALT, PEPPER';
+  await api(`/${create.data.slug}`, { method: 'PUT', token: ada, body: { board } });
+  await api(`/${create.data.slug}/visibility`, { method: 'PUT', token: ada, body: { visibility: 'public' } });
+
+  const { data } = await api('/?row=new');
+  const card = data.boards.find((b) => b.slug === create.data.slug);
+  assert.equal(card.categories.length, 6);
+  assert.equal(card.categories[0], 'SALT, PEPPER');
+});
+
+// ============================================================ covers
+
+await test('a board starts with no cover', async () => {
+  const { data } = await api(`/${published}`);
+  assert.equal(data.hasCover, false);
+});
+
+const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+await test('a cover can be set and comes back as an image, not as JSON', async () => {
+  const put = await api(`/${published}/cover`, { method: 'PUT', token: ada, body: { cover: PIXEL } });
+  assert.equal(put.status, 200);
+  assert.equal(put.data.hasCover, true);
+
+  // Asserted true, not just false: the board's own endpoint selects b.* while
+  // a list computes the column, and reading only the computed one made this
+  // permanently false on the page that shows the cover.
+  assert.equal((await api(`/${published}`)).data.hasCover, true, "the board's own page must see it too");
+
+  const res = await fetch(`${base}/api/boards/${published}/cover`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/png');
+  assert.match(res.headers.get('cache-control') ?? '', /max-age/);
+  assert.ok((await res.arrayBuffer()).byteLength > 0);
+});
+
+await test('the card says there is a cover without carrying it', async () => {
+  // Twenty-four covers inside one browse response would make the shelf the
+  // heaviest page in the app.
+  const { data } = await api('/?row=new');
+  const card = data.boards.find((b) => b.slug === published);
+  assert.equal(card.hasCover, true);
+  assert.equal(card.coverImage, undefined);
+  assert.equal(card.cover, undefined);
+});
+
+await test('a cover can be taken off again', async () => {
+  await api(`/${published}/cover`, { method: 'PUT', token: ada, body: { cover: null } });
+  assert.equal((await api(`/${published}`)).data.hasCover, false);
+  assert.equal((await fetch(`${base}/api/boards/${published}/cover`)).status, 404);
+  await api(`/${published}/cover`, { method: 'PUT', token: ada, body: { cover: PIXEL } });
+});
+
+await test('something that is not an image is refused', async () => {
+  const { status } = await api(`/${published}/cover`, {
+    method: 'PUT', token: ada, body: { cover: 'data:text/html;base64,PHNjcmlwdD4=' },
+  });
+  assert.equal(status, 400);
+});
+
+await test('an uncompressed photograph is refused with a sentence', async () => {
+  const huge = `data:image/png;base64,${'A'.repeat(600 * 1024)}`;
+  const { status, data } = await api(`/${published}/cover`, {
+    method: 'PUT', token: ada, body: { cover: huge },
+  });
+  assert.equal(status, 413);
+  assert.match(data.error.message, /too large/);
+});
+
+await test('somebody else cannot set a cover on my board', async () => {
+  const { status } = await api(`/${published}/cover`, { method: 'PUT', token: bob, body: { cover: PIXEL } });
+  assert.equal(status, 404);
+});
+
 // ============================================================ report
 
 server.kill();

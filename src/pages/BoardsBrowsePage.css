@@ -1,0 +1,284 @@
+/* Community Boards. The page frame is in components/boards/BoardsChrome.css. */
+
+.bb-body { max-width: 1160px; }
+
+/* ---- search and the way in ---- */
+.bb-tools {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.bb-search {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+.bb-search::placeholder { color: var(--text-muted); }
+.bb-search:focus { outline: none; border-color: var(--jeopardy-gold); }
+
+button.bb-make {
+  padding: 11px 16px;
+  border: 1px solid rgba(242, 236, 224, 0.2);
+  border-radius: 3px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.9px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  white-space: nowrap;
+}
+button.bb-make:hover { border-color: var(--jeopardy-gold); }
+
+/* ---- topics ----
+   A row of words with the chosen one underlined, the way a newspaper marks
+   the section you are reading. Not a ring of outlined pills: those belong to
+   somebody else's interface and they turn a list of ten topics into ten
+   competing objects. */
+.bb-topics {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 0 0 9px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
+  scrollbar-width: none;
+}
+.bb-topics::-webkit-scrollbar { display: none; }
+
+button.bb-topic {
+  flex: 0 0 auto;
+  /* The global button rule rounds every button. On a word with no fill that is
+     an invisible leftover rather than a decision, and it is the first thing
+     that turns a section nav back into a row of pills. */
+  border-radius: 0;
+  padding: 3px 0 8px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  cursor: pointer;
+  /* Sits on the rule below, so the chosen one interrupts it. */
+  margin-bottom: -10px;
+  border-bottom: 2px solid transparent;
+}
+
+button.bb-topic:hover { color: var(--text-primary); }
+
+button.bb-topic.is-on {
+  color: var(--jeopardy-gold);
+  border-bottom-color: var(--jeopardy-gold);
+}
+
+button.bb-topic:focus-visible {
+  outline: none;
+  color: var(--jeopardy-gold-light);
+  border-bottom-color: var(--jeopardy-gold-light);
+}
+
+/* ---- rows ---- */
+.bb-row { margin-top: 26px; }
+
+.bb-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 11px;
+}
+
+.bb-row-head h2 {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.8px;
+  color: var(--text-primary);
+}
+
+.bb-row-note {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 1.1px;
+  color: var(--text-muted);
+}
+
+.bb-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+/* ---- a card ---- */
+button.bb-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 0;
+  background: #0a1030;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+button.bb-card:hover { background: #101845; }
+
+button.bb-card:focus-visible {
+  outline: 2px solid var(--jeopardy-gold);
+  outline-offset: 2px;
+}
+
+/* The cover is 16:9 with the categories across the bottom of it. The image is
+   optional; the band is not. Decoration is the part allowed to be missing. */
+.bb-cover {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--signature-ground);
+}
+
+.bb-cover-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* No image, and the board is the image. */
+.bb-cover-board {
+  position: absolute;
+  inset: 0 0 22% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6% 8%;
+  background: linear-gradient(165deg, #141c78, #0a0f42);
+}
+
+.bb-band {
+  position: relative;
+  width: 100%;
+  padding: 5px 8px;
+  background: rgba(5, 9, 30, 0.9);
+  border-top: 2px solid var(--jeopardy-gold);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.58rem;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  color: var(--cream, #f2ece0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bb-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px 11px;
+}
+
+.bb-card-title {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1.08;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  letter-spacing: 0.9px;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.bb-card-meta > span:not(.bb-card-plays) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sits on the ground the canvas baked into it, or it reads as a patch of a
+   different blue. */
+.bb-card-sig {
+  flex: 0 0 auto;
+  height: 15px;
+  width: auto;
+  max-width: 54px;
+  border-radius: 2px;
+  background: var(--signature-ground);
+}
+
+.bb-card-plays { margin-left: auto; white-space: nowrap; }
+
+/* ---- nothing here ---- */
+.bb-empty { max-width: 46ch; padding: 34px 0 20px; }
+
+.bb-empty h1 {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: 2rem;
+  line-height: 0.95;
+  margin: 0 0 12px;
+  color: var(--jeopardy-gold);
+}
+
+.bb-empty p {
+  margin: 0 0 20px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ---- foot ---- */
+.bb-foot {
+  margin: 40px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(242, 236, 224, 0.1);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+button.bb-foot-link {
+  padding: 0;
+  font: inherit;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .bb-tools { flex-wrap: wrap; }
+  .bb-search { flex-basis: 100%; }
+  button.bb-make { width: 100%; }
+  .bb-cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .bb-topics { gap: 16px; }
+}

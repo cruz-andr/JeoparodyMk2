@@ -54,8 +54,12 @@ function start(name, command, args, env, cwd) {
 async function waitFor(url, child) {
   for (let i = 0; i < 160; i += 1) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(500) });
-      if (res.ok || res.status === 404) return;
+      /* Any answer means something is listening, which is the only thing this
+         is asking. Vite replies 403 to 127.0.0.1 because of its host check and
+         200 to localhost, and a probe that insisted on 2xx spent thirty
+         seconds timing out against a server printing its own URL. */
+      await fetch(url, { signal: AbortSignal.timeout(500) });
+      return;
     } catch { /* not up yet */ }
     await new Promise((r) => setTimeout(r, 250));
   }
@@ -79,7 +83,10 @@ const app = start('app', process.execPath, [join(root, 'node_modules', 'vite', '
 }, root);
 
 await waitFor(`http://127.0.0.1:${API_PORT}/health`, api);
-await waitFor(`http://localhost:${APP_PORT}/`, app);
+/* 127.0.0.1, not localhost: Node's fetch tries ::1 first and Vite binds to
+   IPv4, so the probe failed against a server that was plainly running and
+   printing its own URL. The browser is fine with localhost. */
+await waitFor(`http://127.0.0.1:${APP_PORT}/`, app);
 
 let failed = 0;
 for (const suite of suites) {
