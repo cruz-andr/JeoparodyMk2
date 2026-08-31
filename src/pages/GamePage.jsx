@@ -67,7 +67,10 @@ export default function GamePage() {
   const [genre, setGenre] = useState('');
   const [categories, setLocalCategories] = useState([]);
   const [questions, setLocalQuestions] = useState([]);
-  const [questionsReady, setQuestionsReady] = useState(false); // True when host mode questions are pre-loaded
+  const [questionsReady, setQuestionsReady] = useState(false);
+  /* A hosted game carries its own second round and its own final clue. */
+  const hostRound2 = useRef(null);
+  const hostFinal = useRef(null); // True when host mode questions are pre-loaded
   questionsRef.current = questions;
 
   // Game state (shared)
@@ -145,9 +148,17 @@ export default function GamePage() {
   // Handle navigation state from HostPage (pre-set questions)
   useEffect(() => {
     if (location.state?.hostModeQuestions) {
-      const { categories: hostCategories, questions: hostQuestions } = location.state.hostModeQuestions;
+      const {
+        categories: hostCategories, questions: hostQuestions,
+        round2, finalJeopardy,
+      } = location.state.hostModeQuestions;
       setLocalCategories(hostCategories);
       setLocalQuestions(hostQuestions);
+      /* The host wrote these too. Held so Double Jeopardy is not commissioned
+         from a model halfway through somebody's game, and Final Jeopardy is
+         not one of five hardcoded clues about Moby Dick. */
+      hostRound2.current = round2 ?? null;
+      hostFinal.current = finalJeopardy ?? null;
       setQuestionsReady(true);
       // Clear the state to prevent re-triggering on refresh
       window.history.replaceState({}, document.title);
@@ -734,7 +745,13 @@ export default function GamePage() {
         } else if (currentRound === 2 || !settings?.enableDoubleJeopardy) {
           // Game over - check for Final Jeopardy
           if (settings?.enableFinalJeopardy && isHost) {
-            socketClient.emit('game:start-final-jeopardy', { roomCode });
+            socketClient.emit('game:start-final-jeopardy', {
+              roomCode,
+              /* The host's own final, when they wrote one. Without it the
+                 server falls back to five hardcoded clues that have nothing
+                 to do with the game just played. */
+              finalJeopardy: hostFinal.current ?? undefined,
+            });
           } else {
             socketClient.emit('game:end', { roomCode });
           }
@@ -912,6 +929,21 @@ export default function GamePage() {
     setError(null);
 
     try {
+      /* A host wrote a second board, so play it. Asking a model for six fresh
+         categories mid-game gave a host who uploaded a file or wrote thirty
+         clues by hand a round two they had never seen, and on the upload path
+         there was no genre at all so it generated from an empty string. */
+      if (hostRound2.current) {
+        const playerIds = players.map((p) => p.id);
+        socketClient.emit('game:start-round-2', {
+          roomCode,
+          questions: hostRound2.current.questions,
+          categories: hostRound2.current.categories,
+          firstPickerId: playerIds[Math.floor(Math.random() * playerIds.length)],
+        });
+        return;
+      }
+
       // Generate new categories
       const newCategories = await aiService.generateCategories(genre);
 

@@ -169,6 +169,19 @@ test('next empty works from Final Jeopardy', () => {
   assert.deepEqual(nextEmptyFrom(b, { kind: 'final', c: 3 }), clue(3, 0));
 });
 
+test('a doubled board keeps its own values', () => {
+  // Double Jeopardy is the same grid at twice the money, so nothing may assume
+  // the row values are the round-one ones.
+  const doubled = board();
+  const DOUBLE = [400, 800, 1200, 1600, 2000];
+  doubled.categories.forEach((c) => c.questions.forEach((q, r) => { q.points = DOUBLE[r]; }));
+
+  assert.deepEqual(doubled.categories[0].questions.map((q) => q.points), DOUBLE);
+  // The arithmetic does not care about values, and must not start to.
+  assert.deepEqual(moveSelection(clue(0, 0), 'ArrowDown'), clue(0, 1));
+  assert.equal(countWritten(doubled), 0);
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 if (failures.length) {
   for (const f of failures) console.error(`  FAIL  ${f}`);

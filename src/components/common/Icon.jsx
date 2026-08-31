@@ -30,6 +30,12 @@ const PATHS = {
   'user-round-plus': (
     <><path d="M2 21a8 8 0 0 1 13.292-6" /> <circle cx="10" cy="8" r="5" /> <path d="M19 16v6" /> <path d="M22 19h-6" /></>
   ),
+  'upload': (
+    <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <path d="M7 9l5-5 5 5" /> <path d="M12 4v12" /></>
+  ),
+  'copy': (
+    <><rect width="12" height="12" x="9" y="9" rx="1" /> <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></>
+  ),
   'log-out': (
     <><path d="m16 17 5-5-5-5" /> <path d="M21 12H9" /> <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /></>
   ),

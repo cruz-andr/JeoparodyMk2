@@ -80,6 +80,14 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
   const narrow = useNarrowBox(outerRef);
 
   const categories = useMemo(() => board?.categories ?? [], [board]);
+
+  /* The row values come from the board, not from a constant. Double Jeopardy
+     is the same grid at twice the money, and reading POINTS here drew a round
+     two full of $200s while the clues underneath were worth $400. */
+  const values = useMemo(() => {
+    const row = categories[0]?.questions ?? [];
+    return POINTS.map((fallback, r) => row[r]?.points ?? fallback);
+  }, [categories]);
   const written = useMemo(() => countWritten(board), [board]);
   const final = board?.finalJeopardy ?? null;
   const finalIs = finalState(board);
@@ -245,7 +253,7 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
         ))}
       </div>
 
-      {POINTS.map((points, r) => (
+      {values.map((points, r) => (
         <div role="row" style={contents} key={`r${r}`}>
           {categories.map((category, c) => (
             <div role="gridcell" style={contents} key={`${c}-${r}`}>
@@ -295,7 +303,7 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
       </button>
 
       <div className="ge-rows">
-        {POINTS.map((points, r) => {
+        {values.map((points, r) => {
           const q = categories[at.c]?.questions?.[r];
           return (
             <button
@@ -409,7 +417,7 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
     panel = (
       <>
         <p className="ge-where">
-          {categories[at.c]?.name?.trim() || `Category ${at.c + 1}`} &middot; ${POINTS[at.r]}
+          {categories[at.c]?.name?.trim() || `Category ${at.c + 1}`} &middot; ${values[at.r]}
         </p>
 
         <label className="ge-label" htmlFor="ge-clue">The clue</label>

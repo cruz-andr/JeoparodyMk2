@@ -1,0 +1,124 @@
+/* One panel, three faces. They answer the same question and differ only in
+   where the clues come from. */
+
+.hf-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  background: rgba(3, 5, 15, 0.72);
+  overflow-y: auto;
+}
+
+.hf-panel {
+  width: min(520px, 100%);
+  padding: 20px 22px 22px;
+  background: #0a1030;
+  border: 1px solid rgba(242, 236, 224, 0.16);
+}
+
+.hf-panel h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 0.4px;
+  color: var(--jeopardy-gold);
+}
+
+.hf-panel p {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.hf-field {
+  display: block;
+  width: 100%;
+  padding: 12px 13px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(242, 236, 224, 0.14);
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+.hf-field:focus { outline: none; border-color: var(--jeopardy-gold); }
+.hf-field:disabled { color: var(--text-muted); }
+
+.hf-do { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* A label wrapping the file input, because a file input cannot be styled and a
+   button that opens one is a lie about what it is. */
+.hf-drop {
+  display: block;
+  padding: 26px 16px;
+  margin-bottom: 12px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(242, 236, 224, 0.16);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: var(--jeopardy-gold-light);
+}
+.hf-drop:hover { background: rgba(214, 159, 76, 0.1); }
+.hf-drop input { display: none; }
+
+.hf-list { list-style: none; margin: 0 0 14px; padding: 0; max-height: 280px; overflow-y: auto; }
+
+button.hf-board {
+  display: block;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 0;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.1);
+}
+button.hf-board:hover { background: rgba(214, 159, 76, 0.1); }
+
+.hf-board-name {
+  display: block;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.4px;
+  color: var(--text-primary);
+}
+
+.hf-board-note {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.9px;
+  color: var(--text-muted);
+}
+
+.hf-quiet { color: var(--text-muted); font-size: 0.88rem; }
+
+.hf-problem {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--color-error);
+  background: rgba(255, 107, 107, 0.08);
+  font-size: 0.86rem;
+  color: var(--text-primary);
+}
+
+@media (max-width: 600px) {
+  .hf-scrim { padding: 0; align-items: flex-end; }
+  .hf-panel { width: 100%; border: none; }
+  .hf-do { flex-direction: column; align-items: stretch; }
+  .hf-do .btn-primary, .hf-do button { width: 100%; }
+}

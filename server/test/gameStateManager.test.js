@@ -188,6 +188,44 @@ test('a negative Final Jeopardy wager is floored at zero', () => {
 // 4. Multiple choice
 // =========================================================================
 
+test('Final Jeopardy plays the clue the host wrote', () => {
+  // It used to always pick from five hardcoded clues, so a game about the Cold
+  // War ended with a question about Moby Dick.
+  const { gm, room, code } = mkGame({ type: 'host' });
+  // A positive score, because Final Jeopardy needs one to be playable at all.
+  for (const player of room.players.values()) player.score = 1000;
+
+  const fj = gm.startFinalJeopardy(code, {
+    category: 'THE COLD WAR',
+    answer: 'Signed in 1968, this treaty has been ratified by more countries than any other.',
+    question: 'What is the Non-Proliferation Treaty?',
+  });
+
+  assert.equal(fj.category, 'THE COLD WAR');
+  assert.match(fj.clue, /1968/);
+});
+
+test('a half-written final is ignored rather than played', () => {
+  // A clue with no answer waiting at the end of a game is worse than a stock
+  // one, so an incomplete hand-off falls back to something playable.
+  const { gm, room, code } = mkGame({ type: 'host' });
+  // A positive score, because Final Jeopardy needs one to be playable at all.
+  for (const player of room.players.values()) player.score = 1000;
+
+  const fj = gm.startFinalJeopardy(code, { category: 'THE COLD WAR', answer: '', question: '' });
+  assert.notEqual(fj.category, 'THE COLD WAR');
+  assert.ok(fj.category && fj.clue && fj.answer, 'still a playable clue');
+});
+
+test('no hand-off at all still yields a clue', () => {
+  const { gm, room, code } = mkGame({ type: 'host' });
+  // A positive score, because Final Jeopardy needs one to be playable at all.
+  for (const player of room.players.values()) player.score = 1000;
+
+  const fj = gm.startFinalJeopardy(code);
+  assert.ok(fj.category && fj.clue && fj.answer);
+});
+
 test('multiple-choice options are shuffled and the correct index tracked', () => {
   const gm = new GameStateManager();
   const host = mkSocket();

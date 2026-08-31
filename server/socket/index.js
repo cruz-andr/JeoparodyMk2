@@ -414,10 +414,10 @@ export function initializeSocketHandlers(io) {
     });
 
     // Start Final Jeopardy
-    socket.on('game:start-final-jeopardy', async ({ roomCode }) => {
+    socket.on('game:start-final-jeopardy', async ({ roomCode, finalJeopardy }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Final Jeopardy for room ${roomCode}`);
-      const fjData = gameManager.startFinalJeopardy(roomCode);
+      const fjData = gameManager.startFinalJeopardy(roomCode, finalJeopardy);
       if (!fjData) return;
 
       // Jeopardy needs a positive score to play. If that leaves nobody, go

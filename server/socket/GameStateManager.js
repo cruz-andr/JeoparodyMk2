@@ -560,13 +560,19 @@ export class GameStateManager {
     room.gameState.dailyDoubleWager = 0;
   }
 
-  // Final Jeopardy methods
-  startFinalJeopardy(roomCode) {
+  /**
+   * Final Jeopardy.
+   *
+   * A host writes their own now and hands it over when the game starts, so the
+   * last round is about the game that was just played. The list below is only
+   * reached when nobody wrote one: a room made before hosts could, or a mode
+   * that has no author. It used to be the only path, which meant a game about
+   * the Cold War ended with a question about Moby Dick.
+   */
+  startFinalJeopardy(roomCode, written = null) {
     const room = this.rooms.get(roomCode);
     if (!room) return null;
 
-    // Generate a simple Final Jeopardy question (in production, use AI)
-    // For now, use placeholder data - the frontend will generate the actual question
     const fjCategories = [
       { category: 'WORLD HISTORY', clue: 'This ancient wonder was completed around 280 BC on the island of Rhodes.', answer: 'The Colossus of Rhodes' },
       { category: 'SCIENCE', clue: 'This element, with atomic number 79, has been prized by humans for millennia.', answer: 'Gold' },
@@ -575,7 +581,21 @@ export class GameStateManager {
       { category: 'MUSIC', clue: 'This composer wrote his Ninth Symphony while completely deaf.', answer: 'Beethoven' },
     ];
 
-    const randomFJ = fjCategories[Math.floor(Math.random() * fjCategories.length)];
+    /* Written by the host, in the board format: `answer` is the clue shown and
+       `question` is the correct response, which is the show's convention and
+       the one the whole codebase uses. */
+    const usable = written
+      && String(written.category ?? '').trim()
+      && String(written.answer ?? '').trim()
+      && String(written.question ?? '').trim();
+
+    const randomFJ = usable
+      ? {
+          category: String(written.category).trim(),
+          clue: String(written.answer).trim(),
+          answer: String(written.question).trim(),
+        }
+      : fjCategories[Math.floor(Math.random() * fjCategories.length)];
 
     room.gameState = room.gameState || {};
     room.gameState.phase = 'finalJeopardy';

@@ -1,0 +1,171 @@
+/* Game Settings: a layer over the board, not a page you leave it for. */
+
+.hs-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  background: rgba(3, 5, 15, 0.72);
+  overflow-y: auto;
+}
+
+.hs-sheet {
+  width: min(760px, 100%);
+  background: #0a1030;
+  border: 1px solid rgba(242, 236, 224, 0.16);
+}
+.hs-sheet:focus { outline: none; }
+
+.hs-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
+}
+
+.hs-title {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.9px;
+}
+
+.hs-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  padding: 18px 18px 22px;
+}
+
+.hs-body h3 {
+  margin: 0 0 9px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 1.2px;
+  color: var(--jeopardy-gold-light);
+}
+.hs-body h3.hs-later { margin-top: 18px; }
+
+/* Each option says what happens to the people in the room, because "buzzer"
+   does not tell a teacher that players shout and they decide. */
+button.hs-pick {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 5px;
+  border-radius: 0;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(242, 236, 224, 0.1);
+}
+
+.hs-pick-name {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.hs-pick-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+button.hs-pick:hover { background: rgba(255, 255, 255, 0.05); }
+
+button.hs-pick.is-on {
+  background: var(--jeopardy-gold);
+  box-shadow: none;
+}
+button.hs-pick.is-on .hs-pick-name { color: #10121f; font-weight: 600; }
+button.hs-pick.is-on .hs-pick-note { color: #10121f; opacity: 0.75; }
+
+button.hs-pick:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--jeopardy-gold);
+}
+
+/* ---- the time segments ---- */
+.hs-seg { display: flex; box-shadow: inset 0 0 0 1px rgba(242, 236, 224, 0.1); }
+
+button.hs-seg-btn {
+  flex: 1;
+  padding: 9px 4px;
+  border-radius: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: inset -1px 0 0 rgba(242, 236, 224, 0.1);
+}
+button.hs-seg-btn:last-child { box-shadow: none; }
+button.hs-seg-btn:hover { background: rgba(255, 255, 255, 0.05); }
+button.hs-seg-btn.is-on { background: var(--jeopardy-gold); color: #10121f; font-weight: 800; }
+
+/* ---- toggles ---- */
+.hs-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.1);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.hs-toggle.is-last { border-bottom: none; }
+
+.hs-toggle small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.hs-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.hs-switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 34px;
+  height: 19px;
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.hs-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 13px;
+  height: 13px;
+  background: var(--text-muted);
+}
+
+.hs-toggle input:checked + .hs-switch { background: var(--jeopardy-gold); }
+.hs-toggle input:checked + .hs-switch::after { left: 18px; background: #10121f; }
+.hs-toggle input:focus-visible + .hs-switch { box-shadow: 0 0 0 2px var(--jeopardy-gold-light); }
+
+@media (max-width: 700px) {
+  .hs-scrim { padding: 0; align-items: stretch; }
+  .hs-sheet { width: 100%; border: none; display: flex; flex-direction: column; }
+  .hs-body { grid-template-columns: 1fr; gap: 20px; overflow-y: auto; }
+}

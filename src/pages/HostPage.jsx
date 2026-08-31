@@ -1,418 +1,404 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
-import { useRoomStore, useSettingsStore } from '../stores';
-import { roomRulesFromSettings } from '../stores/settingsStore';
 import { useHostStore } from '../stores/hostStore';
-import { socketClient } from '../services/socket/socketClient';
-import { generateCategories, generateQuestions } from '../services/api/aiService';
-import HostSettingsPanel from '../components/setup/HostSettingsPanel';
-import GenreSelector from '../components/setup/GenreSelector';
-import CategoryEditor from '../components/setup/CategoryEditor';
-import QuestionEditor from '../components/setup/QuestionEditor';
-import ImportQuestionsPanel from '../components/setup/ImportQuestionsPanel';
+import { useRoomStore, useSettingsStore, useUserStore } from '../stores';
+import { roomRulesFromSettings } from '../stores/settingsStore';
+import { hostToBoard, boardToHost } from '../stores/boardShape';
+import socketClient from '../services/socket/socketClient';
+import * as aiService from '../services/api/aiService';
+import { emptyBoard, countClues, POINT_VALUES } from '@shared/boardFormat.js';
+import { finalState } from '../components/boards/gridLogic';
+import BoardGridEditor from '../components/boards/BoardGridEditor';
+import HostSettingsSheet from '../components/host/HostSettingsSheet';
+import HostFillPanel from '../components/host/HostFillPanel';
+import Icon from '../components/common/Icon';
 import './HostPage.css';
 
-const POINT_VALUES = [200, 400, 600, 800, 1000];
+const DOUBLE_VALUES = [400, 800, 1200, 1600, 2000];
 
+/** Round two is the same board at twice the money. */
+function doubledBoard() {
+  const board = emptyBoard();
+  board.categories.forEach((category) => {
+    category.questions.forEach((question, r) => { question.points = DOUBLE_VALUES[r]; });
+  });
+  return board;
+}
+
+/**
+ * Host mode, on one screen.
+ *
+ * It used to be six: settings, then how to make questions, then a genre, then
+ * the categories, then the clues, then a room. The first of those asked you to
+ * set a timer before you had said what the game was about, which is the wrong
+ * question at the wrong moment, and the room code only existed once you had
+ * been through all of them.
+ *
+ * Now there is one screen. Everything about what the game IS happens on the
+ * board. Everything about how it is PLAYED is behind Game Settings in the
+ * corner. The room exists from the first second, so people can join while you
+ * are still writing.
+ */
 export default function HostPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { isConnected } = useSocket();
+
+  const { token } = useUserStore();
+  const settings = useSettingsStore();
   const {
-    setupPhase,
-    setSetupPhase,
-    contentSubPhase,
-    setContentSubPhase,
-    answerMode,
-    projectorMode,
-    contentSource,
-    setContentSource,
-    genre,
-    setGenre,
-    categories,
-    setCategories,
-    setQuestionsFromAI,
-    initializeEmptyQuestions,
-    getQuestionsForServer,
-    reset: resetHost,
-    isGenerating,
-    setIsGenerating,
-    setImportedData,
+    answerMode, projectorMode,
+    setCategories, setQuestions, reset: resetHost,
   } = useHostStore();
 
-  const settings = useSettingsStore();
-  const [error, setError] = useState(null);
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  /* The boards live here in the shared board format, not in hostStore's two
+     parallel arrays. hostStore is what the game reads, so it is filled in on
+     the way out rather than edited in place. */
+  const [rounds, setRounds] = useState(() => ({ 1: emptyBoard(), 2: doubledBoard() }));
+  const [final, setFinal] = useState(null);
+  const [round, setRound] = useState(1);
 
-  /* Reset on mount, then take the handed board if there is one.
+  const [showSettings, setShowSettings] = useState(false);
+  const [fill, setFill] = useState(null); // 'ai' | 'file' | 'board'
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [roomCode, setRoomCode] = useState('');
+  const [waiting, setWaiting] = useState(0);
+  const [copied, setCopied] = useState(false);
 
-     These were two effects and the reset ran second, wiping the board. Under
-     StrictMode that happens on every mount anyway, so ordering two effects was
-     never going to hold. One effect has no order to get wrong.
+  const creating = useRef(false);
 
-     setImportedData already turns a stored board into the two things this
-     store holds, because a file import and a saved board are the same object.
-     So this skips the "AI or a file?" question and lands on the clues, where a
-     host can still change anything before going live. */
+  useEffect(() => () => resetHost(), [resetHost]);
+
+  /* The room opens before the board is written, so a code can be read out while
+     people are still arriving. Guarded because StrictMode mounts twice and two
+     rooms would be two codes, one of them dead. */
   useEffect(() => {
-    resetHost();
+    /* Waits for the socket. The old flow opened the room after five screens,
+       by which time it was always connected; opening it on the first screen
+       means arriving before the connection does. */
+    if (!isConnected || creating.current) return;
+    creating.current = true;
 
-    const handed = location.state?.board;
-    if (!handed) return;
+    (async () => {
+      try {
+        const { roomCode: code } = await socketClient.createRoom('host', {
+          maxPlayers: 30,
+          answerMode,
+          projectorMode,
+          ...roomRulesFromSettings(settings),
+        });
+        setRoomCode(code);
+        useRoomStore.getState().setRoomCode(code);
+        useRoomStore.getState().setIsHost(true);
+        useRoomStore.getState().setRoomType('host');
 
-    setContentSource('import');
-    setImportedData(handed);
-    setSetupPhase('content');
-    setContentSubPhase('questionEdit');
-  }, [
-    location.state, resetHost,
-    setContentSource, setImportedData, setSetupPhase, setContentSubPhase,
-  ]);
-
-  // Handle settings complete
-  const handleSettingsComplete = () => {
-    setSetupPhase('content');
-    setContentSubPhase(null); // Show source selection
-  };
-
-  // Handle content source selection
-  const handleContentSourceSelect = (source) => {
-    setContentSource(source);
-    if (source === 'ai') {
-      setContentSubPhase('genreSelect');
-    } else {
-      setContentSubPhase('import');
-    }
-  };
-
-  // Handle genre submission (AI path)
-  const handleGenreSubmit = async (selectedGenre) => {
-    setGenre(selectedGenre);
-    setError(null);
-    setIsGenerating(true, 'categories');
-
-    try {
-      const generatedCategories = await generateCategories(selectedGenre);
-      setCategories(generatedCategories);
-      setContentSubPhase('categoryEdit');
-    } catch (err) {
-      setError(err.message || 'Failed to generate categories');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Handle category editing complete
-  const handleCategoriesComplete = async () => {
-    setError(null);
-    setIsGenerating(true, 'questions');
-
-    try {
-      const questionsData = await generateQuestions(categories, POINT_VALUES, 1, settings.difficulty);
-      setQuestionsFromAI(questionsData, categories);
-      setContentSubPhase('questionEdit');
-    } catch (err) {
-      setError(err.message || 'Failed to generate questions');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Handle category name change
-  const handleCategoryEdit = (index, value) => {
-    const newCategories = [...categories];
-    newCategories[index] = value;
-    setCategories(newCategories);
-  };
-
-  // Handle import complete
-  const handleImportComplete = () => {
-    setContentSubPhase('questionEdit');
-  };
-
-  // Handle question editing complete - create room
-  const handleQuestionsComplete = async () => {
-    setIsCreatingRoom(true);
-    setError(null);
-
-    try {
-      // Create room on backend
-      const { roomCode: newRoomCode } = await socketClient.createRoom('host', {
-        maxPlayers: 30,
-        answerMode: answerMode,
-        projectorMode: projectorMode,
-        ...roomRulesFromSettings(settings),
-      });
-
-      // Update room store
-      useRoomStore.getState().setRoomCode(newRoomCode);
-      useRoomStore.getState().setIsHost(true);
-      useRoomStore.getState().setRoomType('host');
-      useRoomStore.getState().updateSettings({
-        answerMode: answerMode,
-        maxPlayers: 30,
-      });
-
-      // Join the room as host
-      const result = await socketClient.joinRoom(newRoomCode, 'Host', null);
-
-      if (result.players) {
-        useRoomStore.getState().setPlayers(result.players);
+        const joined = await socketClient.joinRoom(code, 'Host', null);
+        if (joined?.players) useRoomStore.getState().setPlayers(joined.players);
+      } catch (err) {
+        setError(err.message || 'Could not open a room. Check your connection.');
       }
+    })();
+    // Once, on connect. The settings it reads are only the opening values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
 
-      // Set questions on server
-      const questionsData = getQuestionsForServer();
-      socketClient.emit('host:set-custom-questions', {
-        roomCode: newRoomCode,
-        ...questionsData,
+  /* Players arriving while the board is being written. */
+  useEffect(() => {
+    const onPlayers = ({ players }) => setWaiting(Math.max((players?.length ?? 1) - 1, 0));
+    socketClient.on('player-joined', onPlayers);
+    socketClient.on('player-left', onPlayers);
+    return () => {
+      socketClient.off('player-joined', onPlayers);
+      socketClient.off('player-left', onPlayers);
+    };
+  }, []);
+
+  // ------------------------------------------------------------- the board
+
+  const board = rounds[round];
+  const onBoardChange = useCallback((next) => {
+    setRounds((all) => ({ ...all, [round]: next }));
+  }, [round]);
+
+  const written = useMemo(() => ({
+    1: countClues(rounds[1]),
+    2: countClues(rounds[2]),
+  }), [rounds]);
+
+  const doubleOn = settings.enableDoubleJeopardy;
+  const finalOn = settings.enableFinalJeopardy;
+  const finalIs = finalState({ finalJeopardy: final });
+
+  /* A round that is switched off is not a round you can be looking at. */
+  useEffect(() => {
+    if (round === 2 && !doubleOn) setRound(1);
+    if (round === 'final' && !finalOn) setRound(1);
+  }, [round, doubleOn, finalOn]);
+
+  // ------------------------------------------------------------- filling
+
+  const fillWithAi = async (topic) => {
+    setError('');
+    setBusy('Writing the board');
+    try {
+      const names = await aiService.generateCategories(topic);
+      const values = round === 2 ? DOUBLE_VALUES : POINT_VALUES;
+      const result = await aiService.generateQuestions(names, values, round === 2 ? 2 : 1, settings.difficulty);
+
+      const filled = emptyBoard();
+      result.categories.forEach((category, c) => {
+        filled.categories[c].name = category.name ?? names[c] ?? '';
+        category.questions.forEach((q, r) => {
+          filled.categories[c].questions[r] = {
+            ...filled.categories[c].questions[r],
+            points: values[r],
+            answer: q.answer ?? '',
+            question: q.question ?? '',
+          };
+        });
       });
 
-      // Mark as fresh join
-      sessionStorage.setItem('jeopardy_fresh_join', 'true');
-
-      // Navigate to game page with questions in state
-      navigate(`/game/${newRoomCode}`, {
-        state: {
-          hostModeQuestions: {
-            categories: questionsData.categories,
-            questions: questionsData.questions,
-            answerMode: answerMode,
-            projectorMode: projectorMode,
-          }
-        }
-      });
+      setRounds((all) => ({ ...all, [round]: filled }));
+      setFill(null);
     } catch (err) {
-      setError(err.message || 'Failed to create room');
-      setIsCreatingRoom(false);
+      setError(err.message || 'Could not write the board. Try again, or write it yourself.');
+    } finally {
+      setBusy('');
     }
   };
 
-  // Navigation helpers
-  const handleBack = () => {
-    if (setupPhase === 'settings') {
-      navigate('/menu');
-    } else if (setupPhase === 'content') {
-      if (contentSubPhase === null) {
-        setSetupPhase('settings');
-      } else if (contentSubPhase === 'genreSelect' || contentSubPhase === 'import') {
-        setContentSubPhase(null);
-      } else if (contentSubPhase === 'categoryEdit') {
-        setContentSubPhase('genreSelect');
-      } else if (contentSubPhase === 'questionEdit') {
-        if (contentSource === 'ai') {
-          setContentSubPhase('categoryEdit');
-        } else {
-          setContentSubPhase('import');
-        }
-      }
+  const fillFromBoard = (incoming) => {
+    /* Values belong to the round, not to whatever was imported: a round-one
+       board dropped into Double Jeopardy is worth double. */
+    const values = round === 2 ? DOUBLE_VALUES : POINT_VALUES;
+    const next = {
+      ...incoming,
+      categories: incoming.categories.map((category) => ({
+        ...category,
+        questions: category.questions.map((q, r) => ({ ...q, points: values[r] })),
+      })),
+    };
+    setRounds((all) => ({ ...all, [round]: next }));
+    if (incoming.finalJeopardy && !final) setFinal(incoming.finalJeopardy);
+    setFill(null);
+  };
+
+  // ------------------------------------------------------------- starting
+
+  /* Both extra rounds are on by default, so a host who wants one board is
+     asked for sixty-one clues. That is the honest cost of writing them rather
+     than having a model invent one mid-game, and the way out has to be as
+     visible as the requirement. */
+  const notReady = (() => {
+    if (written[1] < 30) return `Round one has ${30 - written[1]} clues left`;
+    if (doubleOn && written[2] < 30) {
+      return `Double Jeopardy has ${30 - written[2]} clues left, or turn it off in Game Settings`;
     }
+    if (finalOn && finalIs !== 'complete') {
+      return finalIs === 'partial'
+        ? 'Final Jeopardy is half written. Finish it or clear it.'
+        : 'Final Jeopardy is not written, or turn it off in Game Settings';
+    }
+    if (!roomCode) return 'Opening the room';
+    return null;
+  })();
+
+  const start = () => {
+    if (notReady) return;
+    const one = boardToHost(rounds[1]);
+    const two = boardToHost(rounds[2]);
+
+    setCategories(one.categories);
+    setQuestions(one.questions);
+
+    socketClient.emit('host:set-custom-questions', {
+      roomCode,
+      categories: one.categories,
+      questions: one.questions,
+    });
+
+    sessionStorage.setItem('jeopardy_fresh_join', 'true');
+    navigate(`/game/${roomCode}`, {
+      state: {
+        hostModeQuestions: {
+          categories: one.categories,
+          questions: one.questions,
+          answerMode,
+          projectorMode,
+          /* Carried so the game never has to invent a second round or reach for
+             one of five hardcoded finals. See GamePage. */
+          round2: doubleOn ? { categories: two.categories, questions: two.questions } : null,
+          finalJeopardy: finalOn ? final : null,
+        },
+      },
+    });
   };
 
-  // Render progress indicator
-  const renderProgress = () => {
-    const steps = ['Settings', 'Content', 'Review'];
-    const currentStep = setupPhase === 'settings' ? 0 : setupPhase === 'content' && contentSubPhase !== 'questionEdit' ? 1 : 2;
-
-    return (
-      <div className="progress-indicator">
-        {steps.map((step, index) => (
-          <div
-            key={step}
-            className={`progress-step ${index <= currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
-          >
-            <span className="step-number">{index + 1}</span>
-            <span className="step-label">{step}</span>
-          </div>
-        ))}
-      </div>
-    );
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/join/${roomCode}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch { /* refused; the code is on screen to read out */ }
   };
+
+  // ------------------------------------------------------------- render
+
+  const tabs = [
+    { key: 1, name: 'Round one', note: `${written[1]} of 30` },
+    doubleOn && { key: 2, name: 'Double Jeopardy', note: `${written[2]} of 30` },
+    finalOn && {
+      key: 'final',
+      name: 'Final',
+      note: finalIs === 'complete' ? 'Written' : finalIs === 'partial' ? 'Half written' : 'Not written',
+    },
+  ].filter(Boolean);
 
   return (
     <div className="host-page">
-      <header className="host-header">
-        <h1>Host Mode</h1>
-        <p className="host-subtitle">Create a custom game for your classroom or team</p>
-        {renderProgress()}
+      <header className="host-top">
+        <button className="plain-btn host-back" onClick={() => navigate('/menu')}>
+          &lsaquo; Menu
+        </button>
+        <span className="host-title">Host a game</span>
+        <div className="host-right">
+          {roomCode ? (
+            <button className="plain-btn host-room" onClick={copyLink} title="Copy the link to join">
+              <span className="host-room-k">Room</span>
+              <span className="host-room-code">{roomCode}</span>
+              <span className="host-room-n">
+                {copied ? 'Link copied' : waiting > 0 ? `${waiting} waiting` : 'Nobody yet'}
+              </span>
+            </button>
+          ) : (
+            <span className="host-room is-opening"><span className="host-room-k">Opening a room</span></span>
+          )}
+          <button
+            className="plain-btn quiet-action host-settings"
+            onClick={() => setShowSettings(true)}
+          >
+            <Icon name="settings" size={15} />
+            Game Settings
+          </button>
+        </div>
       </header>
 
-      <AnimatePresence mode="wait">
-        {/* Settings Phase */}
-        {setupPhase === 'settings' && (
-          <motion.div
-            key="settings"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="phase-container"
-          >
-            <HostSettingsPanel
-              onNext={handleSettingsComplete}
-              onBack={() => navigate('/menu')}
-            />
-          </motion.div>
+      <main className="host-body">
+        {tabs.length > 1 && (
+          <nav className="host-rounds" aria-label="Rounds">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                className={`plain-btn host-round ${round === tab.key ? 'is-on' : ''}`}
+                aria-current={round === tab.key ? 'page' : undefined}
+                onClick={() => setRound(tab.key)}
+              >
+                <span className="host-round-name">{tab.name}</span>
+                <span className="host-round-note">{tab.note}</span>
+              </button>
+            ))}
+          </nav>
         )}
 
-        {/* Content Phase - Source Selection */}
-        {setupPhase === 'content' && contentSubPhase === null && (
-          <motion.div
-            key="source-select"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="phase-container"
-          >
-            <div className="content-source-selection">
-              <h2>How would you like to create questions?</h2>
-              <p className="source-subtitle">Choose a method to add your game content</p>
+        {error && <p className="host-error">{error}</p>}
 
-              <div className="source-options">
-                <motion.button
-                  className="source-card"
-                  onClick={() => handleContentSourceSelect('ai')}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <span className="source-icon">🤖</span>
-                  <span className="source-label">AI-Assisted</span>
-                  <span className="source-desc">
-                    Enter a topic and let AI generate categories and questions.
-                    You can edit everything before starting.
-                  </span>
-                </motion.button>
-
-                <motion.button
-                  className="source-card"
-                  onClick={() => handleContentSourceSelect('import')}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <span className="source-icon">📄</span>
-                  <span className="source-label">Import from File</span>
-                  <span className="source-desc">
-                    Upload a JSON file with your pre-made categories and questions.
-                  </span>
-                </motion.button>
-              </div>
-
-              <button onClick={handleBack} className="btn-secondary btn-back">
-                Back to Settings
+        {round === 'final' ? (
+          <div className="host-final">
+            <p className="host-write">One clue, and everybody wagers before they see it</p>
+            <label className="host-field" data-field="category">
+              <span>Category</span>
+              <input
+                value={final?.category ?? ''}
+                maxLength={60}
+                placeholder="One more category"
+                onChange={(e) => setFinal((f) => ({ category: '', answer: '', question: '', ...f, category: e.target.value }))}
+              />
+            </label>
+            <label className="host-field" data-field="clue">
+              <span>The clue</span>
+              <textarea
+                value={final?.answer ?? ''}
+                maxLength={1000}
+                placeholder="What the players see after the wagers"
+                onChange={(e) => setFinal((f) => ({ category: '', answer: '', question: '', ...f, answer: e.target.value }))}
+              />
+            </label>
+            <label className="host-field" data-field="response">
+              <span>Correct response</span>
+              <input
+                value={final?.question ?? ''}
+                maxLength={1000}
+                placeholder="What is&hellip;?"
+                onChange={(e) => setFinal((f) => ({ category: '', answer: '', question: '', ...f, question: e.target.value }))}
+              />
+            </label>
+            {finalIs !== 'none' && (
+              <button className="plain-btn quiet-action host-clear-final" onClick={() => setFinal(null)}>
+                Clear Final Jeopardy
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="host-write-line">
+              <span className="host-write">Click any cell and write it</span>
+              <button
+                className="plain-btn quiet-action host-ai"
+                onClick={() => setFill('ai')}
+                disabled={Boolean(busy)}
+              >
+                {/* The four-pointed star the menu cards already use, rather than
+                    a sparkle borrowed from every other AI feature online. */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 0 L14.4 9.6 L24 12 L14.4 14.4 L12 24 L9.6 14.4 L0 12 L9.6 9.6 Z" />
+                </svg>
+                {busy || 'Or use AI to create the board'}
               </button>
             </div>
-          </motion.div>
+
+            <BoardGridEditor board={board} onChange={onBoardChange} />
+          </>
         )}
 
-        {/* Content Phase - AI: Genre Selection */}
-        {setupPhase === 'content' && contentSubPhase === 'genreSelect' && (
-          <motion.div
-            key="genre-select"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="phase-container"
-          >
-            {isGenerating ? (
-              <div className="generating-container">
-                <div className="spinner" />
-                <p>Generating categories...</p>
-              </div>
-            ) : (
-              <GenreSelector
-                onSubmit={handleGenreSubmit}
-                error={error}
-              />
+        <div className="host-foot">
+          {/* Both of these fill a board, and Final Jeopardy is one clue rather
+              than a board, so on that tab they would do nothing you could see. */}
+          <div className="host-foot-alts">
+            {round !== 'final' && (
+              <>
+                <button className="plain-btn quiet-action host-alt" onClick={() => setFill('file')}>
+                  <Icon name="upload" size={14} />
+                  Upload a file
+                </button>
+                <button className="plain-btn quiet-action host-alt" onClick={() => setFill('board')}>
+                  <Icon name="copy" size={14} />
+                  Duplicate a community board
+                </button>
+              </>
             )}
-            {!isGenerating && (
-              <button onClick={handleBack} className="btn-secondary btn-back">
-                Back
-              </button>
-            )}
-          </motion.div>
-        )}
+          </div>
 
-        {/* Content Phase - AI: Category Editing */}
-        {setupPhase === 'content' && contentSubPhase === 'categoryEdit' && (
-          <motion.div
-            key="category-edit"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="phase-container"
-          >
-            {isGenerating ? (
-              <div className="generating-container">
-                <div className="spinner" />
-                <p>Generating questions...</p>
-              </div>
-            ) : (
-              <CategoryEditor
-                categories={categories}
-                onEdit={handleCategoryEdit}
-                onBack={handleBack}
-                onNext={handleCategoriesComplete}
-                error={error}
-              />
-            )}
-          </motion.div>
-        )}
-
-        {/* Content Phase - Import */}
-        {setupPhase === 'content' && contentSubPhase === 'import' && (
-          <motion.div
-            key="import"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="phase-container"
-          >
-            <ImportQuestionsPanel
-              onBack={handleBack}
-              onNext={handleImportComplete}
-            />
-          </motion.div>
-        )}
-
-        {/* Content Phase - Question Editing */}
-        {setupPhase === 'content' && contentSubPhase === 'questionEdit' && (
-          <motion.div
-            key="question-edit"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="phase-container"
-          >
-            {isCreatingRoom ? (
-              <div className="generating-container">
-                <div className="spinner" />
-                <p>Creating your game...</p>
-              </div>
-            ) : (
-              <QuestionEditor
-                onBack={handleBack}
-                onNext={handleQuestionsComplete}
-                answerMode={answerMode}
-              />
-            )}
-            {error && (
-              <motion.p
-                className="error-message global-error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {error}
-              </motion.p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Connection Status */}
-      {!isConnected && (
-        <div className="connection-warning">
-          Not connected to server. Please wait...
+          <button className="btn-primary host-start" onClick={start} disabled={Boolean(notReady)}>
+            Start the game
+          </button>
         </div>
+
+        {notReady && <p className="host-notready">{notReady}</p>}
+      </main>
+
+      {showSettings && <HostSettingsSheet onClose={() => setShowSettings(false)} />}
+
+      {fill && (
+        <HostFillPanel
+          kind={fill}
+          round={round === 2 ? 2 : 1}
+          token={token}
+          busy={busy}
+          onTopic={fillWithAi}
+          onBoard={fillFromBoard}
+          onClose={() => setFill(null)}
+        />
       )}
     </div>
   );

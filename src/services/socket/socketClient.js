@@ -109,6 +109,11 @@ class SocketClient {
   emit(event, data, callback) {
     if (!this.socket?.connected) {
       console.warn('Socket not connected. Cannot emit:', event);
+      /* A dropped emit with a callback used to leave the caller's promise
+         pending for ever, so a failure looked exactly like a slow network and
+         the screen sat on "opening a room" with nothing to report. Answering
+         the callback turns a hang into a sentence somebody can act on. */
+      if (callback) callback({ success: false, error: 'Not connected to the server.' });
       return;
     }
 
