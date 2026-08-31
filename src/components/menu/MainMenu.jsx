@@ -50,12 +50,39 @@ export default function MainMenu() {
   const restoreSession = useUserStore((s) => s.restoreSession);
   const logout = useUserStore((s) => s.logout);
   const [showIdentity, setShowIdentity] = useState(false);
+  const identityRef = useRef(null);
+  const chipRef = useRef(null);
 
   const boardStreak = stats.board.currentStreak;
   const sixerStreak = stats.sixer.currentStreak;
   // The Board's own best, for the week in progress. Read through the helper so
   // a value left over from last week is not shown as if it still counted.
   const boardWeekBest = currentWeekBest(stats.board, toDateString());
+
+  /* A menu that only closes by clicking the thing that opened it is not a menu.
+     Both ways out are expected: clicking away, and Escape. Escape also puts the
+     focus back on the chip, or a keyboard user is left nowhere. */
+  useEffect(() => {
+    if (!showIdentity) return undefined;
+
+    const onPointerDown = (e) => {
+      if (!identityRef.current?.contains(e.target)) setShowIdentity(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      setShowIdentity(false);
+      chipRef.current?.focus();
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showIdentity]);
 
   /* A stored token can have expired, or belong to an account since deleted.
      Ask once on arrival rather than showing someone a name they cannot use. */
@@ -115,8 +142,9 @@ export default function MainMenu() {
           </span>
           <span className="menu-divider" />
           {/* Guest used to be a word that did nothing. It is the way in now. */}
-          <div className="menu-identity-wrap">
+          <div className="menu-identity-wrap" ref={identityRef}>
             <button
+              ref={chipRef}
               className="menu-player"
               onClick={() => setShowIdentity((v) => !v)}
               aria-haspopup="menu"
