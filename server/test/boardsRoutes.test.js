@@ -166,10 +166,62 @@ await test('normalize drops an all-blank options array', () => {
   assert.equal(normalizeBoard(board).categories[0].questions[0].options, null);
 });
 
-await test('normalize keeps real options', () => {
+await test('normalize derives option zero from the response', () => {
+  // GameStateManager expects the correct answer at index 0 and shuffles from
+  // there. Storing it separately means editing the response later leaves a
+  // stale index 0, and the game marks a right answer wrong at play time.
   const board = emptyBoard();
-  board.categories[0].questions[0].options = ['A', 'B', '', ''];
-  assert.deepEqual(normalizeBoard(board).categories[0].questions[0].options, ['A', 'B', '', '']);
+  const q = board.categories[0].questions[0];
+  q.answer = 'The longest river in Africa';
+  q.question = 'What is the Nile?';
+  q.options = ['SOMETHING STALE', 'What is the Amazon?', 'What is the Congo?', 'What is the Volga?'];
+
+  const options = normalizeBoard(board).categories[0].questions[0].options;
+  assert.equal(options[0], 'What is the Nile?', 'index zero is the response, always');
+  assert.deepEqual(options.slice(1), [
+    'What is the Amazon?', 'What is the Congo?', 'What is the Volga?',
+  ]);
+});
+
+await test('editing the response cannot leave a stale correct answer', () => {
+  const board = emptyBoard();
+  const q = board.categories[0].questions[0];
+  q.answer = 'clue';
+  q.question = 'What is the Nile?';
+  q.options = ['What is the Nile?', 'What is the Amazon?', 'What is the Congo?'];
+
+  // Somebody changes their mind about the answer after setting the options.
+  q.question = 'What is the Blue Nile?';
+  const options = normalizeBoard(board).categories[0].questions[0].options;
+  assert.equal(options[0], 'What is the Blue Nile?');
+  assert.equal(options.includes('What is the Nile?'), false, 'the old answer is gone');
+});
+
+await test('normalize drops blank distractors', () => {
+  const board = emptyBoard();
+  const q = board.categories[0].questions[0];
+  q.answer = 'clue';
+  q.question = 'What is right?';
+  q.options = ['', 'What is wrong?', '  ', ''];
+  assert.deepEqual(
+    normalizeBoard(board).categories[0].questions[0].options,
+    ['What is right?', 'What is wrong?']
+  );
+});
+
+await test('options with no distractors are not options at all', () => {
+  const board = emptyBoard();
+  const q = board.categories[0].questions[0];
+  q.answer = 'clue';
+  q.question = 'What is right?';
+  q.options = ['What is right?', '', '', ''];
+  assert.equal(normalizeBoard(board).categories[0].questions[0].options, null);
+});
+
+await test('distractors with no response are not options either', () => {
+  const board = emptyBoard();
+  board.categories[0].questions[0].options = ['', 'a', 'b', 'c'];
+  assert.equal(normalizeBoard(board).categories[0].questions[0].options, null);
 });
 
 await test('publish gate asks for a title first', () => {
@@ -192,6 +244,28 @@ await test('publish gate counts empty clues, singular', () => {
 await test('publish gate passes a finished board', () => {
   assert.equal(publishProblem({ title: 'Finished', board: fullBoard() }), null);
 });
+
+await test('a board with no Final Jeopardy still publishes', () => {
+  // Optional: plenty of boards will not want one, and the player can turn the
+  // round off anyway.
+  const board = fullBoard();
+  board.finalJeopardy = null;
+  assert.equal(publishProblem({ title: 'Fine', board }), null);
+});
+
+await test('a complete Final Jeopardy publishes', () => {
+  const board = fullBoard();
+  board.finalJeopardy = { category: 'RIVERS', answer: 'The longest', question: 'What is the Nile?' };
+  assert.equal(publishProblem({ title: 'Fine', board }), null);
+});
+
+await test('a half-written Final Jeopardy does not', () => {
+  // A clue with no answer waiting at the end of a game is worse than none.
+  const board = fullBoard();
+  board.finalJeopardy = { category: 'RIVERS', answer: '', question: '' };
+  assert.match(publishProblem({ title: 'Fine', board }), /Final Jeopardy is half written/);
+});
+
 
 // ============================================================ over HTTP
 
@@ -401,6 +475,107 @@ await test('a copy of a copy credits the original author', async () => {
   const second = await api(`/${copy}/copy`, { method: 'POST', token: ada });
   const opened = await api(`/${second.data.slug}`, { token: ada });
   assert.equal(opened.data.adaptedFrom.username, 'ada', 'not the middleman');
+});
+
+await test('a Final Jeopardy survives a save and comes back', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'With a final' } });
+  const board = fullBoard();
+  board.finalJeopardy = { category: 'RIVERS', answer: 'The longest in Africa', question: 'What is the Nile?' };
+  await api(`/${create.data.slug}`, { method: 'PUT', token: ada, body: { board } });
+
+  const read = await api(`/${create.data.slug}`, { token: ada });
+  assert.deepEqual(read.data.board.finalJeopardy, {
+    category: 'RIVERS', answer: 'The longest in Africa', question: 'What is the Nile?',
+  });
+});
+
+await test('a half-written Final Jeopardy is refused from Community Boards', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Half a final' } });
+  const board = fullBoard();
+  board.finalJeopardy = { category: 'RIVERS', answer: 'A clue with no answer', question: '' };
+  await api(`/${create.data.slug}`, { method: 'PUT', token: ada, body: { board } });
+
+  const { status, data } = await api(`/${create.data.slug}/visibility`, {
+    method: 'PUT', token: ada, body: { visibility: 'public' },
+  });
+  assert.equal(status, 400);
+  assert.match(data.error.message, /Final Jeopardy is half written/);
+});
+
+// ============================================================ conflicts
+
+await test('a board carries a version that goes up when it is saved', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Versioned' } });
+  const first = await api(`/${create.data.slug}`, { token: ada });
+  assert.equal(first.data.version, 1);
+
+  const saved = await api(`/${create.data.slug}`, {
+    method: 'PUT', token: ada, body: { title: 'Versioned twice' },
+  });
+  assert.equal(saved.data.version, 2);
+});
+
+await test('saving against a stale version is refused', async () => {
+  // One person with the editor open in two tabs, which is the actual case.
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Two tabs' } });
+  const slug = create.data.slug;
+
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'From tab one', baseVersion: 1 } });
+  const { status, data } = await api(`/${slug}`, {
+    method: 'PUT', token: ada, body: { title: 'From tab two', baseVersion: 1 },
+  });
+
+  assert.equal(status, 409);
+  assert.equal(data.error.code, 'STALE_BOARD');
+});
+
+await test('the refusal carries the board that is actually there', async () => {
+  // So the client can offer a choice without a second request at the moment
+  // the network is already unhappy.
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Carries it' } });
+  const slug = create.data.slug;
+  const board = fullBoard();
+  board.categories[0].name = 'THE WINNER';
+
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'Theirs', board, baseVersion: 1 } });
+  const { data } = await api(`/${slug}`, {
+    method: 'PUT', token: ada, body: { title: 'Mine', baseVersion: 1 },
+  });
+
+  assert.equal(data.error.details.title, 'Theirs');
+  assert.equal(data.error.details.version, 2);
+  assert.equal(data.error.details.board.categories[0].name, 'THE WINNER');
+});
+
+await test('a stale save changes nothing', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Untouched' } });
+  const slug = create.data.slug;
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'Kept', baseVersion: 1 } });
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'Lost', baseVersion: 1 } });
+
+  const read = await api(`/${slug}`, { token: ada });
+  assert.equal(read.data.title, 'Kept');
+  assert.equal(read.data.version, 2, 'a refused save does not bump the version either');
+});
+
+await test('leaving out baseVersion still saves, for a deliberate overwrite', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Forced' } });
+  const slug = create.data.slug;
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'One', baseVersion: 1 } });
+  const { status } = await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'Two' } });
+  assert.equal(status, 200);
+});
+
+await test('sending only a title leaves the board alone', async () => {
+  // The saving that makes editing a title stop re-uploading every image.
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Partial' } });
+  const slug = create.data.slug;
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { board: fullBoard() } });
+
+  await api(`/${slug}`, { method: 'PUT', token: ada, body: { title: 'Renamed only' } });
+  const read = await api(`/${slug}`, { token: ada });
+  assert.equal(read.data.title, 'Renamed only');
+  assert.equal(read.data.clueCount, CLUE_COUNT, 'the board survived a title-only save');
 });
 
 // ============================================================ plays

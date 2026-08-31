@@ -28,3 +28,4 @@ CLAUDE.md
 
 # Throwaway databases the server test suites boot against
 server/test/tmp-*.sqlite*
+e2e/tmp-*.sqlite*

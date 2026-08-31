@@ -94,7 +94,67 @@ button.board-edit-done {
 
 button.board-edit-done:hover { border-color: var(--jeopardy-gold); }
 
-@media (max-width: 640px) {
+button.board-edit-undo {
+  padding: 10px 13px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  white-space: nowrap;
+}
+button.board-edit-undo:disabled { color: var(--text-muted); cursor: default; }
+
+/* A conflict is the one thing on this page that has to stop somebody, so it
+   is a band across the work rather than a note beside it. */
+.board-conflict {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  padding: 13px 16px;
+  border-left: 3px solid var(--color-warning);
+  background: rgba(224, 178, 60, 0.1);
+}
+
+.board-conflict-say {
+  flex: 1;
+  min-width: 260px;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.board-conflict-do { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Quiet, and it goes away by itself. The keyboard has Cmd+Z; this is the same
+   escape for anyone using a mouse. */
+.board-cleared {
+  margin: 0 0 14px;
+  font-size: 0.87rem;
+  color: var(--text-secondary);
+}
+
+button.board-cleared-undo {
+  padding: 2px 4px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: var(--jeopardy-gold-light);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* 820, matching the editor's own breakpoint. These were 640 and 820, which
+   put the phone grid inside the desktop header for a 180px band nobody would
+   think to look at. */
+@media (max-width: 820px) {
   .board-edit-head {
     flex-wrap: wrap;
     align-items: center;
@@ -104,7 +164,8 @@ button.board-edit-done:hover { border-color: var(--jeopardy-gold); }
   /* Title takes the full second line so it is not a 90px input next to a
      thumbnail. */
   .board-edit-title { order: 3; flex-basis: 100%; }
-  button.board-edit-done { order: 2; margin-left: auto; }
+  button.board-edit-undo { order: 2; margin-left: auto; }
+  button.board-edit-done { order: 2; }
   .board-edit-title input { font-size: 1.25rem; }
   .board-edit-count { padding-bottom: 0; }
 }

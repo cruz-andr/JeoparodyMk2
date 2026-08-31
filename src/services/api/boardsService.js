@@ -44,11 +44,14 @@ async function call(path, { method = 'GET', body, token, headers } = {}) {
     if (response.status === 429) {
       throw new BoardsError('Too many requests just now. Wait a moment and try again.', 'RATE_LIMITED', 429);
     }
-    throw new BoardsError(
+    const error = new BoardsError(
       data?.error?.message || 'Something went wrong. Try again.',
       data?.error?.code,
       response.status
     );
+    // A 409 carries the board that is actually there. See routes/boards.js.
+    error.details = data?.error?.details;
+    throw error;
   }
   return data;
 }

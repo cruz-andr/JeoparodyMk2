@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, useUserStore, useSettingsStore } from '../stores';
@@ -59,6 +59,10 @@ export default function SinglePlayerPage() {
 
   // Final Jeopardy state
   const [finalJeopardyData, setFinalJeopardyData] = useState(null);
+  /* A community board brings its own Final Jeopardy, or brings none. Held in a
+     ref rather than state because it is set during the mount effect and only
+     ever read later. */
+  const boardFinal = useRef(null);
 
   // Category re-roll state
   const [remainingRolls, setRemainingRolls] = useState(5);
@@ -82,6 +86,7 @@ export default function SinglePlayerPage() {
     const handed = location.state?.board;
     if (handed) {
       const { categories: names, questions: grid } = boardToHost(handed);
+      boardFinal.current = handed.finalJeopardy ?? null;
       setGenre(handed.title || 'Community board');
       setCategories(names);
       setQuestions(grid, enableDailyDouble);
@@ -91,6 +96,7 @@ export default function SinglePlayerPage() {
          to increment a counter is not worth interrupting anyone over. */
       if (location.state.boardSlug) countPlay(location.state.boardSlug, token);
     } else {
+      boardFinal.current = null;
       setPhase('setup');
     }
 
@@ -222,11 +228,27 @@ export default function SinglePlayerPage() {
     }
   };
 
+  /* Whether there is a Final Jeopardy to play at all.
+
+     A board somebody else wrote either has one or it does not. Asking a model
+     to invent one is putting words in their mouth and billing us for it, so a
+     community board with no Final Jeopardy simply ends after the last clue. */
+  const playingSomeoneElsesBoard = Boolean(location.state?.board);
+  const canPlayFinalJeopardy = playingSomeoneElsesBoard
+    ? Boolean(boardFinal.current)
+    : true;
+
   const handleStartFinalJeopardy = async () => {
     // Only eligible if score >= 0 or we allow negative scores to play
-    setLoading(true);
     setError(null);
 
+    if (boardFinal.current) {
+      setFinalJeopardyData(boardFinal.current);
+      setPhase('finalJeopardy');
+      return;
+    }
+
+    setLoading(true);
     try {
       const fjData = await aiService.generateFinalJeopardyQuestion(genre);
       setFinalJeopardyData(fjData);
@@ -390,7 +412,7 @@ export default function SinglePlayerPage() {
             <button onClick={handleNextRound} className="btn-primary">
               Continue to Double Jeopardy
             </button>
-          ) : enableFinalJeopardy && score >= 0 ? (
+          ) : enableFinalJeopardy && canPlayFinalJeopardy && score >= 0 ? (
             <div className="round-end-buttons">
               <button onClick={handleStartFinalJeopardy} className="btn-primary">
                 Play Final Jeopardy!
@@ -404,9 +426,14 @@ export default function SinglePlayerPage() {
               See Final Results
             </button>
           )}
-          {enableFinalJeopardy && score < 0 && (
+          {enableFinalJeopardy && canPlayFinalJeopardy && score < 0 && (
             <p className="fj-ineligible">
               (Final Jeopardy requires a non-negative score)
+            </p>
+          )}
+          {enableFinalJeopardy && !canPlayFinalJeopardy && (
+            <p className="fj-ineligible">
+              This board has no Final Jeopardy, so the game ends here.
             </p>
           )}
         </motion.div>

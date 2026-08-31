@@ -205,6 +205,15 @@ export function validateBoardStructure(data) {
  * board that arrives with its rows shuffled comes out in board order, and
  * every cell has every field whether or not the sender bothered.
  */
+function buildOptions(_clue, response, options) {
+  if (!Array.isArray(options)) return null;
+
+  const distractors = options.slice(1).map((o) => String(o ?? '').trim()).filter(Boolean);
+  if (!distractors.length || !response) return null;
+
+  return [response, ...distractors];
+}
+
 export function normalizeBoard(data) {
   const categories = Array.from({ length: CATEGORY_COUNT }, (_, c) => {
     const incoming = data?.categories?.[c] ?? {};
@@ -222,10 +231,20 @@ export function normalizeBoard(data) {
           points,
           answer: String(q.answer ?? '').trim(),
           question: String(q.question ?? '').trim(),
-          /* An all-empty options array is the multiple-choice editor's idle
-             state, not a choice. Storing it would turn every clue into a
-             multiple-choice clue with four blank answers. */
-          options: options && options.some(Boolean) ? options : null,
+          /* Multiple choice, and the one rule that keeps it correct.
+
+             GameStateManager expects the correct answer at index 0 and
+             shuffles the four before any player sees them, keeping the correct
+             index server-side for scoring. So option zero is DERIVED from the
+             response rather than stored beside it. Storing it twice means
+             editing the response afterwards leaves a stale index 0, and the
+             game marks a right answer wrong, silently, at play time.
+
+             Everything after index 0 is a distractor. An all-blank array is
+             the editor's idle state rather than a choice, so it becomes null:
+             otherwise every clue would be a multiple-choice clue with four
+             empty answers. */
+          options: buildOptions(String(q.answer ?? '').trim(), String(q.question ?? '').trim(), options),
           mediaType: q.mediaType ?? null,
           mediaData: q.mediaData ?? null,
           youtubeStart: q.youtubeStart ?? null,
@@ -258,6 +277,15 @@ export function normalizeBoard(data) {
  * "name your last two categories" is actionable, a wall of thirty complaints
  * is not.
  */
+/** 'none', 'partial' or 'complete'. Partial is the only one that is a problem. */
+export function finalJeopardyState(board) {
+  const fj = board?.finalJeopardy;
+  const parts = [fj?.category, fj?.answer, fj?.question]
+    .map((value) => Boolean(value && String(value).trim()));
+  if (parts.every((part) => !part)) return 'none';
+  return parts.every(Boolean) ? 'complete' : 'partial';
+}
+
 export function publishProblem({ title, board }) {
   if (!title || !title.trim()) return 'Give the board a title first.';
   if (title.trim().length > MAX_TITLE) return `Titles are ${MAX_TITLE} characters or fewer.`;
@@ -275,6 +303,13 @@ export function publishProblem({ title, board }) {
     return left === 1
       ? 'One clue is still empty. It is marked on your board.'
       : `${left} clues are still empty. They are marked on your board.`;
+  }
+
+  /* Final Jeopardy is optional: plenty of boards will not want one, and the
+     player can turn the round off anyway. What is not allowed is half of one,
+     because that is a clue with no answer waiting at the end of a game. */
+  if (finalJeopardyState(board) === 'partial') {
+    return 'Final Jeopardy is half written. Finish all three parts or clear it.';
   }
 
   return null;

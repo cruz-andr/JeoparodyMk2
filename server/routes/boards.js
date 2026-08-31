@@ -79,6 +79,7 @@ function uniqueSlug(db) {
 function cardFromRow(row) {
   return {
     slug: row.slug,
+    version: row.version ?? 1,
     title: row.title,
     description: row.description,
     topic: row.topic,
@@ -268,6 +269,25 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
     const existing = owned(db, req.params.slug, req.user.userId);
     const incoming = req.body ?? {};
 
+    /* Optimistic locking. A client that read version 4 and is saving against
+       version 7 has been open in another tab, or in another browser, while
+       somebody changed it. Refuse, and hand back what is actually there so the
+       client can show the two and let a person choose, rather than making a
+       second request at the exact moment the network is already unhappy.
+
+       baseVersion is optional so an older client, or a deliberate overwrite,
+       still works. */
+    if (incoming.baseVersion !== undefined && incoming.baseVersion !== existing.version) {
+      const current = db.prepare(`
+        SELECT b.*, ${AUTHOR_COLUMNS} FROM boards b ${AUTHOR_JOIN} WHERE b.id = ?
+      `).get(existing.id);
+      const err = new AppError(
+        'This board was changed somewhere else.', 409, 'STALE_BOARD'
+      );
+      err.details = { ...cardFromRow(current), board: parseBoard(current) };
+      throw err;
+    }
+
     let board = null;
     let clueCount = existing.clue_count;
 
@@ -308,6 +328,7 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
       SET title = ?, description = ?, topic = ?,
           data = COALESCE(?, data), clue_count = ?,
           visibility = ?, published_at = ?,
+          version = version + 1,
           updated_at = datetime('now')
       WHERE id = ?
     `).run(
@@ -317,7 +338,8 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
     );
 
     res.json({
-      slug: existing.slug, title, description, topic,
+      slug: existing.slug, version: existing.version + 1,
+      title, description, topic,
       clueCount, visibility,
       unpublished: visibility !== existing.visibility,
     });

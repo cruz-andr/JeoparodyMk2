@@ -78,6 +78,12 @@ export async function initializeDatabase() {
     ['users', 'google_id', 'TEXT'],
     // The drawn name, as a PNG data URL. This is what other players see.
     ['users', 'signature', 'TEXT'],
+    /* Optimistic locking on a board. Without it, autosave from a tab that has
+       been open a while silently replaces whatever another tab did, and nobody
+       is told. Not an ETag: we have no cache in front of this that a header
+       would also serve, and an integer in a JSON body cannot be rewritten on
+       its way through a proxy. */
+    ['boards', 'version', 'INTEGER NOT NULL DEFAULT 1'],
     // Google's profile picture, when they sign in that way.
     ['users', 'avatar_url', 'TEXT'],
   ];

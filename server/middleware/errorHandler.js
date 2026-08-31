@@ -9,6 +9,11 @@ export function errorHandler(err, req, res, next) {
     error: {
       message,
       code: err.code || 'INTERNAL_ERROR',
+      /* Some refusals are more useful with the thing they refused over.
+         A 409 on a stale board carries the board that is actually there, so
+         the client can offer a choice without a second request at the moment
+         the network is already misbehaving. */
+      ...(err.details !== undefined && { details: err.details }),
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     },
   });
