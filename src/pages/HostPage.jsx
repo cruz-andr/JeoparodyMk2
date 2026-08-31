@@ -63,6 +63,10 @@ export default function HostPage() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [roomCode, setRoomCode] = useState('');
+  /* What the board was generated from, and how many re-rolls are left on it.
+     Both are per round: two rounds can come from two different topics. */
+  const [topics, setTopics] = useState({ 1: '', 2: '' });
+  const [rerolls, setRerolls] = useState({ 1: 5, 2: 5 });
   const [waiting, setWaiting] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -160,6 +164,8 @@ export default function HostPage() {
       });
 
       setRounds((all) => ({ ...all, [round]: filled }));
+      setTopics((all) => ({ ...all, [round]: topic }));
+      setRerolls((all) => ({ ...all, [round]: 5 }));
       setFill(null);
     } catch (err) {
       setError(err.message || 'Could not write the board. Try again, or write it yourself.');
@@ -182,6 +188,64 @@ export default function HostPage() {
     setRounds((all) => ({ ...all, [round]: next }));
     if (incoming.finalJeopardy && !final) setFinal(incoming.finalJeopardy);
     setFill(null);
+  };
+
+  /**
+   * Another category, and its five clues with it.
+   *
+   * Five per round, which is what host mode always allowed. It needs the topic
+   * the board came from, so it is offered only on a board that came from one:
+   * there is nothing to ask a model for about a category somebody typed.
+   */
+  const rerollCategory = async (index) => {
+    const topic = topics[round];
+    if (!topic) return;
+
+    setError('');
+    try {
+      const names = rounds[round].categories.map((c) => c.name);
+      const replacement = await aiService.regenerateCategory(topic, names, index);
+      const values = round === 2 ? DOUBLE_VALUES : POINT_VALUES;
+      const written = await aiService.generateQuestions([replacement], values, round === 2 ? 2 : 1, settings.difficulty);
+      const fresh = written.categories?.[0];
+
+      setRounds((all) => ({
+        ...all,
+        [round]: {
+          ...all[round],
+          categories: all[round].categories.map((category, c) => (
+            c !== index ? category : {
+              name: fresh?.name ?? replacement,
+              questions: values.map((points, r) => ({
+                points,
+                answer: fresh?.questions?.[r]?.answer ?? '',
+                question: fresh?.questions?.[r]?.question ?? '',
+                options: null, mediaType: null, mediaData: null,
+                youtubeStart: null, youtubeEnd: null, audioOnly: false, altText: null,
+              })),
+            }
+          )),
+        },
+      }));
+      setRerolls((all) => ({ ...all, [round]: Math.max(all[round] - 1, 0) }));
+    } catch (err) {
+      setError(err.message || 'Could not find another category. Try again, or rename it yourself.');
+    }
+  };
+
+  /** Three plausible wrong answers for a clue that already has a right one. */
+  const suggestWrong = async ({ clue, response, category }) => {
+    setError('');
+    try {
+      const result = await aiService.generateMCOptions(response, category, clue);
+      /* generateMCOptions returns the correct answer first. The editor derives
+         index zero from the response itself, so only the wrong ones matter and
+         handing back all four would put the answer in twice. */
+      return (result?.options ?? []).slice(1);
+    } catch (err) {
+      setError(err.message || 'Could not think of any. Write them yourself.');
+      return [];
+    }
   };
 
   // ------------------------------------------------------------- starting
@@ -357,7 +421,15 @@ export default function HostPage() {
               </button>
             </div>
 
-            <BoardGridEditor board={board} onChange={onBoardChange} />
+            <BoardGridEditor
+              board={board}
+              onChange={onBoardChange}
+              /* Only on a board that came from a topic: there is nothing to ask
+                 a model for about a category somebody typed themselves. */
+              onReroll={topics[round] ? rerollCategory : undefined}
+              rerollsLeft={rerolls[round]}
+              onSuggestWrong={suggestWrong}
+            />
           </>
         )}
 

@@ -151,6 +151,26 @@ try {
     await b.evaluate("document.querySelector('.host-notready')?.textContent ?? 'nothing missing'"));
   await b.shot('host-ready.png');
 
+  // ---------- the two capabilities the rebuild had dropped ----------
+  console.log('\n-- capabilities the old host mode had --');
+  await b.evaluate(`[...document.querySelectorAll('.host-round')].find(e=>/Round one/.test(e.textContent)).click()`);
+  await new Promise((r) => setTimeout(r, 400));
+
+  // A duplicated board did not come from a topic, so there is nothing to ask a
+  // model about: the control is absent rather than present and dead.
+  await b.click('.ge-head');
+  await new Promise((r) => setTimeout(r, 300));
+  check('no re-roll on a board that came from a file or a shelf',
+    await b.evaluate("![...document.querySelectorAll('.ge-action')].some(e=>/Try another/.test(e.textContent))"));
+
+  await b.click('.ge-grid .ge-cell');
+  await new Promise((r) => setTimeout(r, 300));
+  await b.click('.ge-choices-toggle');
+  await new Promise((r) => setTimeout(r, 300));
+  check('multiple choice offers to suggest the wrong answers',
+    await b.evaluate("[...document.querySelectorAll('.ge-action')].some(e=>/Suggest three wrong/.test(e.textContent))"),
+    await b.evaluate("[...document.querySelectorAll('.ge-action')].map(e=>e.textContent.trim()).join(' | ')"));
+
   b.kill();
   console.log(bad ? `\n${bad} failed` : '\nall passed');
   process.exit(bad ? 1 : 0);

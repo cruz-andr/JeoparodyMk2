@@ -64,9 +64,18 @@ const sameCell = (a, b) => (
   && (a.kind !== 'category' || a.c === b.c)
 );
 
-export default function BoardGridEditor({ board, onChange, onCleared, onBeforeClear }) {
+/**
+ * `onReroll` and `onSuggestWrong` are optional because they need a model and
+ * not every caller has one to offer. Host mode passes both; the community
+ * board editor passes neither, and the controls are simply absent rather than
+ * present and dead.
+ */
+export default function BoardGridEditor({
+  board, onChange, onCleared, onBeforeClear, onReroll, rerollsLeft, onSuggestWrong,
+}) {
   const [at, setAt] = useState({ kind: 'clue', c: 0, r: 0 });
   const [showChoices, setShowChoices] = useState(false);
+  const [thinking, setThinking] = useState('');
 
   const outerRef = useRef(null);
   const selectedRef = useRef(null);
@@ -357,6 +366,24 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
         <p className="ge-hint">
           Six of these run across the top of the board. Short ones read best.
         </p>
+
+        {onReroll && (
+          <div className="ge-panel-actions">
+            <button
+              type="button"
+              className="plain-btn quiet-action ge-action"
+              disabled={!rerollsLeft || thinking === 'reroll'}
+              onClick={async () => {
+                setThinking('reroll');
+                try { await onReroll(at.c); } finally { setThinking(''); }
+              }}
+            >
+              {thinking === 'reroll'
+                ? 'Finding another'
+                : `Try another category${rerollsLeft ? ` (${rerollsLeft} left)` : ''}`}
+            </button>
+          </div>
+        )}
       </>
     );
   } else if (at.kind === 'final') {
@@ -490,6 +517,31 @@ export default function BoardGridEditor({ board, onChange, onCleared, onBeforeCl
                   onChange={(e) => editDistractor(i, e.target.value)}
                 />
               ))}
+
+              {onSuggestWrong && (
+                <button
+                  type="button"
+                  className="plain-btn quiet-action ge-action"
+                  disabled={thinking === 'wrong' || !here?.answer?.trim() || !here?.question?.trim()}
+                  onClick={async () => {
+                    setThinking('wrong');
+                    try {
+                      /* The category comes from here, because the editor is
+                         the only thing that knows which cell is open. */
+                      const wrong = await onSuggestWrong({
+                        clue: here.answer,
+                        response: here.question,
+                        category: categories[at.c]?.name ?? '',
+                      });
+                      if (wrong?.length) {
+                        editClue(at.c, at.r, { options: [here.question, ...wrong.slice(0, 3)] });
+                      }
+                    } finally { setThinking(''); }
+                  }}
+                >
+                  {thinking === 'wrong' ? 'Thinking' : 'Suggest three wrong answers'}
+                </button>
+              )}
             </div>
           )}
         </div>
