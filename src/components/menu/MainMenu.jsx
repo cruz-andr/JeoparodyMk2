@@ -161,9 +161,11 @@ export default function MainMenu() {
               <div className="menu-identity-menu" role="menu">
                 {isAuthenticated ? (
                   <>
+                    {/* Profile and Settings only. Account is a row inside the
+                        profile: it is where you change an email or delete the
+                        thing, not somewhere you jump to from a header. */}
                     <button role="menuitem" onClick={() => navigate('/profile')}>Profile</button>
                     <button role="menuitem" onClick={() => navigate('/settings')}>Settings</button>
-                    <button role="menuitem" onClick={() => navigate('/account')}>Account</button>
                     <div className="menu-identity-sep" />
                     <button role="menuitem" className="quiet" onClick={() => { logout(); setShowIdentity(false); }}>
                       Sign out
