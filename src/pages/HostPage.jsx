@@ -183,6 +183,11 @@ export default function HostPage() {
     setError('');
     setFill(null);
     const target = round === 2 ? 2 : 1;
+    /* Kept so a failure halfway leaves the board as the host had it. The names
+       land before the clues, so a model that answers the first call and fails
+       the second used to overwrite whatever the host had named their own
+       categories and then stop, with no way back to them. */
+    const before = rounds[target];
     setWriting({ round: target, stage: 'categories', names: [] });
 
     try {
@@ -221,6 +226,7 @@ export default function HostPage() {
       setTopics((all) => ({ ...all, [target]: topic }));
       setRerolls((all) => ({ ...all, [target]: 5 }));
     } catch (err) {
+      setRounds((all) => ({ ...all, [target]: before }));
       setError(aiTrouble(err));
     } finally {
       setWriting(null);

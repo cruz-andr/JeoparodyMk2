@@ -32,6 +32,17 @@ try {
   await b.goto(`${APP}/host`);
   await b.until("!!document.querySelector('.ge-board')", { timeout: 15000 });
 
+  /* Something of the host's own on the board first, so a failure has work to
+     lose. The names land before the clues do, so a model that answers the
+     first call and fails the second must put back what it replaced. */
+  console.log('\n-- with work already on the board --');
+  await b.evaluate("document.querySelector('.ge-head').click()");
+  await b.until("!!document.querySelector('.ge-field')", { timeout: 8000 });
+  await b.type('.ge-field', 'MY OWN CATEGORY');
+  await wait(300);
+  check('a category the host named is on the board',
+    (await b.evaluate("document.querySelector('.ge-head').textContent")).includes('MY OWN CATEGORY'));
+
   console.log('\n-- asking --');
   await b.evaluate("document.querySelector('.host-ai').click()");
   await b.until("!!document.querySelector('.hf-scrim')", { timeout: 8000 });
@@ -72,6 +83,9 @@ try {
     await b.evaluate("document.querySelector('.host-ai').textContent"));
   check('nothing was written to the board',
     await b.evaluate("document.querySelectorAll('.ge-cell.is-written').length") === 0);
+  check('and the work the host had done is still there',
+    (await b.evaluate("document.querySelector('.ge-head').textContent")).includes('MY OWN CATEGORY'),
+    await b.evaluate("document.querySelector('.ge-head').textContent"));
   await b.shot('ai-failed.png');
 
   console.log('\n-- the ways in that do not need a model --');
