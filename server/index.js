@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import { apiLimiter, authLimiter, ON_FLY } from './middleware/rateLimit.js';
+import { aiLimiter, apiLimiter, authLimiter, ON_FLY } from './middleware/rateLimit.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -15,6 +15,7 @@ import userRoutes from './routes/users.js';
 import roomRoutes from './routes/rooms.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import boardRoutes from './routes/boards.js';
+import aiRoutes from './routes/ai.js';
 
 // Import socket handlers
 import { initializeSocketHandlers } from './socket/index.js';
@@ -117,6 +118,11 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
 app.use('/api/boards', boardRoutes);
+
+/* The model. The key lives here and only here; see services/gemini.js. Its
+   own budget sits on top of the general one because every call here is paid
+   for. */
+app.use('/api/ai', aiLimiter, aiRoutes);
 
 // Daily Challenge endpoint - scrapes J-Archive
 app.get('/api/daily/challenge', async (req, res) => {
