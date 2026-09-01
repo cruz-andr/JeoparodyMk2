@@ -6,10 +6,12 @@
  * identical: nothing. And when it did fail, the message rendered on the page
  * underneath the panel that was covering it, so nobody ever saw it.
  *
- * The run has no model key on purpose, so this covers the failure a host is
- * most likely to hit and never spends anyone's quota.
+ * The model is answered from inside the page with the refusal Google sends for
+ * a key it will not accept, so this covers a real failure without a key, a
+ * token, or a request that leaves the machine.
  */
 import { launch } from './driver.mjs';
+import { fakeModel } from './fakeModel.mjs';
 const APP = 'http://localhost:5000';
 const API = 'http://127.0.0.1:3995';
 const STAMP = String(Date.now()).slice(-7);
@@ -29,6 +31,10 @@ try {
   await b.onNewDocument(`localStorage.setItem('jeopardy-user-storage', ${JSON.stringify(
     JSON.stringify({ state: { token, isAuthenticated: true, isGuest: false }, version: 0 })
   )});`);
+  await b.onNewDocument(fakeModel({
+    delays: { categories: 200, questions: 200 },
+    failWith: { status: 400, message: 'API key not valid. Please pass a valid API key.' },
+  }));
   await b.goto(`${APP}/host`);
   await b.until("!!document.querySelector('.ge-board')", { timeout: 15000 });
 
@@ -87,6 +93,27 @@ try {
     (await b.evaluate("document.querySelector('.ge-head').textContent")).includes('MY OWN CATEGORY'),
     await b.evaluate("document.querySelector('.ge-head').textContent"));
   await b.shot('ai-failed.png');
+
+  console.log('\n-- and when it is simply out of requests --');
+  /* The other failure a host actually meets, and the one a key that works
+     until it does not produces. It must not read like the setup failure. */
+  await b.evaluate(fakeModel({
+    delays: { categories: 150, questions: 150 },
+    failWith: { status: 429, message: 'Resource has been exhausted (e.g. check quota).' },
+  }));
+  await b.evaluate("document.querySelector('.host-ai').click()");
+  await b.until("!!document.querySelector('.hf-scrim input')", { timeout: 8000 });
+  await b.type('.hf-scrim input', 'Volcanoes');
+  await b.evaluate("document.querySelector('.hf-scrim button[type=submit]').click()");
+  /* Waits for the words to change rather than for the element to appear: it is
+     already on screen from the failure before, and pulling it out of the DOM by
+     hand leaves React updating a node that is no longer there. */
+  await b.until("/out of requests/i.test(document.querySelector('.host-error')?.textContent ?? '')", { timeout: 15000 });
+  const quota = await b.evaluate("document.querySelector('.host-error').textContent");
+  check('running out of requests says so, and says to come back',
+    /out of requests/i.test(quota) && /again/i.test(quota), quota);
+  check('and does not blame the setup, which is fine',
+    !/not set up/i.test(quota), quota);
 
   console.log('\n-- the ways in that do not need a model --');
   await wait(300);

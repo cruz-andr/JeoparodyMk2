@@ -1,13 +1,13 @@
 /**
  * Watching a board actually get written.
  *
- * Opt in with E2E_REAL_AI=1, because it spends real quota on somebody's key
- * and waits on somebody else's service. Without it this does nothing, so the
- * ordinary run stays free and offline.
+ * host-ai-offline drives these same screens against a model answered from
+ * inside the page, and that is the one the ordinary run uses. This one exists
+ * to check the fake still matches the real service: if Google changes the
+ * shape of what it sends, this fails and the offline suite would not.
  *
- * What it holds: while a model is working the screen says so in three places
- * at once, and the six category names land on the board before the clues do,
- * so the wait is spent watching something happen.
+ * Opt in with E2E_REAL_AI=1. It spends real quota, so without it this does
+ * nothing.
  */
 import { launch } from './driver.mjs';
 
