@@ -39,7 +39,7 @@ export default [
   /* Node, not a browser. Last, because flat config is last one wins and the
      block above would otherwise put the browser globals back. */
   {
-    files: ['server/**/*.js', 'e2e/**/*.mjs', '**/*.test.js', 'eslint.config.js', 'vite.config.js'],
+    files: ['server/**/*.js', 'e2e/**/*.mjs', 'scripts/**/*.mjs', '**/*.test.js', 'eslint.config.js', 'vite.config.js'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
