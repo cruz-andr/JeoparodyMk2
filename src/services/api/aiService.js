@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { tidyBoard } from './tidyBoard';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -111,6 +112,20 @@ ${difficultyNote}
 IMPORTANT: In Jeopardy, the "answer" is shown to the player (as a clue), and they respond with a question.
 Example: If the answer/clue is "This planet is known as the Red Planet", the correct question is "What is Mars?".
 
+Every response must name exactly one answer. Never offer an alternative in
+brackets, never write "or", "aka" or "also known as", and never separate two
+answers with a slash. If you are not confident enough in a fact to give one
+answer, write a different clue you are sure of.
+
+Difficulty is set by the point value, not by position in the list. Take each
+row as its own brief:
+- ${pointValues[0]}: almost everyone who knows the topic gets this.
+- ${pointValues[1]}: a regular quiz player gets this.
+- ${pointValues[2]}: someone who follows the subject gets this.
+- ${pointValues[3]}: needs real knowledge of the subject.
+- ${pointValues[4]}: the hardest clue on the board, and it must be harder than the ${pointValues[3]} one.
+Never put a household name at ${pointValues[4]} or an obscure one at ${pointValues[0]}.
+
 Return ONLY a valid JSON object with this exact structure (no markdown, no extra text):
 {
   "categories": [
@@ -127,7 +142,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no extra
   ]
 }
 
-Generate for all ${categories.length} categories with progressively harder questions.`;
+Generate for all ${categories.length} categories.`;
 
   const result = await aiModel.generateContent(prompt);
   const response = await result.response;
@@ -140,7 +155,10 @@ Generate for all ${categories.length} categories with progressively harder quest
     if (match) jsonStr = match[1].trim();
   }
 
-  return JSON.parse(jsonStr);
+  /* Tidied on the way out, so nothing downstream has to know the model
+     sometimes hedges. This is a pass over text that already arrived: it asks
+     the model nothing and costs nothing. */
+  return tidyBoard(JSON.parse(jsonStr));
 }
 
 export async function generateFinalJeopardyQuestion(genre) {

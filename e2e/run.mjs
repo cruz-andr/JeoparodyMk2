@@ -91,10 +91,11 @@ const api = start('api', 'node', [join(root, 'server', 'index.js')], {
 
 const app = start('app', process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(APP_PORT), '--strictPort'], {
   VITE_SOCKET_URL: `http://localhost:${API_PORT}`,
-  /* No model key. A suite must never spend real quota or wait on somebody
-     else's service, and the path worth covering here is what a host sees when
-     the model cannot be reached. */
-  VITE_GEMINI_API_KEY: '',
+  /* No model key by default: a suite must never spend real quota or wait on
+     somebody else's service, and the path worth covering is what a host sees
+     when the model cannot be reached. E2E_REAL_AI=1 hands the real key over
+     for the rare check that has to watch a generation actually happen. */
+  VITE_GEMINI_API_KEY: process.env.E2E_REAL_AI === '1' ? (process.env.VITE_GEMINI_API_KEY ?? '') : '',
 }, root);
 
 await waitFor(`http://127.0.0.1:${API_PORT}/health`, api);

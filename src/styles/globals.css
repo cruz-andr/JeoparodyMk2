@@ -178,7 +178,15 @@ button.quiet-action:focus-visible {
   color: var(--jeopardy-gold);
 }
 
-button.quiet-action:disabled { color: var(--text-muted); cursor: default; }
+/* Dimmed as well as recoloured. The colour alone was being outweighed by
+   something later in the cascade and a disabled quiet button looked exactly
+   like a live one, so there was no way to tell a button that was working from
+   one waiting to be pressed. Opacity is set by nothing else on these. */
+button.quiet-action:disabled {
+  color: var(--text-muted);
+  opacity: 0.55;
+  cursor: default;
+}
 
 /* Button Variants */
 .btn-primary {

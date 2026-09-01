@@ -521,6 +521,7 @@ export default function HostPage() {
 
             {atWork && (
               <p className="host-writing" role="status">
+                <span className="host-writing-dot" aria-hidden="true" />
                 {writing.stage === 'categories'
                   ? 'Thinking of six categories'
                   : `Writing thirty clues for ${writing.names.slice(0, 3).join(', ')}${
@@ -528,6 +529,7 @@ export default function HostPage() {
               </p>
             )}
 
+            <div className={atWork ? 'host-board is-writing' : 'host-board'}>
             <BoardGridEditor
               board={board}
               onChange={onBoardChange}
@@ -545,6 +547,7 @@ export default function HostPage() {
               dailyDoublesWanted={wanted}
               onToggleDailyDouble={marking ? markDouble : undefined}
             />
+            </div>
           </>
         )}
 
