@@ -488,7 +488,9 @@ export function initializeSocketHandlers(io) {
     // Quickplay matchmaking
     socket.on('quickplay:join-queue', ({ displayName, signature }) => {
       gameManager.joinMatchmakingQueue(socket, displayName, signature);
-      socket.emit('quickplay:queue-joined');
+      // The thresholds travel with the ack so the waiting screen and the
+      // matchmaker never disagree about when "two will do".
+      socket.emit('quickplay:queue-joined', gameManager.matchmakingTimings());
 
       // Check if we can make a match
       const match = gameManager.tryCreateMatch();

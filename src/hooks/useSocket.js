@@ -197,21 +197,39 @@ export function useRoom(roomCode) {
 }
 
 // Hook for quickplay matchmaking
+const DEFAULT_TIMINGS = { pairAfterMs: 20000, giveUpAfterMs: 45000 };
+
 export function useMatchmaking() {
   const { isConnected, subscribe } = useSocket();
   const [isInQueue, setIsInQueue] = useState(false);
   const [matchFound, setMatchFound] = useState(null);
+  const [noMatch, setNoMatch] = useState(null);
   const [queueTime, setQueueTime] = useState(0);
+  const [timings, setTimings] = useState(DEFAULT_TIMINGS);
   const timerRef = useRef(null);
 
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubQueueJoined = subscribe('quickplay:queue-joined', () => {
+    const stopTimer = () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+
+    const unsubQueueJoined = subscribe('quickplay:queue-joined', (data) => {
       setIsInQueue(true);
+      setNoMatch(null);
       setQueueTime(0);
+      // The server says when it will settle for two and when it gives up, so
+      // the waiting copy never promises something the matchmaker will not do.
+      if (data?.pairAfterMs && data?.giveUpAfterMs) {
+        setTimings({ pairAfterMs: data.pairAfterMs, giveUpAfterMs: data.giveUpAfterMs });
+      }
 
       // Start queue timer
+      stopTimer();
       timerRef.current = setInterval(() => {
         setQueueTime((prev) => prev + 1);
       }, 1000);
@@ -220,30 +238,34 @@ export function useMatchmaking() {
     const unsubQueueLeft = subscribe('quickplay:queue-left', () => {
       setIsInQueue(false);
       setQueueTime(0);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      stopTimer();
     });
 
     const unsubMatchFound = subscribe('quickplay:match-found', (data) => {
       setMatchFound(data);
       setIsInQueue(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      stopTimer();
+    });
+
+    // The server has already taken us out of the queue; this only tells the
+    // screen why the spinner stopped.
+    const unsubNoMatch = subscribe('quickplay:no-match', (data) => {
+      setNoMatch({ message: data?.message || 'Nobody else is looking right now.' });
+      setIsInQueue(false);
+      stopTimer();
     });
 
     return () => {
       unsubQueueJoined();
       unsubQueueLeft();
       unsubMatchFound();
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      unsubNoMatch();
+      stopTimer();
     };
   }, [isConnected, subscribe]);
 
   const joinQueue = useCallback((displayName, signature) => {
+    setNoMatch(null);
     socketApi.joinMatchmaking(displayName, signature);
   }, []);
 
@@ -255,7 +277,9 @@ export function useMatchmaking() {
     isConnected,
     isInQueue,
     matchFound,
+    noMatch,
     queueTime,
+    timings,
     joinQueue,
     leaveQueue,
   };

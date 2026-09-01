@@ -1,11 +1,26 @@
 import { v4 as uuidv4 } from 'uuid';
 
+/* How long the matchmaker holds out for a full table before it settles.
+
+   Three players is the game as designed. A queue that insisted on three at the
+   same instant, with no clock, left a lone player on the spinner forever: the
+   second person to arrive had usually given up before the third existed. So
+   after PAIR_AFTER_MS with two waiting the match starts with two, and after
+   GIVE_UP_AFTER_MS alone the player is told so and released. */
+export const PAIR_AFTER_MS = 20000;
+export const GIVE_UP_AFTER_MS = 45000;
+export const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
+
 export class GameStateManager {
-  constructor() {
+  constructor({ now = () => Date.now(), pairAfterMs = PAIR_AFTER_MS, giveUpAfterMs = GIVE_UP_AFTER_MS } = {}) {
     this.rooms = new Map(); // roomCode -> GameRoom
     this.playerRooms = new Map(); // socketId -> roomCode (legacy, kept for cleanup)
     this.sessionRooms = new Map(); // sessionId -> roomCode (for reconnection)
-    this.matchmakingQueue = []; // Array of { socket, displayName, joinedAt }
+    this.matchmakingQueue = []; // Array of { socket, displayName, signature, queuedAt }
+    /* Injectable so a test can move the clock instead of waiting on it. */
+    this.now = now;
+    this.pairAfterMs = pairAfterMs;
+    this.giveUpAfterMs = giveUpAfterMs;
   }
 
   // Room Management
@@ -908,7 +923,7 @@ export class GameStateManager {
       socket,
       displayName,
       signature,
-      joinedAt: Date.now(),
+      queuedAt: this.now(),
     });
   }
 
@@ -918,14 +933,39 @@ export class GameStateManager {
     );
   }
 
+  /** The thresholds a waiting client shows, so its copy and the server agree. */
+  matchmakingTimings() {
+    return { pairAfterMs: this.pairAfterMs, giveUpAfterMs: this.giveUpAfterMs };
+  }
+
+  /* Three if three are here. Two once the longest wait has passed the pairing
+     threshold. Nobody, and a plain message to the one person left, once they
+     have waited alone past the give-up threshold: they leave the queue, so the
+     next tick does not tell them again. */
   tryCreateMatch() {
-    if (this.matchmakingQueue.length < 3) {
-      return null;
+    const queue = this.matchmakingQueue;
+    if (queue.length === 0) return null;
+
+    if (queue.length >= 3) {
+      return this.buildMatch(queue.splice(0, 3));
     }
 
-    // Take first 3 players
-    const matchedPlayers = this.matchmakingQueue.splice(0, 3);
+    const waited = this.now() - queue[0].queuedAt;
 
+    if (queue.length === 2) {
+      return waited >= this.pairAfterMs ? this.buildMatch(queue.splice(0, 2)) : null;
+    }
+
+    if (waited >= this.giveUpAfterMs) {
+      const [{ socket }] = queue.splice(0, 1);
+      if (typeof socket.emit === 'function') {
+        socket.emit('quickplay:no-match', { message: NO_MATCH_MESSAGE });
+      }
+    }
+    return null;
+  }
+
+  buildMatch(matchedPlayers) {
     // Create room
     const roomCode = this.generateRoomCode();
     const room = {

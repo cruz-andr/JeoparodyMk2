@@ -443,6 +443,35 @@ async function run() {
     assert.ok(await showClue, 'a departed player cannot hold the round open');
   });
 
+  await test('joining the quickplay queue is acknowledged with the matchmaking thresholds', async (open) => {
+    const lone = await connect(`lone-${Math.random()}`);
+    open.push(lone);
+
+    const ack = once(lone, 'quickplay:queue-joined');
+    lone.emit('quickplay:join-queue', { displayName: 'Lone' });
+    const timings = await ack;
+    assert.equal(timings.pairAfterMs, 20000);
+    assert.equal(timings.giveUpAfterMs, 45000);
+
+    assert.ok(await notEmitted(lone, 'quickplay:match-found'), 'one player is not a match');
+    lone.emit('quickplay:leave-queue');
+    await once(lone, 'quickplay:queue-left');
+  });
+
+  await test('three in the quickplay queue are matched the instant the third arrives', async (open) => {
+    const players = [];
+    for (let i = 0; i < 3; i += 1) players.push(await connect(`qp-${i}-${Math.random()}`));
+    open.push(...players);
+
+    const found = players.map((p) => once(p, 'quickplay:match-found'));
+    players.forEach((p, i) => p.emit('quickplay:join-queue', { displayName: `P${i}` }));
+    const payloads = await Promise.all(found);
+
+    const codes = new Set(payloads.map((m) => m.roomCode));
+    assert.equal(codes.size, 1, 'everyone lands in the same room');
+    assert.equal(payloads[0].players.length, 3);
+  });
+
   console.log(`\n${passed} passed, ${failures.length} failed\n`);
   for (const { name, err } of failures) {
     console.log(`  FAIL  ${name}`);
