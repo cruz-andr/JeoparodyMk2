@@ -7,6 +7,7 @@
  * way back that actually reaches the menu.
  */
 import { launch } from './driver.mjs';
+import { FORBIDDEN_WORDS } from '../src/components/common/errorReport.js';
 const STAMP = String(Date.now()).slice(-7);
 const APP = 'http://localhost:5000';
 const API = 'http://127.0.0.1:3995';
@@ -20,9 +21,12 @@ const { token } = await (await fetch(`${API}/api/auth/register`, {
 let bad = 0;
 const check = (n, ok, d = '') => { if (!ok) bad++; console.log(`${ok ? '  ok  ' : ' FAIL '} ${n}${d ? '  ' + d : ''}`); };
 
-/* The words a visitor must never read. Lower case; the page text is lowered
-   before the search so "Developer" and "developer" are the same miss. */
-const FORBIDDEN = ['developer', 'errorboundary', 'unexpected application error', 'application error'];
+/* The words a visitor must never read, the same list the unit test checks
+   the copy against, so a word added there is looked for here too. Lower
+   case; the page text is lowered before the search so "Developer" and
+   "developer" are the same miss. The ticket's exact phrase is asserted by
+   name as well, so a reader can see it. */
+const FORBIDDEN = [...new Set([...FORBIDDEN_WORDS, 'unexpected application error'])];
 
 const b = await launch({ width: 1280, height: 800, dpr: 2 });
 try {

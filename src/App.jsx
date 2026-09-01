@@ -3,8 +3,11 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { useSettingsStore } from './stores/settingsStore';
 import ErrorBoundary from './components/common/ErrorBoundary';
 /* Not lazy. A chunk that fails to load is one of the errors this page
-   exists to show, and the page for that cannot itself be a chunk. */
+   exists to show, and the page for that cannot itself be a chunk. It draws
+   NotFoundPage for a 404, so that page is in the main chunk too; a lazy()
+   around it here would be inert, and Vite says so on every build. */
 import RouteErrorPage from './pages/RouteErrorPage';
+import NotFoundPage from './pages/NotFoundPage';
 import './styles/globals.css';
 
 // Lazy-load all pages — each becomes its own chunk,
@@ -37,7 +40,6 @@ const BoardPage = lazy(() => import('./pages/BoardPage'));
 const BoardEditPage = lazy(() => import('./pages/BoardEditPage'));
 const BoardsBrowsePage = lazy(() => import('./pages/BoardsBrowsePage'));
 const GuidelinesPage = lazy(() => import('./pages/GuidelinesPage'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function PageLoader() {
   return (

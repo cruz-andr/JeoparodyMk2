@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 import ErrorScreen, { MenuLink } from '../components/common/ErrorScreen';
 import { VISITOR_COPY, reportError } from '../components/common/errorReport';
@@ -16,8 +16,13 @@ export default function RouteErrorPage() {
   const error = useRouteError();
   const notFound = isRouteErrorResponse(error) && error.status === 404;
 
+  /* Once per error. StrictMode runs every effect twice in development, and
+     a reporter that hears one crash as two would be counting wrong. */
+  const reported = useRef(null);
   useEffect(() => {
-    if (!notFound) reportError(error, {});
+    if (notFound || reported.current === error) return;
+    reported.current = error;
+    reportError(error, {});
   }, [error, notFound]);
 
   if (notFound) return <NotFoundPage />;
