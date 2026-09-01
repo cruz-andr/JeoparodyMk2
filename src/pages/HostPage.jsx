@@ -17,6 +17,31 @@ import './HostPage.css';
 
 const DOUBLE_VALUES = [400, 800, 1200, 1600, 2000];
 
+/**
+ * What went wrong with the model, in words a host can act on.
+ *
+ * The service throws whatever the SDK or the network handed it, and somebody
+ * who asked for a board about rivers should not be told about an environment
+ * variable. Each of these says what to do next, because writing the board by
+ * hand is always still open.
+ */
+function aiTrouble(err) {
+  const raw = String(err?.message ?? '');
+  if (/API[_ ]?key|not set|invalid key|401|403|PERMISSION/i.test(raw)) {
+    return 'The AI is not set up on this site. Write the board yourself, upload a file, or duplicate a community board.';
+  }
+  if (/quota|rate limit|429|RESOURCE_EXHAUSTED|exhausted/i.test(raw)) {
+    return 'The AI is out of requests for now. Try again in a few minutes, or write the board yourself.';
+  }
+  if (/network|failed to fetch|ECONN|timeout|abort/i.test(raw)) {
+    return 'Could not reach the AI. Check your connection and try again.';
+  }
+  if (/JSON|parse|unexpected token/i.test(raw)) {
+    return 'The AI sent back something unusable. Try again, or write the board yourself.';
+  }
+  return 'Could not write the board. Try again, or write it yourself.';
+}
+
 /** Round two is the same board at twice the money. */
 function doubledBoard() {
   const board = emptyBoard();
@@ -62,7 +87,9 @@ export default function HostPage() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [fill, setFill] = useState(null); // 'ai' | 'file' | 'board'
-  const [busy, setBusy] = useState('');
+  /* What the model is doing right now, so the board can say so instead of
+     sitting there looking finished and wrong. */
+  const [writing, setWriting] = useState(null);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState('');
   /* What the board was generated from, and how many re-rolls are left on it.
@@ -111,6 +138,10 @@ export default function HostPage() {
      but a marker on screen has to mean the game will use it. */
   const placed = placing && typeof round === 'number' ? doubles[round] ?? [] : [];
 
+  /* Only on the round being written. Switching tabs mid write shows the other
+     round as it is, rather than claiming that one is being written too. */
+  const atWork = writing && writing.round === (round === 2 ? 2 : 1) && round !== 'final';
+
   /* Marking is a mode on one board, so it ends when that board leaves the
      screen. A host who switches to Double Jeopardy is usually going there to
      write it, and their first click landing a marker instead of opening a clue
@@ -138,13 +169,45 @@ export default function HostPage() {
 
   // ------------------------------------------------------------- filling
 
+  /**
+   * Write a round from a topic.
+   *
+   * The panel closes first and the board fills in as the answers arrive: six
+   * category names land as soon as they are known, then the thirty clues under
+   * them. It used to sit behind a closed panel doing nothing visible for the
+   * best part of a minute, and if it failed the error rendered on the page
+   * underneath the panel covering it, so a failure and a slow success looked
+   * exactly the same: nothing.
+   */
   const fillWithAi = async (topic) => {
     setError('');
-    setBusy('Writing the board');
+    setFill(null);
+    const target = round === 2 ? 2 : 1;
+    /* Kept so a failure halfway leaves the board as the host had it. The names
+       land before the clues, so a model that answers the first call and fails
+       the second used to overwrite whatever the host had named their own
+       categories and then stop, with no way back to them. */
+    const before = rounds[target];
+    setWriting({ round: target, stage: 'categories', names: [] });
+
     try {
       const names = await aiService.generateCategories(topic);
-      const values = round === 2 ? DOUBLE_VALUES : POINT_VALUES;
-      const result = await aiService.generateQuestions(names, values, round === 2 ? 2 : 1, settings.difficulty);
+
+      /* The names go on the board the moment they exist. Six headers appearing
+         is real progress rather than a spinner claiming some. */
+      setRounds((all) => ({
+        ...all,
+        [target]: {
+          ...all[target],
+          categories: all[target].categories.map((category, c) => ({
+            ...category, name: names[c] ?? category.name,
+          })),
+        },
+      }));
+      setWriting({ round: target, stage: 'clues', names });
+
+      const values = target === 2 ? DOUBLE_VALUES : POINT_VALUES;
+      const result = await aiService.generateQuestions(names, values, target, settings.difficulty);
 
       const filled = emptyBoard();
       result.categories.forEach((category, c) => {
@@ -159,14 +222,14 @@ export default function HostPage() {
         });
       });
 
-      setRounds((all) => ({ ...all, [round]: filled }));
-      setTopics((all) => ({ ...all, [round]: topic }));
-      setRerolls((all) => ({ ...all, [round]: 5 }));
-      setFill(null);
+      setRounds((all) => ({ ...all, [target]: filled }));
+      setTopics((all) => ({ ...all, [target]: topic }));
+      setRerolls((all) => ({ ...all, [target]: 5 }));
     } catch (err) {
-      setError(err.message || 'Could not write the board. Try again, or write it yourself.');
+      setRounds((all) => ({ ...all, [target]: before }));
+      setError(aiTrouble(err));
     } finally {
-      setBusy('');
+      setWriting(null);
     }
   };
 
@@ -225,7 +288,7 @@ export default function HostPage() {
       }));
       setRerolls((all) => ({ ...all, [round]: Math.max(all[round] - 1, 0) }));
     } catch (err) {
-      setError(err.message || 'Could not find another category. Try again, or rename it yourself.');
+      setError(aiTrouble(err));
     }
   };
 
@@ -239,7 +302,7 @@ export default function HostPage() {
          handing back all four would put the answer in twice. */
       return (result?.options ?? []).slice(1);
     } catch (err) {
-      setError(err.message || 'Could not think of any. Write them yourself.');
+      setError(aiTrouble(err));
       return [];
     }
   };
@@ -272,6 +335,13 @@ export default function HostPage() {
    * finished choosing, and a host who changes their mind and leaves has not
    * left a room behind.
    */
+  /* Defaults, then whatever is already there, then the field being typed in.
+     Written three times inline it repeated the key it was overriding, which
+     works because the last one wins but reads like a mistake. */
+  const editFinal = (field) => (e) => setFinal((f) => ({
+    category: '', answer: '', question: '', ...(f ?? {}), [field]: e.target.value,
+  }));
+
   const start = async () => {
     if (notReady || opening) return;
     setOpening(true);
@@ -390,7 +460,7 @@ export default function HostPage() {
                 value={final?.category ?? ''}
                 maxLength={60}
                 placeholder="One more category"
-                onChange={(e) => setFinal((f) => ({ category: '', answer: '', question: '', ...f, category: e.target.value }))}
+                onChange={editFinal('category')}
               />
             </label>
             <label className="host-field" data-field="clue">
@@ -399,7 +469,7 @@ export default function HostPage() {
                 value={final?.answer ?? ''}
                 maxLength={1000}
                 placeholder="What the players see after the wagers"
-                onChange={(e) => setFinal((f) => ({ category: '', answer: '', question: '', ...f, answer: e.target.value }))}
+                onChange={editFinal('answer')}
               />
             </label>
             <label className="host-field" data-field="response">
@@ -408,7 +478,7 @@ export default function HostPage() {
                 value={final?.question ?? ''}
                 maxLength={1000}
                 placeholder="What is&hellip;?"
-                onChange={(e) => setFinal((f) => ({ category: '', answer: '', question: '', ...f, question: e.target.value }))}
+                onChange={editFinal('question')}
               />
             </label>
             {finalIs !== 'none' && (
@@ -424,14 +494,16 @@ export default function HostPage() {
               <button
                 className="plain-btn quiet-action host-ai"
                 onClick={() => setFill('ai')}
-                disabled={Boolean(busy)}
+                disabled={Boolean(writing)}
               >
                 {/* The four-pointed star the menu cards already use, rather than
                     a sparkle borrowed from every other AI feature online. */}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12 0 L14.4 9.6 L24 12 L14.4 14.4 L12 24 L9.6 14.4 L0 12 L9.6 9.6 Z" />
                 </svg>
-                {busy || 'Or use AI to create the board'}
+                {atWork
+                  ? (writing.stage === 'categories' ? 'Thinking of six categories' : 'Writing the clues')
+                  : 'Or use AI to create the board'}
               </button>
 
               {placing && (
@@ -446,6 +518,15 @@ export default function HostPage() {
                 </button>
               )}
             </div>
+
+            {atWork && (
+              <p className="host-writing" role="status">
+                {writing.stage === 'categories'
+                  ? 'Thinking of six categories'
+                  : `Writing thirty clues for ${writing.names.slice(0, 3).join(', ')}${
+                    writing.names.length > 3 ? ' and three more' : ''}`}
+              </p>
+            )}
 
             <BoardGridEditor
               board={board}
@@ -506,7 +587,6 @@ export default function HostPage() {
           kind={fill}
           round={round === 2 ? 2 : 1}
           token={token}
-          busy={busy}
           onTopic={fillWithAi}
           onBoard={fillFromBoard}
           onClose={() => setFill(null)}

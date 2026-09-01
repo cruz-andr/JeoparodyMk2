@@ -145,6 +145,17 @@ button.host-round:focus-visible {
 }
 
 /* ---- the write line, with AI beside it ---- */
+/* What the model is doing, under the write line and above the board, so it is
+   read in the same glance as the board filling in. */
+.host-writing {
+  margin: 0 0 10px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1.1px;
+  color: var(--jeopardy-gold-light);
+}
+
 .host-write-line {
   display: flex;
   align-items: center;
@@ -274,7 +285,18 @@ button.host-alt {
 
   /* Stacked, and both lines start at the same place. Centring only the second
      one made the pair look accidental. */
-  .host-write-line { align-items: flex-start; flex-direction: column; gap: 8px; }
+  /* What the model is doing, under the write line and above the board, so it is
+   read in the same glance as the board filling in. */
+.host-writing {
+  margin: 0 0 10px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1.1px;
+  color: var(--jeopardy-gold-light);
+}
+
+.host-write-line { align-items: flex-start; flex-direction: column; gap: 8px; }
   button.host-ai { justify-content: flex-start; padding-left: 0; }
 
   .host-foot { flex-direction: column; align-items: stretch; }

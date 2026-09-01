@@ -91,6 +91,10 @@ const api = start('api', 'node', [join(root, 'server', 'index.js')], {
 
 const app = start('app', process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(APP_PORT), '--strictPort'], {
   VITE_SOCKET_URL: `http://localhost:${API_PORT}`,
+  /* No model key. A suite must never spend real quota or wait on somebody
+     else's service, and the path worth covering here is what a host sees when
+     the model cannot be reached. */
+  VITE_GEMINI_API_KEY: '',
 }, root);
 
 await waitFor(`http://127.0.0.1:${API_PORT}/health`, api);
