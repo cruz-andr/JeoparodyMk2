@@ -24,6 +24,7 @@ import { initializeDatabase } from './config/database.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
+import { info as logInfo, error as logError, fatal as logFatal } from './utils/log.js';
 
 // Import J-Archive scraper for Daily Challenge
 import { getDailyChallenge } from './services/jarchiveScraper.js';
@@ -124,7 +125,7 @@ app.get('/api/daily/challenge', async (req, res) => {
     const challenge = await getDailyChallenge();
     res.json(challenge);
   } catch (error) {
-    console.error('Daily challenge error:', error);
+    logError({ msg: 'Daily challenge failed', path: req.originalUrl, method: req.method }, error);
     res.status(500).json({ error: 'Failed to fetch daily challenge' });
   }
 });
@@ -135,6 +136,52 @@ app.use(errorHandler);
 // Initialize socket handlers
 initializeSocketHandlers(io);
 
+/* Crashes.
+
+   Without these an uncaught exception prints a stack and exits 1, which is
+   fine, but an unhandled rejection only warns on this Node version and the
+   process limps on with whatever state the failed promise left behind. Both
+   now log one JSON line and exit non-zero, so Fly restarts the machine into a
+   known state rather than us guessing which rooms survived. */
+function die(kind, reason) {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  logFatal({ msg: kind, err: err.message, stack: err.stack });
+  process.exit(1);
+}
+process.on('uncaughtException', (err) => die('uncaughtException', err));
+process.on('unhandledRejection', (reason) => die('unhandledRejection', reason));
+
+/* Fly sends SIGTERM before it stops a machine. Stop accepting, close the
+   sockets so clients reconnect to the new machine promptly instead of waiting
+   out pingTimeout, and give in-flight requests a moment to finish. Five
+   seconds is well inside Fly's kill timeout. */
+const SHUTDOWN_MS = 5000;
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logInfo({ msg: 'Shutting down', signal });
+
+  const deadline = setTimeout(() => {
+    logError({ msg: 'Shutdown timed out, exiting anyway', signal, timeoutMs: SHUTDOWN_MS });
+    process.exit(1);
+  }, SHUTDOWN_MS);
+  deadline.unref();
+
+  /* io.close() also closes the underlying http server, but only once every
+     socket has gone; closing httpServer explicitly afterwards is a no-op on
+     the happy path and makes the ordering plain. */
+  io.close(() => {
+    httpServer.close(() => {
+      clearTimeout(deadline);
+      logInfo({ msg: 'Closed cleanly', signal });
+      process.exit(0);
+    });
+  });
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 // Start server
 const PORT = process.env.SERVER_PORT || 3001;
 
@@ -142,15 +189,14 @@ async function startServer() {
   try {
     // Initialize database
     await initializeDatabase();
-    console.log('Database initialized successfully');
+    logInfo({ msg: 'Database initialized' });
 
     // Start HTTP server
     httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`WebSocket server ready`);
+      logInfo({ msg: 'Server running', port: httpServer.address().port, websocket: 'ready' });
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logFatal({ msg: 'Failed to start server' }, error);
     process.exit(1);
   }
 }
