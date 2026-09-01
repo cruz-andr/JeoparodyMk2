@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/boards/BoardsChrome.css';
 import './GuidelinesPage.css';
 
@@ -11,6 +12,7 @@ import './GuidelinesPage.css';
  * nobody published is just reporting something you did not like.
  */
 export default function GuidelinesPage() {
+  usePageTitle('Guidelines');
   const navigate = useNavigate();
 
   return (

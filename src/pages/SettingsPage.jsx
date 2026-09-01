@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import SettingsPanel from '../components/common/SettingsPanel';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './SettingsPage.css';
 
 /**
@@ -10,6 +11,7 @@ import './SettingsPage.css';
  * so they come straight here from the menu.
  */
 export default function SettingsPage() {
+  usePageTitle('Settings');
   const navigate = useNavigate();
 
   return (

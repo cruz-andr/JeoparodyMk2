@@ -13,6 +13,7 @@ import BoardGridEditor from '../components/boards/BoardGridEditor';
 import HostSettingsSheet from '../components/host/HostSettingsSheet';
 import HostFillPanel from '../components/host/HostFillPanel';
 import Icon from '../components/common/Icon';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './HostPage.css';
 
 const DOUBLE_VALUES = [400, 800, 1200, 1600, 2000];
@@ -66,6 +67,7 @@ function doubledBoard() {
  * are still writing.
  */
 export default function HostPage() {
+  usePageTitle('Host a game');
   const navigate = useNavigate();
   const { isConnected } = useSocket();
 

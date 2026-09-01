@@ -4,6 +4,7 @@ import { useUserStore } from '../stores';
 import { readableError } from '../services/api/authService';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/auth/auth-forms.css';
 
 /* Shown under the field and ticked as they are met. Being told the rule only
@@ -15,6 +16,7 @@ const RULES = [
 ];
 
 export default function SignUpPage() {
+  usePageTitle('Make an account');
   const navigate = useNavigate();
   const register = useUserStore((s) => s.register);
 

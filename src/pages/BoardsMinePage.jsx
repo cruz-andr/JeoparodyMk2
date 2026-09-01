@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { createBoard, deleteBoard, myBoards } from '../services/api/boardsService';
 import BoardMiniature from '../components/boards/BoardMiniature';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/boards/BoardsChrome.css';
 import './BoardsMinePage.css';
 
@@ -37,6 +38,7 @@ function boardFromCount(clueCount) {
 }
 
 export default function BoardsMinePage() {
+  usePageTitle('My Boards');
   const navigate = useNavigate();
   const { token, isAuthenticated } = useUserStore();
   const [boards, setBoards] = useState(null);

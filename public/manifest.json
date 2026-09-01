@@ -1,0 +1,15 @@
+{
+  "name": "Jeoparody",
+  "short_name": "Jeoparody",
+  "description": "Play Jeopardy with friends. A daily board, private rooms, quickplay, and a host mode with a projector screen.",
+  "start_url": "/menu",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B0D1F",
+  "theme_color": "#0B0D1F",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

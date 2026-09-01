@@ -4,8 +4,10 @@ import { useUserStore } from '../stores';
 import { useDailyStore } from '../stores/dailyStore';
 import './HighscoresPage.css';
 import AppTabBar from '../components/common/AppTabBar';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export default function HighscoresPage() {
+  usePageTitle('Highscores');
   const navigate = useNavigate();
   const { localHighscores, stats } = useUserStore();
   // The all-time board best lives here rather than on the menu: the menu's job

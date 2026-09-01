@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import AuthLayout from '../components/auth/AuthLayout';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/auth/auth-forms.css';
 
 /**
@@ -13,6 +14,7 @@ import '../components/auth/auth-forms.css';
  * scrubbed from the address bar so it is not left sitting in history.
  */
 export default function AuthCallbackPage() {
+  usePageTitle('Signing you in');
   const navigate = useNavigate();
   const adoptToken = useUserStore((s) => s.adoptToken);
   const [failed, setFailed] = useState(false);

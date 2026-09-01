@@ -6,10 +6,12 @@ import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
 import { socketClient } from '../services/socket/socketClient';
 import SignatureCanvas from '../components/common/SignatureCanvas';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
 import './MultiplayerPage.css';
 
 export default function MultiplayerPage() {
+  usePageTitle('Multiplayer');
   const navigate = useNavigate();
   const [phase, setPhase] = useState('menu'); // 'menu' | 'creating' | 'lobby'
   const [displayName, setDisplayName] = useState('');

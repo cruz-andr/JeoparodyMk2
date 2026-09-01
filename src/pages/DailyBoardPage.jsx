@@ -19,6 +19,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useAudio } from '../hooks';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyResults from '../components/daily/DailyResults';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './DailyBoardPage.css';
 
 const FORMAT = 'board';
@@ -28,6 +29,7 @@ const POINT_VALUES = [200, 400, 600, 800, 1000];
 const flatIndex = (categoryIndex, pointIndex) => categoryIndex * BOARD_ROW_COUNT + pointIndex;
 
 export default function DailyBoardPage() {
+  usePageTitle('The Board');
   const navigate = useNavigate();
   const [openCell, setOpenCell] = useState(null); // { categoryIndex, pointIndex }
   // Null while the player is still typing; set once the answer has been graded.

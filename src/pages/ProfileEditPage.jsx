@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { checkUsername, readableError } from '../services/api/authService';
 import SignatureCanvas from '../components/common/SignatureCanvas';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
 import '../components/auth/auth-forms.css';
 import './ProfileEditPage.css';
@@ -16,6 +17,7 @@ import './ProfileEditPage.css';
  * consequences, and the page says so rather than leaving you to wonder.
  */
 export default function ProfileEditPage() {
+  usePageTitle('Edit profile');
   const navigate = useNavigate();
   const { user, saveUsername, saveSignature, restoreSession, isAuthenticated } = useUserStore();
 
