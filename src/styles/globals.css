@@ -159,7 +159,9 @@ button.quiet-action {
   font-family: var(--font-board);
   text-transform: uppercase;
   font-weight: 700;
-  font-size: 0.76rem;
+  /* A condensed face reads thin below about this, and every one of these is a
+     control somebody has to find. */
+  font-size: 0.92rem;
   letter-spacing: 0.9px;
   color: var(--jeopardy-gold-light);
   cursor: pointer;
