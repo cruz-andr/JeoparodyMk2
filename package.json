@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "test": "node src/stores/dailyLogic.test.js && node src/stores/settingsStore.test.js && node src/stores/boardShape.test.js && node src/components/boards/gridLogic.test.js && node src/hooks/usePageTitle.test.js",
+    "test": "node scripts/test-all.mjs",
     "e2e": "node e2e/run.mjs"
   },
   "dependencies": {
