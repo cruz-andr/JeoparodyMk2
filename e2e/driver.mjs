@@ -184,6 +184,13 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, buttons: 0 });
       await new Promise((r) => setTimeout(r, 120));
     },
+    /* Refuse requests matching these patterns, so a suite can see the page the
+       way a visitor with no web fonts sees it: the fallback face is wider than
+       the condensed one and layouts that only fit with the real font show up. */
+    async block(patterns) {
+      await send('Network.enable');
+      await send('Network.setBlockedURLs', { urls: patterns });
+    },
     /* Become a different device without reloading. A suite that has to reach a
        screen through several steps can walk there once and then look at it at
        both sizes, instead of driving the whole flow twice. */

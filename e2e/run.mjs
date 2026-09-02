@@ -137,13 +137,17 @@ for (const suite of suites) {
       /* With ONLY set you are looking at one suite on purpose, so its own
          output is worth seeing whether or not it passed. */
       if (only && c === 0) console.log(out);
+      /* In CI the six greppable lines are all anyone gets, and a width or a
+         count that differs from a laptop's is invisible in them. A failed
+         suite prints everything it said there, the way ONLY does here. */
+      const verbose = only || process.env.CI;
       if (c !== 0) {
-        console.log(only
+        console.log(verbose
           ? out
           : out.split('\n').filter((l) => /FAIL|THREW|Error/.test(l)).slice(0, 6).join('\n'));
         /* The server's own account of what it did. Half of a failing suite's
            causes are on this side, and guessing from the browser is slow. */
-        if (only) console.log(`\n--- api log ---\n${api.log.split('\n').slice(-40).join('\n')}`);
+        if (verbose) console.log(`\n--- api log ---\n${api.log.split('\n').slice(-40).join('\n')}`);
       }
       resolve(c);
     });
