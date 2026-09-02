@@ -30,10 +30,13 @@ try {
   )});`);
 
   const titles = {};
+  /* Readiness is a DOM selector, never the title itself: a page that renders
+     but forgets its title should fail the title check at once, not sit in a
+     15s wait and then report that it never came up. */
   for (const [path, ready, expect] of [
     ['/menu', '!!document.querySelector(".menu-wordmark")', 'Jeoparody'],
-    ['/daily', 'document.title.startsWith("The Sixer")', 'The Sixer · Jeoparody'],
-    ['/host', 'document.title.startsWith("Host a game")', 'Host a game · Jeoparody'],
+    ['/daily', '!!document.querySelector(".daily-page")', 'The Sixer · Jeoparody'],
+    ['/host', '!!document.querySelector(".host-page")', 'Host a game · Jeoparody'],
   ]) {
     await b.goto(`${APP}${path}`);
     try {
@@ -66,10 +69,16 @@ try {
   check('the icon is no longer the Vite logo', head.icon === '/favicon.svg', String(head.icon));
 
   /* The files the head names must actually be served, or the tab shows a
-     broken icon and the share card is blank. */
-  for (const path of ['/manifest.json', '/og.png', '/favicon.svg', '/apple-touch-icon.png']) {
-    const status = await b.evaluate(`fetch(${JSON.stringify(path)}).then((r) => r.status).catch(() => 0)`);
-    check(`${path} is served`, status === 200, `status ${status}`);
+     broken icon and the share card is blank. A missing file does not 404
+     here: the SPA rewrite answers with index.html and a 200, which is how
+     the automatic /favicon.ico probe used to get a page instead of an icon.
+     So the content type is checked, not just the status. */
+  for (const path of ['/manifest.json', '/og.png', '/favicon.svg', '/favicon.ico', '/apple-touch-icon.png']) {
+    const got = await b.evaluate(`fetch(${JSON.stringify(path)})
+      .then((r) => ({ status: r.status, type: r.headers.get('content-type') || '' }))
+      .catch(() => ({ status: 0, type: '' }))`);
+    check(`${path} is served`, got.status === 200 && !got.type.startsWith('text/html'),
+      `status ${got.status}, ${got.type || 'no content type'}`);
   }
   const manifest = await b.evaluate(`fetch('/manifest.json').then((r) => r.json()).catch(() => null)`);
   check('the manifest starts at the menu', manifest?.start_url === '/menu', String(manifest?.start_url));

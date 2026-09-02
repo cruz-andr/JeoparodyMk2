@@ -20,6 +20,7 @@ const money = (n) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString()}`;
 export default function ProjectorPage() {
   const { roomCode } = useParams();
   const [feed, setFeed] = useState(null);
+  // Reads "Board · CODE · Jeoparody" in the window the host opens.
   usePageTitle(`Board · ${roomCode}`);
 
   useEffect(() => {
