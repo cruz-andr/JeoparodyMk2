@@ -110,6 +110,13 @@
   font-size: 0.9rem;
 }
 
+.scores-note {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .no-scores {
   text-align: center;
   color: var(--text-secondary);

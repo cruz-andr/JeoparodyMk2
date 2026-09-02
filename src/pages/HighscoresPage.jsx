@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../stores';
 import { useDailyStore } from '../stores/dailyStore';
+import { useGameRecord } from '../hooks/useGameRecord';
+import { describeGame, deviceOnlyNote, modeLabel, money, whenPlayed } from '../utils/gameRecord';
 import './HighscoresPage.css';
 import AppTabBar from '../components/common/AppTabBar';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -9,7 +10,9 @@ import { usePageTitle } from '../hooks/usePageTitle';
 export default function HighscoresPage() {
   usePageTitle('Highscores');
   const navigate = useNavigate();
-  const { localHighscores, stats } = useUserStore();
+  /* The same record the profile shows: the archive when signed in, this
+     device's own when not. See hooks/useGameRecord.js. */
+  const { record, source, deviceOnly, loading } = useGameRecord({ limit: 10 });
   // The all-time board best lives here rather than on the menu: the menu's job
   // is a target you can beat today, this is the record.
   const dailyStats = useDailyStore((s) => s.stats);
@@ -24,68 +27,70 @@ export default function HighscoresPage() {
         <h1>Highscores</h1>
 
         {/* Stats Overview */}
-        <div className="stats-overview">
+        <div className="stats-overview" aria-busy={loading}>
           <div className="stat-card">
-            <span className="stat-value">{stats.gamesPlayed}</span>
+            <span className="stat-value">{record.stats.gamesPlayed}</span>
             <span className="stat-label">Games Played</span>
           </div>
           <div className="stat-card">
-            <span className="stat-value">${stats.highestScore.toLocaleString()}</span>
-            <span className="stat-label">Best Solo Score</span>
+            <span className="stat-value">{money(record.stats.bestScore)}</span>
+            <span className="stat-label">Best Score</span>
           </div>
           <div className="stat-card">
             <span className="stat-value">
               {dailyStats.board.bestScore === null
-                ? '\u2014'
+                ? 'None yet'
                 : `${dailyStats.board.bestScore < 0 ? '-' : ''}$${Math.abs(dailyStats.board.bestScore).toLocaleString()}`}
             </span>
             <span className="stat-label">Best Board, All Time</span>
           </div>
           <div className="stat-card">
-            <span className="stat-value">
-              {stats.totalAnswers > 0
-                ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100)
-                : 0}%
-            </span>
+            <span className="stat-value">{record.stats.accuracy}%</span>
             <span className="stat-label">Accuracy</span>
           </div>
         </div>
 
-        {/* Highscores List */}
+        {/* Recent games */}
         <div className="highscores-list">
-          <h2>Recent Scores</h2>
-          {localHighscores.length > 0 ? (
+          <h2>Recent Games</h2>
+          {record.games.length > 0 ? (
             <table className="scores-table">
               <thead>
                 <tr>
-                  <th>Rank</th>
+                  <th>Game</th>
+                  <th>Mode</th>
                   <th>Score</th>
-                  <th>Genre</th>
-                  <th>Date</th>
+                  <th>When</th>
                 </tr>
               </thead>
               <tbody>
-                {localHighscores.slice(0, 10).map((entry, index) => (
+                {record.games.slice(0, 10).map((entry, index) => (
                   <motion.tr
                     key={entry.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <td className="rank">#{index + 1}</td>
+                    <td className="genre">{describeGame(entry)}</td>
+                    <td className="date">{modeLabel(entry.mode)}</td>
                     <td className={`score ${entry.score >= 0 ? 'positive' : 'negative'}`}>
-                      ${entry.score.toLocaleString()}
+                      {money(entry.score)}
                     </td>
-                    <td className="genre">{entry.genre}</td>
-                    <td className="date">
-                      {new Date(entry.date).toLocaleDateString()}
-                    </td>
+                    <td className="date">{whenPlayed(entry.playedAt)}</td>
                   </motion.tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <p className="no-scores">No scores yet. Play a game to set your first highscore!</p>
+            <p className="no-scores">
+              {loading ? 'Looking up your games.' : 'No games yet. Play a game to set your first score.'}
+            </p>
+          )}
+          {source === 'local' && !loading && (
+            <p className="scores-note">Kept on this device. Sign in to keep your record with your account.</p>
+          )}
+          {source === 'account' && deviceOnly > 0 && (
+            <p className="scores-note">{deviceOnlyNote(deviceOnly)}</p>
           )}
         </div>
 

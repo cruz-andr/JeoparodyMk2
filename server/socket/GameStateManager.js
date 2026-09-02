@@ -64,6 +64,15 @@ export class GameStateManager {
       isConnected: true,
       isHost: playerId === room.hostId,
       waitingToJoin: isLateJoin && !!room.gameState?.currentQuestion,
+      /* The account behind the session, when there is one, so the archive
+         can be written to it when the game ends. Server-side only: every
+         payload that carries players goes through publicPlayers(), which
+         drops it along with the tally below. displayName and signature are
+         what the others see. */
+      userId: socket.userId || existing?.userId || null,
+      // How they played, for the archive. Kept across a rejoin like the score.
+      correct: existing?.correct || 0,
+      answered: existing?.answered || 0,
     };
 
     room.players.set(playerId, player);
@@ -74,7 +83,7 @@ export class GameStateManager {
       roomId: room.id,
       roomCode: room.code,
       type: room.type,
-      players: Array.from(room.players.values()),
+      players: this.publicPlayers(room),
       settings: room.settings,
       isHost: player.isHost,
       isLateJoin,
@@ -378,6 +387,32 @@ export class GameStateManager {
     };
   }
 
+  /**
+   * One line in the archive's ledger: a clue this player was judged on.
+   *
+   * Called wherever a score moves for an answer, and nowhere else. A clue
+   * nobody buzzed on is not an answer, so it is not counted against anyone.
+   */
+  /* The players as the room may see them. A player's account id and their
+     running tally are the archive's business, not the room's: sent raw, any
+     player could pull another's user id out of room:joined and read that
+     account's totals by id. */
+  publicPlayers(room) {
+    return Array.from(room.players.values()).map((player) => {
+      const shown = { ...player };
+      delete shown.userId;
+      delete shown.correct;
+      delete shown.answered;
+      return shown;
+    });
+  }
+
+  tally(player, correct) {
+    if (!player) return;
+    player.answered = (player.answered || 0) + 1;
+    if (correct) player.correct = (player.correct || 0) + 1;
+  }
+
   handleAnswer(roomCode, playerId, correct) {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
@@ -399,6 +434,7 @@ export class GameStateManager {
 
     if (correct) {
       player.score = (player.score || 0) + points;
+      this.tally(player, true);
       // Correct answer - they get to pick next
       room.gameState.currentPickerId = playerId;
       room.gameState.currentQuestion = null;
@@ -416,6 +452,7 @@ export class GameStateManager {
       };
     } else {
       player.score = (player.score || 0) - points;
+      this.tally(player, false);
 
       // Check if others can still buzz. Only players who can actually act count:
       // counting disconnected players (or the host of a hosted room) here left
@@ -566,6 +603,7 @@ export class GameStateManager {
 
     const wager = room.gameState.dailyDoubleWager || 0;
     player.score = (player.score || 0) + (correct ? wager : -wager);
+    this.tally(player, correct);
 
     room.gameState.isDailyDouble = false;
     room.gameState.dailyDoubleWager = 0;
@@ -613,6 +651,7 @@ export class GameStateManager {
     } else {
       player.score = (player.score || 0) - wager;
     }
+    this.tally(player, correct);
 
     // Reset Daily Double state
     room.gameState.isDailyDouble = false;
@@ -799,6 +838,7 @@ export class GameStateManager {
 
       // Update player score
       player.score = finalScore;
+      this.tally(player, correct);
 
       results.push({
         playerId,
@@ -837,7 +877,7 @@ export class GameStateManager {
     return {
       status: room.status,
       gameState: room.gameState,
-      players: Array.from(room.players.values()),
+      players: this.publicPlayers(room),
     };
   }
 
@@ -881,6 +921,7 @@ export class GameStateManager {
     } else {
       player.score -= question.points;
     }
+    this.tally(player, isCorrect);
 
     room.gameState.currentQuestion = null;
     room.gameState.buzzedPlayerId = null;
@@ -955,6 +996,9 @@ export class GameStateManager {
         isReady: false,
         isConnected: true,
         isHost: false,
+        userId: socket.userId || null,
+        correct: 0,
+        answered: 0,
       });
       this.playerRooms.set(socket.id, roomCode);
       this.sessionRooms.set(socket.sessionId, roomCode);
@@ -1015,6 +1059,9 @@ export class GameStateManager {
     // Restore player connection
     player.isConnected = true;
     player.socketId = socket.id;
+    // Someone who signed in between dropping and coming back gets their
+    // account attached; someone already attached keeps it.
+    if (socket.userId && !player.userId) player.userId = socket.userId;
 
     // Update mappings
     this.playerRooms.set(socket.id, roomCode);
@@ -1024,7 +1071,7 @@ export class GameStateManager {
       success: true,
       roomCode,
       type: room.type,  // Include room type for host mode detection
-      players: Array.from(room.players.values()),
+      players: this.publicPlayers(room),
       settings: room.settings,
       gameState: room.gameState,
       isHost: player.isHost,
@@ -1280,6 +1327,7 @@ export class GameStateManager {
 
       if (player) {
         player.score = (player.score || 0) + (correct ? points : 0);
+        this.tally(player, correct);
         results.push({
           playerId,
           playerName: player.displayName || player.name,
@@ -1412,6 +1460,10 @@ export class GameStateManager {
     const points = room.gameState.currentQuestion?.points || 0;
     const pointsToApply = correct ? points : -points;
     player.score = (player.score || 0) + pointsToApply;
+    /* Hosted rooms judge every answer through here, verbal, typed or
+       multiple choice, and this path moved the score without counting the
+       answer. Every hosted game was archived as 0 of 0. */
+    this.tally(player, correct);
 
     /* In typed and multiple-choice modes the host works through every
        submission, and clearing the clue after the first judgement dropped its

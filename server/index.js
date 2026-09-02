@@ -16,6 +16,7 @@ import roomRoutes from './routes/rooms.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import boardRoutes from './routes/boards.js';
 import aiRoutes from './routes/ai.js';
+import gameRoutes from './routes/games.js';
 
 // Import socket handlers
 import { initializeSocketHandlers } from './socket/index.js';
@@ -118,6 +119,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
 app.use('/api/boards', boardRoutes);
+app.use('/api/games', gameRoutes);
 
 /* The model. The key lives here and only here; see services/gemini.js. Its
    own budget sits on top of the general one because every call here is paid

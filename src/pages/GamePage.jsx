@@ -43,6 +43,8 @@ export default function GamePage() {
   const { players, isHost, resetRoom, settings, updateSettings, roomType, hostModeState, clearHostModeAnswers, getTypedAnswers } = useRoomStore();
   const { setCategories, setQuestions, setPhase: setGamePhase } = useGameStore();
   const sessionId = useUserStore((s) => s.sessionId);
+  const updateStats = useUserStore((s) => s.updateStats);
+  const addHighscore = useUserStore((s) => s.addHighscore);
   const currentPlayerId = sessionId || socketClient.getSocketId();
 
   // Held in a ref so toggling sound does not tear down and rebuild every
@@ -787,6 +789,38 @@ export default function GamePage() {
       }
     }
   }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion]);
+
+  /* The local record of a room game, written once when the standings appear.
+
+     The archive itself is written by the server at game:end from its own
+     scores, for every player who is signed in; nothing here posts a score, so
+     nothing here can post a better one. This is the copy a visitor without an
+     account keeps, and the number the pages fall back to when the server is
+     out of reach. The host of a hosted room ran the game rather than playing
+     it and has nothing to record. */
+  const recorded = useRef(false);
+  useEffect(() => {
+    if (phase !== 'finished' || recorded.current) return;
+    if (isHostMode && isHost) return;
+    const me = players.find((p) => p.id === currentPlayerId);
+    if (!me) return;
+    recorded.current = true;
+
+    const scores = players
+      .filter((p) => !(isHostMode && p.isHost))
+      .map((p) => p.score || 0);
+    const top = scores.length ? Math.max(...scores) : 0;
+    const myScore = me.score || 0;
+
+    updateStats({ score: myScore, won: myScore === top, questionsCorrect: 0, questionsTotal: 0 });
+    addHighscore({
+      score: myScore,
+      genre: genre || null,
+      categories: categories.map((c) => (typeof c === 'string' ? c : c?.name)).filter(Boolean),
+      mode: roomType || 'multiplayer',
+      rounds: currentRound,
+    });
+  }, [phase, players, currentPlayerId, isHostMode, isHost, genre, categories, roomType, currentRound, updateStats, addHighscore]);
 
   const handleLeave = () => {
     // Clear stored room so we don't try to reconnect
