@@ -20,9 +20,15 @@ on:
   push:
     branches: [main]
 
+# A newer push to a pull request cancels the older run: nobody needs the
+# result of a commit that is no longer the branch tip. A push to main is never
+# cancelled, because this run may be mid deploy, and killing flyctl halfway
+# through a rolling update leaves the Fly app half rolled until the next push
+# gets a green test job of its own. The job level group on deploy-server only
+# serialises deploys against each other; it cannot stop a cancel from here.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -69,11 +75,14 @@ jobs:
       # The browser suites start their own API on 3995 and Vite on 5000 with a
       # throwaway database, so nothing here needs a secret or a network.
       # e2e/driver.mjs reads CHROME for the binary; without it, it looks in
-      # the usual places for the platform.
+      # the usual places for the platform. e2e/run.mjs deletes e2e/shots/ on
+      # the way out, failure or not, unless KEEP_SHOTS=1: without it the
+      # upload step below would find nothing to keep.
       - name: Browser suites
         run: npm run e2e
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          KEEP_SHOTS: '1'
 
       - name: Keep the screenshots of a failed run
         if: failure()
@@ -89,7 +98,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # One deploy at a time, and never cancelled halfway.
+    # One deploy at a time. Not being cancelled halfway is the workflow level
+    # concurrency's job, above: this group only queues deploys behind each other.
     concurrency:
       group: deploy-server
       cancel-in-progress: false
