@@ -98,7 +98,6 @@ export default function DailyPage() {
 
   const currentQuestion = questions[currentIndex];
   const currentAnswer = answers[currentIndex];
-  const allRevealed = answers.every((a) => a.revealed);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();

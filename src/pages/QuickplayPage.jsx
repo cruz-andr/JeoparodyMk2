@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useMatchmaking } from '../hooks';
-import { useUserStore, useSettingsStore, useRoomStore } from '../stores';
+import { useUserStore, useRoomStore } from '../stores';
 import SignatureCanvas from '../components/common/SignatureCanvas';
 import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
@@ -45,7 +45,6 @@ export default function QuickplayPage() {
     isConnected, isInQueue, matchFound, noMatch, queueTime, timings, joinQueue, leaveQueue,
   } = useMatchmaking();
   const { user, isGuest } = useUserStore();
-  const { loadPreset } = useSettingsStore();
 
   // Set default display name
   useEffect(() => {

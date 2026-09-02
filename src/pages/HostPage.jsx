@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useHostStore } from '../stores/hostStore';
 import { useRoomStore, useSettingsStore, useUserStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
-import { hostToBoard, boardToHost } from '../stores/boardShape';
+import { boardToHost } from '../stores/boardShape';
 import socketClient from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import { emptyBoard, countClues, POINT_VALUES } from '@shared/boardFormat.js';

@@ -19,7 +19,7 @@ export default function MultiplayerPage() {
   const [error, setError] = useState(null);
 
   const { isConnected, isConnecting, error: socketError, joinRoom, leaveRoom, setReady, startGame } = useSocket();
-  const { roomCode, players, isHost, createRoom, resetRoom, settings } = useRoomStore();
+  const { roomCode, players, isHost, resetRoom } = useRoomStore();
   const { user, isGuest } = useUserStore();
 
   // Set default display name from user
