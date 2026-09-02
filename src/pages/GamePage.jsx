@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom, useAudio } from '../hooks';
-import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
+import { useRoomStore, useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import GenreSelector from '../components/setup/GenreSelector';
@@ -37,6 +37,10 @@ export default function GamePage() {
   const location = useLocation();
   const { leaveRoom, setReady, subscribe, isConnected } = useRoom(roomCode);
   const { players, isHost, resetRoom, settings, updateSettings, roomType, clearHostModeAnswers } = useRoomStore();
+  // No field of gameStore is read here any more, but the lint pass is not
+  // allowed to change behaviour, and dropping the hook would drop this
+  // page's subscription to the store. Kept as a bare call for that reason.
+  useGameStore();
   const sessionId = useUserStore((s) => s.sessionId);
   const currentPlayerId = sessionId || socketClient.getSocketId();
 
