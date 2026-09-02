@@ -37,7 +37,7 @@ const POINTS = [200, 400, 600, 800, 1000];
 const NAMES = ['RIVERS', 'MOUNTAINS', 'DESERTS', 'ISLANDS', 'CAPITALS', 'FLAGS'];
 const board = {
   version: 1,
-  categories: NAMES.map((name, c) => ({
+  categories: NAMES.map((name) => ({
     name,
     questions: POINTS.map((points, r) => ({
       points,

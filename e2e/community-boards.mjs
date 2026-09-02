@@ -10,7 +10,8 @@ const register = async (who) => (await (await fetch(`${API}/api/auth/register`, 
 })).json()).token;
 
 const ada = await register('cb');
-const bob = await register('cbtwo');
+/* A second account exists so the shelf has more than one author. */
+await register('cbtwo');
 const call = (t) => (p, o = {}) => fetch(`${API}/api/boards${p}`, {
   ...o, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}`, ...o.headers },
 }).then((r) => r.json());
@@ -37,14 +38,11 @@ async function publish(title, names, topic) {
   return slug;
 }
 
-const cold = await publish('The Cold War', ['DETENTE', 'PROXY WARS', 'THE WALL', 'SPYCRAFT', 'SPACE RACE', '1989'], 'history');
-const songs = await publish('Songs That Sample Songs', ['BREAKBEATS', 'DISCO', 'CLEARED?', 'ONE NOTE', 'SUED', 'THE AMEN'], 'music');
+await publish('The Cold War', ['DETENTE', 'PROXY WARS', 'THE WALL', 'SPYCRAFT', 'SPACE RACE', '1989'], 'history');
+await publish('Songs That Sample Songs', ['BREAKBEATS', 'DISCO', 'CLEARED?', 'ONE NOTE', 'SUED', 'THE AMEN'], 'music');
 
 let bad = 0;
 const check = (n, ok, d = '') => { if (!ok) bad++; console.log(`${ok ? '  ok  ' : ' FAIL '} ${n}${d ? '  ' + d : ''}`); };
-const seed = (t) => `localStorage.setItem('jeopardy-user-storage', ${JSON.stringify(
-  JSON.stringify({ state: { token: t, isAuthenticated: true, isGuest: false }, version: 0 })
-)});`;
 
 const b = await launch({ width: 1440, height: 900, dpr: 2 });
 try {
