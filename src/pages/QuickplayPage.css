@@ -212,6 +212,25 @@
   text-align: center;
 }
 
+/* Nobody else */
+.qp-nomatch {
+  min-height: 400px;
+  justify-content: center;
+}
+
+.nomatch-title {
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+}
+
+.nomatch-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* Match Found */
 .qp-found {
   min-height: 400px;

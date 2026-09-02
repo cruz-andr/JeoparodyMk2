@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useReducer } from 'react';
 import { socketClient } from '../services/socket/socketClient';
 import { useRoomStore, useUserStore } from '../stores';
+import { initialWait, needsJoin, waitReducer } from './matchmakingWait';
 
 // socketClient is a singleton, so these bindings never change. Creating them
 // per render made the object returned by useSocket unstable, which forced every
@@ -196,66 +197,70 @@ export function useRoom(roomCode) {
   };
 }
 
-// Hook for quickplay matchmaking
+// Hook for quickplay matchmaking. The state rules live in matchmakingWait.js.
 export function useMatchmaking() {
   const { isConnected, subscribe } = useSocket();
-  const [isInQueue, setIsInQueue] = useState(false);
-  const [matchFound, setMatchFound] = useState(null);
-  const [queueTime, setQueueTime] = useState(0);
-  const timerRef = useRef(null);
+  const [wait, dispatch] = useReducer(waitReducer, initialWait);
+  const { wants, isInQueue } = wait;
 
+  // What the server says about the queue.
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubQueueJoined = subscribe('quickplay:queue-joined', () => {
-      setIsInQueue(true);
-      setQueueTime(0);
-
-      // Start queue timer
-      timerRef.current = setInterval(() => {
-        setQueueTime((prev) => prev + 1);
-      }, 1000);
-    });
-
-    const unsubQueueLeft = subscribe('quickplay:queue-left', () => {
-      setIsInQueue(false);
-      setQueueTime(0);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    });
-
-    const unsubMatchFound = subscribe('quickplay:match-found', (data) => {
-      setMatchFound(data);
-      setIsInQueue(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    });
-
-    return () => {
-      unsubQueueJoined();
-      unsubQueueLeft();
-      unsubMatchFound();
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
+    const unsubs = [
+      // The server says when it will settle for two and when it gives up, so
+      // the waiting copy never promises something the matchmaker will not do.
+      subscribe('quickplay:queue-joined', (data) => dispatch({ type: 'joined', timings: data })),
+      subscribe('quickplay:queue-left', () => dispatch({ type: 'left' })),
+      subscribe('quickplay:match-found', (match) => dispatch({ type: 'match', match })),
+      // The server has already taken us out of the queue; this only tells the
+      // screen why the spinner stopped.
+      subscribe('quickplay:no-match', (data) => dispatch({ type: 'no-match', message: data?.message })),
+    ];
+    return () => unsubs.forEach((off) => off());
   }, [isConnected, subscribe]);
 
+  // A dropped transport drops us from the server's queue too (its disconnect
+  // handler does that), so believing we are still queued would leave the
+  // spinner up for ever with nothing ever coming.
+  useEffect(() => {
+    if (!isConnected) dispatch({ type: 'dropped' });
+  }, [isConnected]);
+
+  // Ask for a place in the queue whenever we want one and do not have one:
+  // the first time, and again after every reconnect. The ack restarts the
+  // clock, which is honest, because the server's clock restarted too.
+  useEffect(() => {
+    if (isConnected && needsJoin({ wants, isInQueue })) {
+      socketApi.joinMatchmaking(wants.displayName, wants.signature);
+    }
+  }, [isConnected, wants, isInQueue]);
+
+  // The wait clock runs only while the server has us.
+  useEffect(() => {
+    if (!isInQueue) return;
+    const timer = setInterval(() => dispatch({ type: 'tick' }), 1000);
+    return () => clearInterval(timer);
+  }, [isInQueue]);
+
   const joinQueue = useCallback((displayName, signature) => {
-    socketApi.joinMatchmaking(displayName, signature);
+    dispatch({ type: 'request', displayName, signature });
   }, []);
 
   const leaveQueue = useCallback(() => {
+    // Forget the wish first: if the socket is down the leave never reaches
+    // the server, and a reconnect must not put us straight back in.
+    dispatch({ type: 'cancel' });
     socketApi.leaveMatchmaking();
   }, []);
 
   return {
     isConnected,
     isInQueue,
-    matchFound,
-    queueTime,
+    matchFound: wait.matchFound,
+    noMatch: wait.noMatch,
+    queueTime: wait.queueTime,
+    timings: wait.timings,
     joinQueue,
     leaveQueue,
   };

@@ -1,11 +1,25 @@
 import { v4 as uuidv4 } from 'uuid';
 
+/* How long the matchmaker holds out for a full table before it settles.
+
+   Three players is the game as designed. A queue that insisted on three at the
+   same instant, with no clock, left a lone player on the spinner forever: the
+   second person to arrive had usually given up before the third existed. So
+   after PAIR_AFTER_MS with two waiting the match starts with two, and after
+   GIVE_UP_AFTER_MS alone the player is told so and released. */
+export const PAIR_AFTER_MS = 20000;
+export const GIVE_UP_AFTER_MS = 45000;
+
 export class GameStateManager {
-  constructor() {
+  constructor({ now = () => Date.now(), pairAfterMs = PAIR_AFTER_MS, giveUpAfterMs = GIVE_UP_AFTER_MS } = {}) {
     this.rooms = new Map(); // roomCode -> GameRoom
     this.playerRooms = new Map(); // socketId -> roomCode (legacy, kept for cleanup)
     this.sessionRooms = new Map(); // sessionId -> roomCode (for reconnection)
-    this.matchmakingQueue = []; // Array of { socket, displayName, joinedAt }
+    this.matchmakingQueue = []; // Array of { socket, displayName, signature, queuedAt }
+    /* Injectable so a test can move the clock instead of waiting on it. */
+    this.now = now;
+    this.pairAfterMs = pairAfterMs;
+    this.giveUpAfterMs = giveUpAfterMs;
   }
 
   // Room Management
@@ -949,7 +963,7 @@ export class GameStateManager {
       socket,
       displayName,
       signature,
-      joinedAt: Date.now(),
+      queuedAt: this.now(),
     });
   }
 
@@ -959,14 +973,40 @@ export class GameStateManager {
     );
   }
 
+  /** The thresholds a waiting client shows, so its copy and the server agree. */
+  matchmakingTimings() {
+    return { pairAfterMs: this.pairAfterMs, giveUpAfterMs: this.giveUpAfterMs };
+  }
+
+  /* Three if three are here. Two once the longest wait has passed the pairing
+     threshold. Nobody once the one person left has waited alone past the
+     give-up threshold: they leave the queue, so the next tick does not name
+     them again. Returns what happened rather than telling anyone; the socket
+     layer does the talking, the way it does for every other event here. */
   tryCreateMatch() {
-    if (this.matchmakingQueue.length < 3) {
-      return null;
+    const queue = this.matchmakingQueue;
+    const result = { match: null, noMatchFor: null };
+    if (queue.length === 0) return result;
+
+    if (queue.length >= 3) {
+      result.match = this.buildMatch(queue.splice(0, 3));
+      return result;
     }
 
-    // Take first 3 players
-    const matchedPlayers = this.matchmakingQueue.splice(0, 3);
+    const waited = this.now() - queue[0].queuedAt;
 
+    if (queue.length === 2) {
+      if (waited >= this.pairAfterMs) result.match = this.buildMatch(queue.splice(0, 2));
+      return result;
+    }
+
+    if (waited >= this.giveUpAfterMs) {
+      result.noMatchFor = queue.shift().socket;
+    }
+    return result;
+  }
+
+  buildMatch(matchedPlayers) {
     // Create room
     const roomCode = this.generateRoomCode();
     const room = {

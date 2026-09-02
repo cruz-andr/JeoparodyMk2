@@ -1127,7 +1127,7 @@ test('a quickplay match identifies players the way every other event does', () =
   const sockets = [mkSocket(), mkSocket(), mkSocket()];
   sockets.forEach((s, i) => gm.joinMatchmakingQueue(s, `P${i}`));
 
-  const match = gm.tryCreateMatch();
+  const { match } = gm.tryCreateMatch();
   assert.ok(match, 'three players is a match');
 
   const room = gm.rooms.get(match.roomCode);
@@ -1137,6 +1137,147 @@ test('a quickplay match identifies players the way every other event does', () =
       'the id in the payload must be the key the room stores'
     );
   }
+});
+
+/* A matchmaker on a clock we control. Real time would make these tests take
+   a minute each. */
+function mkMatchmaker({ pairAfterMs = 20000, giveUpAfterMs = 45000 } = {}) {
+  let t = 1_000_000;
+  const gm = new GameStateManager({ now: () => t, pairAfterMs, giveUpAfterMs });
+  const advance = (ms) => { t += ms; };
+  return { gm, advance };
+}
+
+const NOTHING = { match: null, noMatchFor: null };
+
+test('an empty queue settles nothing', () => {
+  const { gm } = mkMatchmaker();
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING);
+});
+
+test('three in the queue match at once', () => {
+  const { gm } = mkMatchmaker();
+  const sockets = [mkSocket(), mkSocket(), mkSocket()];
+  sockets.forEach((s, i) => gm.joinMatchmakingQueue(s, `P${i}`));
+
+  const { match, noMatchFor } = gm.tryCreateMatch();
+  assert.ok(match);
+  assert.equal(noMatchFor, null);
+  assert.equal(match.players.length, 3);
+  assert.equal(gm.matchmakingQueue.length, 0);
+  assert.equal(gm.rooms.get(match.roomCode).settings.maxPlayers, 3);
+});
+
+test('two in the queue wait for a third until the pairing threshold', () => {
+  const { gm, advance } = mkMatchmaker();
+  gm.joinMatchmakingQueue(mkSocket(), 'A');
+  advance(5000);
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'two fresh players keep waiting');
+  advance(14_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'still under 20s for the first player');
+  advance(1);
+
+  const { match } = gm.tryCreateMatch();
+  assert.ok(match, 'the first player has waited 20s, so two will do');
+  assert.deepEqual(match.players.map(p => p.displayName), ['A', 'B']);
+  assert.equal(gm.matchmakingQueue.length, 0);
+  assert.equal(gm.rooms.get(match.roomCode).players.size, 2);
+});
+
+test('a third arrival before the pairing threshold makes a full match', () => {
+  const { gm, advance } = mkMatchmaker();
+  gm.joinMatchmakingQueue(mkSocket(), 'A');
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+  advance(10_000);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING);
+  gm.joinMatchmakingQueue(mkSocket(), 'C');
+  assert.equal(gm.tryCreateMatch().match.players.length, 3);
+});
+
+test('a player alone past the give-up threshold is named for release and leaves the queue', () => {
+  const { gm, advance } = mkMatchmaker();
+  const lone = mkSocket();
+  gm.joinMatchmakingQueue(lone, 'A');
+
+  advance(44_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'nothing before 45s');
+  assert.equal(gm.matchmakingQueue.length, 1);
+
+  advance(1);
+  assert.deepEqual(gm.tryCreateMatch(), { match: null, noMatchFor: lone });
+  assert.equal(gm.matchmakingQueue.length, 0, 'out of the queue');
+
+  advance(60_000);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'not named twice');
+});
+
+test('a player who leaves mid-wait is not matched', () => {
+  const { gm, advance } = mkMatchmaker();
+  const quitter = mkSocket();
+  const stayer = mkSocket();
+  gm.joinMatchmakingQueue(quitter, 'Q');
+  gm.joinMatchmakingQueue(stayer, 'S');
+  advance(10_000);
+  gm.leaveMatchmakingQueue(quitter);
+  advance(15_000);
+
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'one player left, no pair to make');
+  assert.equal(gm.matchmakingQueue.length, 1);
+  assert.equal(gm.matchmakingQueue[0].socket.id, stayer.id);
+
+  const third = mkSocket();
+  gm.joinMatchmakingQueue(third, 'T');
+  const { match } = gm.tryCreateMatch();
+  assert.ok(match, 'the stayer has waited 25s, so the newcomer pairs with them');
+  assert.ok(!match.players.some(p => p.id === quitter.sessionId));
+});
+
+test('a disconnect mid-wait leaves the queue the same way', () => {
+  const { gm, advance } = mkMatchmaker();
+  const gone = mkSocket();
+  gm.joinMatchmakingQueue(gone, 'G');
+  gm.handleDisconnect(gone);
+  advance(50_000);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'nobody is named for a queue they already left');
+});
+
+test('a reconnected player who asks again is back on a fresh clock', () => {
+  // The transport drops the old socket; the client comes back on a new one
+  // with the same session and asks to queue again. That must be a normal
+  // join, not a ghost of the old wait.
+  const { gm, advance } = mkMatchmaker();
+  const before = mkSocket('same-session');
+  gm.joinMatchmakingQueue(before, 'R');
+  advance(30_000);
+  gm.handleDisconnect(before);
+
+  const after = mkSocket('same-session');
+  gm.joinMatchmakingQueue(after, 'R');
+  assert.equal(gm.matchmakingQueue.length, 1, 'one entry, not two for one person');
+  assert.equal(gm.matchmakingQueue[0].socket.id, after.id);
+
+  advance(44_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'the old 30s do not count');
+  advance(1);
+  assert.deepEqual(gm.tryCreateMatch(), { match: null, noMatchFor: after });
+});
+
+test('rejoining the queue restarts the wait', () => {
+  const { gm, advance } = mkMatchmaker();
+  const a = mkSocket();
+  gm.joinMatchmakingQueue(a, 'A');
+  advance(30_000);
+  gm.joinMatchmakingQueue(a, 'A');
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'the rejoin is fresh, so two do not yet do');
+  assert.equal(gm.matchmakingQueue.length, 2);
+});
+
+test('the pairing thresholds are what the client is told', () => {
+  const { gm } = mkMatchmaker({ pairAfterMs: 1234, giveUpAfterMs: 5678 });
+  assert.deepEqual(gm.matchmakingTimings(), { pairAfterMs: 1234, giveUpAfterMs: 5678 });
 });
 
 // =========================================================================

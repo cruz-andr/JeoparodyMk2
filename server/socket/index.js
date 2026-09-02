@@ -19,6 +19,26 @@ function archiveRoom(roomCode) {
   }
 }
 
+const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
+
+// One place for what the matchmaker decided, whether a join or the tick asked.
+// A match goes to everyone seated; a player released after waiting alone is
+// told so once, and only here: the manager never touches a socket itself.
+function settleMatchmaking(io) {
+  const { match, noMatchFor } = gameManager.tryCreateMatch();
+  if (match) {
+    match.players.forEach(player => {
+      io.to(player.socketId).emit('quickplay:match-found', {
+        roomCode: match.roomCode,
+        players: match.players,
+      });
+    });
+  }
+  if (noMatchFor) {
+    io.to(noMatchFor.id).emit('quickplay:no-match', { message: NO_MATCH_MESSAGE });
+  }
+}
+
 // Lifecycle events (setting the board, ending rounds, starting Final Jeopardy)
 // change the game for everyone, so only the room's host may fire them. In
 // quickplay rooms there is no host, so the first player in acts as one.
@@ -512,18 +532,12 @@ export function initializeSocketHandlers(io) {
     // Quickplay matchmaking
     socket.on('quickplay:join-queue', ({ displayName, signature }) => {
       gameManager.joinMatchmakingQueue(socket, displayName, signature);
-      socket.emit('quickplay:queue-joined');
+      // The thresholds travel with the ack so the waiting screen and the
+      // matchmaker never disagree about when "two will do".
+      socket.emit('quickplay:queue-joined', gameManager.matchmakingTimings());
 
       // Check if we can make a match
-      const match = gameManager.tryCreateMatch();
-      if (match) {
-        match.players.forEach(player => {
-          io.to(player.socketId).emit('quickplay:match-found', {
-            roomCode: match.roomCode,
-            players: match.players,
-          });
-        });
-      }
+      settleMatchmaking(io);
     });
 
     socket.on('quickplay:leave-queue', () => {
@@ -853,14 +867,6 @@ export function initializeSocketHandlers(io) {
     gameManager.cleanupStaleRooms();
 
     // Update matchmaking queue
-    const match = gameManager.tryCreateMatch();
-    if (match) {
-      match.players.forEach(player => {
-        io.to(player.socketId).emit('quickplay:match-found', {
-          roomCode: match.roomCode,
-          players: match.players,
-        });
-      });
-    }
+    settleMatchmaking(io);
   }, 5000);
 }

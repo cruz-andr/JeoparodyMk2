@@ -38,10 +38,12 @@ export default function QuickplayPage() {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [signature, setSignature] = useState(null);
-  const [phase, setPhase] = useState('setup'); // 'setup' | 'searching' | 'found'
+  const [phase, setPhase] = useState('setup'); // 'setup' | 'searching' | 'found' | 'nomatch'
   const [selectedPreset, setSelectedPreset] = useState('standard');
 
-  const { isConnected, isInQueue, matchFound, queueTime, joinQueue, leaveQueue } = useMatchmaking();
+  const {
+    isConnected, isInQueue, matchFound, noMatch, queueTime, timings, joinQueue, leaveQueue,
+  } = useMatchmaking();
   const { user, isGuest } = useUserStore();
   const { loadPreset } = useSettingsStore();
 
@@ -60,6 +62,11 @@ export default function QuickplayPage() {
       setPhase('searching');
     }
   }, [isInQueue, phase]);
+
+  // The server gave up on finding anyone: say so, and offer a way forward.
+  useEffect(() => {
+    if (noMatch) setPhase('nomatch');
+  }, [noMatch]);
 
   useEffect(() => {
     if (matchFound) {
@@ -109,6 +116,12 @@ export default function QuickplayPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  /* Before the pairing threshold the matchmaker wants three; after it, the
+     next person to arrive is enough. The screen says which, in the server's
+     own numbers, so nobody is promised a third who will never be waited for. */
+  const pairAfterSec = Math.round(timings.pairAfterMs / 1000);
+  const settlingForTwo = queueTime * 1000 >= timings.pairAfterMs;
+
   return (
     <div className="quickplay-page">
       <header className="qp-header">
@@ -147,7 +160,7 @@ export default function QuickplayPage() {
             <div className="qp-info">
               <div className="info-item">
                 <span className="info-icon">👥</span>
-                <span>3 Players</span>
+                <span>2 to 3 Players</span>
               </div>
               <div className="info-item">
                 <span className="info-icon">🎯</span>
@@ -206,16 +219,57 @@ export default function QuickplayPage() {
               </div>
             </div>
 
-            <h2>Finding Players...</h2>
+            <h2 className="search-state" data-state={settlingForTwo ? 'two' : 'looking'}>
+              {settlingForTwo ? 'Starting with two' : 'Looking for players'}
+            </h2>
             <p className="queue-time">{formatTime(queueTime)}</p>
 
             <p className="search-hint">
-              Looking for 2 more players to start a match
+              {!isConnected
+                ? 'Connection lost. Reconnecting, then looking again.'
+                : settlingForTwo
+                  ? 'The next player to arrive starts the game.'
+                  : `Three players start a match. After ${pairAfterSec} seconds, two will do.`}
             </p>
 
             <button className="btn-ghost" onClick={handleLeaveQueue}>
               Cancel
             </button>
+          </motion.div>
+        )}
+
+        {/* Nobody Else Phase */}
+        {phase === 'nomatch' && (
+          <motion.div
+            key="nomatch"
+            className="qp-content qp-nomatch"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <h2 className="nomatch-title">Nobody else is looking right now</h2>
+            <p className="search-hint">
+              You waited {Math.round(timings.giveUpAfterMs / 1000)} seconds and no game came together.
+              You can look again, or set up a game and invite people yourself.
+            </p>
+
+            <div className="nomatch-actions">
+              <button
+                type="button"
+                className="plain-btn quiet-action"
+                onClick={handleJoinQueue}
+                disabled={!isConnected || !signature}
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                className="plain-btn quiet-action"
+                onClick={() => navigate('/host')}
+              >
+                Host a game instead
+              </button>
+            </div>
           </motion.div>
         )}
 
