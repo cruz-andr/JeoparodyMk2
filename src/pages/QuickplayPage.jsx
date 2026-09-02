@@ -42,7 +42,7 @@ export default function QuickplayPage() {
   const [selectedPreset, setSelectedPreset] = useState('standard');
 
   const {
-    isConnected, isInQueue, matchFound, noMatch, queueTime, timings, joinQueue, leaveQueue,
+    isConnected, matchFound, noMatch, queueTime, timings, joinQueue, leaveQueue,
   } = useMatchmaking();
   const { user, isGuest } = useUserStore();
 
@@ -55,12 +55,11 @@ export default function QuickplayPage() {
     }
   }, [user, isGuest]);
 
-  // Handle phase changes based on matchmaking state
-  useEffect(() => {
-    if (isInQueue && phase !== 'searching') {
-      setPhase('searching');
-    }
-  }, [isInQueue, phase]);
+  /* The phase follows the player's own actions (join, cancel, try again), not
+     isInQueue: that is what the server last confirmed, and it stays true for
+     a moment after a cancel, until the queue-left ack. An effect that pushed
+     the phase back to 'searching' whenever isInQueue was true undid every
+     cancel, and the spinner stayed up with nothing coming. */
 
   // The server gave up on finding anyone: say so, and offer a way forward.
   useEffect(() => {

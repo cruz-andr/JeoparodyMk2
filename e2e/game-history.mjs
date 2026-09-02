@@ -54,7 +54,9 @@ try {
   check('recent games list the genre', profile.includes('Volcanoes') && profile.includes('Opera'));
   check('a losing score is shown as a loss', profile.includes('-$600'));
   check('the profile does not say it is showing this device', !profile.includes('could not be reached'));
-  check('the daily record is still there', /Board streak/.test(profile) && /Boards played/.test(profile));
+  /* Case-insensitive: the labels are text-transform: uppercase, and innerText
+   reflects that. */
+  check('the daily record is still there', /Board streak/i.test(profile) && /Boards played/i.test(profile));
 
   await me.goto(`${APP}/highscores`);
   await me.until("document.querySelectorAll('.scores-table tbody tr').length === 2");
@@ -67,7 +69,7 @@ try {
 const guest = await launch({ width: 1440, height: 900, dpr: 2 });
 try {
   await guest.goto(`${APP}/highscores`);
-  await guest.until("document.body.innerText.includes('Games Played')");
+  await guest.until("/Games Played/i.test(document.body.innerText)");
   const scores = await text(guest);
   check('a visitor sees an empty record', /No games yet/.test(scores));
   check('and is told it lives on this device', scores.includes('Kept on this device'));
