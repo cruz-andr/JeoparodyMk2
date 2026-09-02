@@ -87,21 +87,18 @@ const api = start('api', 'node', [join(root, 'server', 'index.js')], {
   DATABASE_PATH: DB,
   JWT_SECRET: 'e2e-secret-not-a-real-one',
   NODE_ENV: 'test',
+  /* A key that is present but worthless. The model is behind the server now,
+     so the server has to believe it is set up for a request to get as far as
+     the route, where a suite answers it from fakeModel.mjs before it leaves
+     the browser. Nothing here ever reaches Google. E2E_REAL_AI=1 hands the
+     real key over for the rare check that has to watch a live generation. */
+  GEMINI_API_KEY: process.env.E2E_REAL_AI === '1'
+    ? (process.env.GEMINI_API_KEY ?? '')
+    : 'e2e-offline-not-a-real-key',
 }, root);
 
 const app = start('app', process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(APP_PORT), '--strictPort'], {
   VITE_SOCKET_URL: `http://localhost:${API_PORT}`,
-  /* No model key by default: a suite must never spend real quota or wait on
-     somebody else's service, and the path worth covering is what a host sees
-     when the model cannot be reached. E2E_REAL_AI=1 hands the real key over
-     for the rare check that has to watch a generation actually happen. */
-  /* A key that is present but worthless, so the app gets as far as making the
-     request and a suite can answer it from fakeModel.mjs. Nothing here ever
-     reaches Google. E2E_REAL_AI=1 swaps in the real one for the rare check
-     that has to watch a live generation. */
-  VITE_GEMINI_API_KEY: process.env.E2E_REAL_AI === '1'
-    ? (process.env.VITE_GEMINI_API_KEY ?? '')
-    : 'e2e-offline-not-a-real-key',
 }, root);
 
 await waitFor(`http://127.0.0.1:${API_PORT}/health`, api);

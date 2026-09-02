@@ -1,11 +1,11 @@
 /**
  * Tidying what the model sends back.
- * Run with: node src/services/api/tidyBoard.test.js
+ * Run with: node server/test/tidyBoard.test.js
  *
  * None of this asks a model anything, so the suite costs nothing to run.
  */
 import assert from 'node:assert/strict';
-import { hedged, singleResponse, tidyBoard } from './tidyBoard.js';
+import { hedged, singleResponse, tidyBoard } from '../services/gemini.js';
 
 let passed = 0;
 const failures = [];

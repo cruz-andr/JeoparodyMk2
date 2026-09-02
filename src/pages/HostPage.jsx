@@ -28,6 +28,10 @@ const DOUBLE_VALUES = [400, 800, 1200, 1600, 2000];
  */
 function aiTrouble(err) {
   const raw = String(err?.message ?? '');
+  /* The model now answers through the server, which asks who is asking. */
+  if (/sign in/i.test(raw)) {
+    return 'Sign in to have the AI write the board, or write it yourself.';
+  }
   if (/API[_ ]?key|not set|invalid key|401|403|PERMISSION/i.test(raw)) {
     return 'The AI is not set up on this site. Write the board yourself, upload a file, or duplicate a community board.';
   }

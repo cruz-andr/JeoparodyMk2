@@ -120,6 +120,17 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
+/* Asking the model is the one thing here that costs money on every call, and
+   it is paid from one key for the whole site. A board is two calls and a
+   reroll is two more, so thirty an hour is a full evening of hosting and a
+   short one of running a loop against somebody else's quota. */
+export const aiLimiter = rateLimit({
+  ...shared,
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: { error: { message: 'The AI has used up its quota for you this hour. Try again later.', code: 'AI_QUOTA' } },
+});
+
 /** Reads and writes have different shapes, so they get different budgets. */
 export function apiLimiter(req, res, next) {
   const read = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS';

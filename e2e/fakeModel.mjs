@@ -2,17 +2,17 @@
  * A model that answers instantly and costs nothing.
  *
  * Installed into the page before anything loads, it takes over the fetch the
- * Gemini SDK makes and answers it from here. Every screen that depends on a
- * model can then be driven offline, at whatever speed the test needs, with no
- * key and no quota.
+ * app makes to the server's /api/ai routes and answers it from here. Every
+ * screen that depends on a model can then be driven offline, at whatever
+ * speed the test needs, with no key and no quota.
+ *
+ * It answers in the shape the server answers in: the JSON the page reads on
+ * success, and { error: { message } } with a status on failure. The server
+ * itself is never asked, so this covers the page and not the route; the route
+ * has its own suite in server/test/aiRoutes.test.js.
  */
 
-const HOST = 'generativelanguage.googleapis.com';
-
-/** The envelope the SDK unwraps to reach response.text(). */
-const reply = (text) => JSON.stringify({
-  candidates: [{ content: { parts: [{ text }], role: 'model' }, finishReason: 'STOP' }],
-});
+const PATH = '/api/ai/';
 
 export const NAMES = [
   'VOLCANIC VITICULTURE', 'CRYOVOLCANOLOGY', 'LAVA IN THE LIBRARY',
@@ -27,7 +27,7 @@ const CLUES = {
   1000: ['This shield volcano on Mars is the tallest in the solar system', 'What is Olympus Mons?'],
 };
 
-const board = (names, values) => JSON.stringify({
+const board = (names, values) => ({
   categories: names.map((name) => ({
     name,
     questions: values.map((points) => ({
@@ -49,33 +49,60 @@ export function fakeModel({ names = NAMES, values = [200, 400, 600, 800, 1000],
   return `(() => {
     const real = window.fetch.bind(window);
     const names = ${JSON.stringify(names)};
-    const values = ${JSON.stringify(values)};
+    const clues = ${JSON.stringify(CLUES)};
     const delays = ${JSON.stringify(delays)};
     const failWith = ${JSON.stringify(failWith)};
-    const catsBody = ${JSON.stringify(reply(JSON.stringify(NAMES)))};
-    const boardBody = ${JSON.stringify(reply(board(NAMES, [200, 400, 600, 800, 1000])))};
+    const fallbackValues = ${JSON.stringify(values)};
+
+    const json = (body, status) => new Response(JSON.stringify(body),
+      { status, headers: { 'Content-Type': 'application/json' } });
 
     window.fetch = async (input, init) => {
       const url = String(typeof input === 'string' ? input : input?.url ?? '');
-      if (!url.includes(${JSON.stringify(HOST)})) return real(input, init);
+      const at = url.indexOf(${JSON.stringify(PATH)});
+      if (at < 0) return real(input, init);
+      const route = url.slice(at + ${PATH.length}).split(/[?#]/)[0];
 
-      /* The two calls differ by what the prompt asks for, which is the only
-         thing this needs to tell them apart. */
-      const sent = String(init?.body ?? '');
-      const wantsCategories = sent.includes('Generate 6 unique');
-      const wait = wantsCategories ? delays.categories : delays.questions;
+      let sent = {};
+      try { sent = JSON.parse(String(init?.body ?? '{}')); } catch { /* not JSON */ }
+
+      const wait = route === 'categories' ? delays.categories : delays.questions;
       await new Promise((r) => setTimeout(r, wait));
 
-      if (failWith) {
-        return new Response(JSON.stringify({ error: { message: failWith.message } }),
-          { status: failWith.status, headers: { 'Content-Type': 'application/json' } });
-      }
+      if (failWith) return json({ error: { message: failWith.message, code: 'AI_FAKE' } }, failWith.status);
 
-      const body = wantsCategories
-        ? catsBody
-        : ${JSON.stringify(reply(board(NAMES, [200, 400, 600, 800, 1000])))};
-      void names; void values; void boardBody;
-      return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (route === 'categories') return json(names, 200);
+      if (route === 'category') return json({ category: names[Number(sent.index) || 0] ?? names[0] }, 200);
+      if (route === 'questions') {
+        /* The page tells the server which names and values it wants written,
+           and gets back a board for exactly those. */
+        const asked = Array.isArray(sent.categories) && sent.categories.length ? sent.categories : names;
+        const values = Array.isArray(sent.pointValues) && sent.pointValues.length === 5
+          ? sent.pointValues : fallbackValues;
+        return json({
+          categories: asked.map((name) => ({
+            name,
+            questions: values.map((points) => ({
+              points,
+              answer: clues[points]?.[0] ?? 'A clue worth $' + points,
+              question: clues[points]?.[1] ?? 'What is it?',
+            })),
+          })),
+        }, 200);
+      }
+      if (route === 'final') {
+        return json({ category: 'FINAL ERUPTIONS', answer: clues[1000][0], question: clues[1000][1] }, 200);
+      }
+      if (route === 'mc-options') {
+        return json({ options: [sent.response ?? '', 'What is Etna?', 'What is Krakatoa?', 'What is Vesuvius?'] }, 200);
+      }
+      if (route === 'validate') {
+        return json({ isCorrect: true, confidence: 1, reason: 'fake' }, 200);
+      }
+      return json({ error: { message: 'No such route.', code: 'NOT_FOUND' } }, 404);
     };
   })();`;
 }
+
+/* Kept for anything that wants the answer shape without the page. */
+export const fakeBoard = board;
