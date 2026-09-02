@@ -26,6 +26,7 @@ import { initializeDatabase } from './config/database.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
+import { info as logInfo, error as logError, fatal as logFatal } from './utils/log.js';
 
 // Import J-Archive scraper for Daily Challenge
 import { getDailyChallenge } from './services/jarchiveScraper.js';
@@ -132,7 +133,7 @@ app.get('/api/daily/challenge', async (req, res) => {
     const challenge = await getDailyChallenge();
     res.json(challenge);
   } catch (error) {
-    console.error('Daily challenge error:', error);
+    logError({ msg: 'Daily challenge failed', path: req.originalUrl, method: req.method }, error);
     res.status(500).json({ error: 'Failed to fetch daily challenge' });
   }
 });
@@ -143,6 +144,59 @@ app.use(errorHandler);
 // Initialize socket handlers
 initializeSocketHandlers(io);
 
+/* Crashes.
+
+   Node 22 already exits on an uncaught exception and on an unhandled
+   rejection; what it prints on the way out is a multi-line dump that Fly's
+   log collector splits into as many entries as it has lines. Both now log
+   one JSON line {level, msg, err, stack} and exit non-zero on purpose, so the
+   crash is one searchable entry and Fly restarts the machine into a known
+   state rather than us guessing which rooms survived. */
+function die(kind, reason) {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  logFatal({ msg: kind, err: err.message, stack: err.stack });
+  process.exit(1);
+}
+process.on('uncaughtException', (err) => die('uncaughtException', err));
+process.on('unhandledRejection', (reason) => die('unhandledRejection', reason));
+
+/* Fly sends SIGTERM before it stops a machine. Stop accepting, close the
+   sockets so clients reconnect to the new machine promptly instead of waiting
+   out pingTimeout, and give in-flight requests a moment to finish. Fly's
+   default kill_timeout is five seconds (fly.toml does not raise it), so the
+   deadline sits a second inside that: if a keep-alive connection will not let
+   go, the timeout line is written and we exit on our own terms before the
+   SIGKILL lands. */
+const SHUTDOWN_MS = 4000;
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logInfo({ msg: 'Shutting down', signal });
+
+  const deadline = setTimeout(() => {
+    logError({ msg: 'Shutdown timed out, exiting anyway', signal, timeoutMs: SHUTDOWN_MS });
+    process.exit(1);
+  }, SHUTDOWN_MS);
+  deadline.unref();
+
+  /* io.close() disconnects every socket, then closes the http server it is
+     attached to and hands us that close's error, if any. A server that was
+     not running (or was closed already) is not a clean shutdown, so the error
+     is checked rather than closed over a second time. */
+  io.close((err) => {
+    clearTimeout(deadline);
+    if (err) {
+      logError({ msg: 'Shutdown finished with an error', signal }, err);
+      process.exit(1);
+    }
+    logInfo({ msg: 'Closed cleanly', signal });
+    process.exit(0);
+  });
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 // Start server
 const PORT = process.env.SERVER_PORT || 3001;
 
@@ -150,15 +204,14 @@ async function startServer() {
   try {
     // Initialize database
     await initializeDatabase();
-    console.log('Database initialized successfully');
+    logInfo({ msg: 'Database initialized' });
 
     // Start HTTP server
     httpServer.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`WebSocket server ready`);
+      logInfo({ msg: 'Server running', port: httpServer.address().port, websocket: 'ready' });
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logFatal({ msg: 'Failed to start server' }, error);
     process.exit(1);
   }
 }

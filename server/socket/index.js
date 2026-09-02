@@ -2,6 +2,7 @@ import { verifyToken } from '../middleware/auth.js';
 import { getDatabase } from '../config/database.js';
 import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager } from './GameStateManager.js';
+import { info as logInfo } from '../utils/log.js';
 
 const gameManager = new GameStateManager();
 
@@ -103,7 +104,12 @@ export function initializeSocketHandlers(io) {
   });
 
   io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}, Session: ${socket.sessionId}, User: ${socket.userId || 'anonymous'}`);
+    logInfo({
+      msg: 'Socket connected',
+      socketId: socket.id,
+      sessionId: socket.sessionId,
+      userId: socket.userId || 'anonymous',
+    });
 
     // Send connection confirmation
     socket.emit('connected', {
@@ -856,7 +862,7 @@ export function initializeSocketHandlers(io) {
 
     // Disconnect handling
     socket.on('disconnect', (reason) => {
-      console.log(`Socket disconnected: ${socket.id}, Reason: ${reason}`);
+      logInfo({ msg: 'Socket disconnected', socketId: socket.id, reason });
       gameManager.handleDisconnect(socket);
     });
   });
