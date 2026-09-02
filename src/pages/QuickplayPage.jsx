@@ -223,9 +223,11 @@ export default function QuickplayPage() {
             <p className="queue-time">{formatTime(queueTime)}</p>
 
             <p className="search-hint">
-              {settlingForTwo
-                ? 'The next player to arrive starts the game.'
-                : `Three players start a match. After ${pairAfterSec} seconds, two will do.`}
+              {!isConnected
+                ? 'Connection lost. Reconnecting, then looking again.'
+                : settlingForTwo
+                  ? 'The next player to arrive starts the game.'
+                  : `Three players start a match. After ${pairAfterSec} seconds, two will do.`}
             </p>
 
             <button className="btn-ghost" onClick={handleLeaveQueue}>
@@ -245,7 +247,7 @@ export default function QuickplayPage() {
           >
             <h2 className="nomatch-title">Nobody else is looking right now</h2>
             <p className="search-hint">
-              You waited {Math.round(timings.giveUpAfterMs / 1000)} seconds and nobody else queued up.
+              You waited {Math.round(timings.giveUpAfterMs / 1000)} seconds and no game came together.
               You can look again, or set up a game and invite people yourself.
             </p>
 

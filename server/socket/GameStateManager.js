@@ -9,7 +9,6 @@ import { v4 as uuidv4 } from 'uuid';
    GIVE_UP_AFTER_MS alone the player is told so and released. */
 export const PAIR_AFTER_MS = 20000;
 export const GIVE_UP_AFTER_MS = 45000;
-export const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
 
 export class GameStateManager {
   constructor({ now = () => Date.now(), pairAfterMs = PAIR_AFTER_MS, giveUpAfterMs = GIVE_UP_AFTER_MS } = {}) {
@@ -939,30 +938,31 @@ export class GameStateManager {
   }
 
   /* Three if three are here. Two once the longest wait has passed the pairing
-     threshold. Nobody, and a plain message to the one person left, once they
-     have waited alone past the give-up threshold: they leave the queue, so the
-     next tick does not tell them again. */
+     threshold. Nobody once the one person left has waited alone past the
+     give-up threshold: they leave the queue, so the next tick does not name
+     them again. Returns what happened rather than telling anyone; the socket
+     layer does the talking, the way it does for every other event here. */
   tryCreateMatch() {
     const queue = this.matchmakingQueue;
-    if (queue.length === 0) return null;
+    const result = { match: null, noMatchFor: null };
+    if (queue.length === 0) return result;
 
     if (queue.length >= 3) {
-      return this.buildMatch(queue.splice(0, 3));
+      result.match = this.buildMatch(queue.splice(0, 3));
+      return result;
     }
 
     const waited = this.now() - queue[0].queuedAt;
 
     if (queue.length === 2) {
-      return waited >= this.pairAfterMs ? this.buildMatch(queue.splice(0, 2)) : null;
+      if (waited >= this.pairAfterMs) result.match = this.buildMatch(queue.splice(0, 2));
+      return result;
     }
 
     if (waited >= this.giveUpAfterMs) {
-      const [{ socket }] = queue.splice(0, 1);
-      if (typeof socket.emit === 'function') {
-        socket.emit('quickplay:no-match', { message: NO_MATCH_MESSAGE });
-      }
+      result.noMatchFor = queue.shift().socket;
     }
-    return null;
+    return result;
   }
 
   buildMatch(matchedPlayers) {
