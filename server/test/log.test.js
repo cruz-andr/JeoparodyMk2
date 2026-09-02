@@ -62,6 +62,22 @@ test('null and undefined parts are skipped', () => {
   assert.deepEqual(Object.keys(entry).sort(), ['a', 'level', 'time']);
 });
 
+test('a caller cannot overwrite level or time through a fields object', () => {
+  const entry = parse(format('info', { msg: 'x', level: 'debug', time: 'yesterday', ok: true }));
+  assert.equal(entry.level, 'info');
+  assert.ok(!Number.isNaN(Date.parse(entry.time)), 'time is still the real timestamp');
+  assert.equal(entry.time !== 'yesterday', true);
+  assert.equal(entry.ok, true);
+  assert.equal(entry.msg, 'x');
+});
+
+test('an array is one data field, not a spread of numeric keys', () => {
+  const entry = parse(format('info', 'rooms', ['ABCD', 'EFGH']));
+  assert.deepEqual(entry.data, ['ABCD', 'EFGH']);
+  assert.equal('0' in entry, false);
+  assert.equal(entry.msg, 'rooms');
+});
+
 // ----------------------------------------------------------------- errors
 
 test('an Error becomes err and stack, not a multi-line dump', () => {

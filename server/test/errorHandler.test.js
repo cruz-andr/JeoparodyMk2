@@ -76,19 +76,64 @@ test('an unset NODE_ENV is treated like production for a 500', () => {
   assert.equal('stack' in body.error, false);
 });
 
-test('a 5xx AppError in production still hides its message and code', () => {
-  const err = new AppError('Model quota exceeded for key abc123', 503, 'UPSTREAM_DOWN');
+test('a 5xx AppError in production keeps the message and code we wrote for the user', () => {
+  // routes/auth.js throws this when GOOGLE_CLIENT_ID is unset. The sign-in
+  // page shows it, and the operator learns what to configure from the UI.
+  const err = new AppError('Google sign-in is not configured', 503, 'GOOGLE_UNCONFIGURED');
   const { statusCode, body } = shapeError(err, PROD);
   assert.equal(statusCode, 503);
-  assert.equal(body.error.code, 'INTERNAL_ERROR');
-  assert.equal(body.error.message.includes('abc123'), false);
+  assert.equal(body.error.message, 'Google sign-in is not configured');
+  assert.equal(body.error.code, 'GOOGLE_UNCONFIGURED');
+  assert.equal('stack' in body.error, false, 'the stack rule is unchanged');
 });
 
-test('details on a 5xx are dropped in production', () => {
-  const err = new AppError('boom', 500);
-  err.details = { query: 'SELECT * FROM users' };
-  const { body } = shapeError(err, PROD);
+test('every 5xx AppError the routes throw survives production unchanged', () => {
+  const thrown = [
+    ['Could not create the board. Try again.', 500, 'SLUG_EXHAUSTED'],
+    ['That board could not be read.', 500, 'CORRUPT_BOARD'],
+    ['Could not generate unique room code', 500, 'CODE_GENERATION_FAILED'],
+  ];
+  for (const [message, status, code] of thrown) {
+    const { statusCode, body } = shapeError(new AppError(message, status, code), PROD);
+    assert.equal(statusCode, status);
+    assert.equal(body.error.message, message);
+    assert.equal(body.error.code, code);
+    assert.equal('stack' in body.error, false);
+  }
+});
+
+test('details on a 5xx AppError go through in production; details on an accident do not', () => {
+  const ours = new AppError('boom', 500, 'OURS');
+  ours.details = { retryAfter: 30 };
+  assert.deepEqual(shapeError(ours, PROD).body.error.details, { retryAfter: 30 });
+
+  const accident = new Error('boom');
+  accident.details = { query: 'SELECT * FROM users' };
+  const { body } = shapeError(accident, PROD);
   assert.equal('details' in body.error, false);
+  assert.equal(JSON.stringify(body).includes('SELECT'), false);
+});
+
+test('an error marked expose is shown in production like an AppError', () => {
+  // http-errors (body-parser, express) sets expose on errors meant for clients.
+  const err = new Error('Service unavailable for maintenance');
+  err.statusCode = 503;
+  err.code = 'MAINTENANCE';
+  err.expose = true;
+  const { body } = shapeError(err, PROD);
+  assert.equal(body.error.message, 'Service unavailable for maintenance');
+  assert.equal(body.error.code, 'MAINTENANCE');
+  assert.equal('stack' in body.error, false);
+});
+
+test('a 5xx with a statusCode but no AppError and no expose is still hidden', () => {
+  const err = new Error('SQLITE_BUSY: database is locked');
+  err.statusCode = 503;
+  err.code = 'SQLITE_BUSY';
+  const { statusCode, body } = shapeError(err, PROD);
+  assert.equal(statusCode, 503);
+  assert.equal(body.error.message, 'Something went wrong on our side. Please try again.');
+  assert.equal(body.error.code, 'INTERNAL_ERROR');
 });
 
 test('a non-Error thrown value still yields a safe 500', () => {

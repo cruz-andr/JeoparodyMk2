@@ -14,8 +14,13 @@
 
 const LEVELS = new Set(['info', 'warn', 'error', 'fatal']);
 
+/** Level and time belong to the line, not to the caller: `info({ level: 'debug' })`
+    would otherwise emit a level no reader filters on. */
+const RESERVED = new Set(['level', 'time']);
+
 /** Anything that is not a plain object becomes a field, so callers can pass
-    a message, an Error, or extra fields in any order. */
+    a message, an Error, or extra fields in any order. An array is one field
+    (`data`) rather than a spread of numeric keys. */
 function fold(entry, value) {
   if (value === undefined || value === null) return;
   if (value instanceof Error) {
@@ -28,8 +33,14 @@ function fold(entry, value) {
     entry.msg = entry.msg === undefined ? value : `${entry.msg} ${value}`;
     return;
   }
+  if (Array.isArray(value)) {
+    entry.data = value;
+    return;
+  }
   if (typeof value === 'object') {
-    Object.assign(entry, value);
+    for (const key of Object.keys(value)) {
+      if (!RESERVED.has(key)) entry[key] = value[key];
+    }
     return;
   }
   entry.msg = entry.msg === undefined ? String(value) : `${entry.msg} ${String(value)}`;
