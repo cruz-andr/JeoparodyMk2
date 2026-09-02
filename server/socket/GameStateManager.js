@@ -64,6 +64,13 @@ export class GameStateManager {
       isConnected: true,
       isHost: playerId === room.hostId,
       waitingToJoin: isLateJoin && !!room.gameState?.currentQuestion,
+      /* The account behind the session, when there is one, so the archive
+         can be written to it when the game ends. Never sent to other players
+         as a name: displayName and signature are what they see. */
+      userId: socket.userId || existing?.userId || null,
+      // How they played, for the archive. Kept across a rejoin like the score.
+      correct: existing?.correct || 0,
+      answered: existing?.answered || 0,
     };
 
     room.players.set(playerId, player);
@@ -378,6 +385,18 @@ export class GameStateManager {
     };
   }
 
+  /**
+   * One line in the archive's ledger: a clue this player was judged on.
+   *
+   * Called wherever a score moves for an answer, and nowhere else. A clue
+   * nobody buzzed on is not an answer, so it is not counted against anyone.
+   */
+  tally(player, correct) {
+    if (!player) return;
+    player.answered = (player.answered || 0) + 1;
+    if (correct) player.correct = (player.correct || 0) + 1;
+  }
+
   handleAnswer(roomCode, playerId, correct) {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
@@ -399,6 +418,7 @@ export class GameStateManager {
 
     if (correct) {
       player.score = (player.score || 0) + points;
+      this.tally(player, true);
       // Correct answer - they get to pick next
       room.gameState.currentPickerId = playerId;
       room.gameState.currentQuestion = null;
@@ -416,6 +436,7 @@ export class GameStateManager {
       };
     } else {
       player.score = (player.score || 0) - points;
+      this.tally(player, false);
 
       // Check if others can still buzz. Only players who can actually act count:
       // counting disconnected players (or the host of a hosted room) here left
@@ -566,6 +587,7 @@ export class GameStateManager {
 
     const wager = room.gameState.dailyDoubleWager || 0;
     player.score = (player.score || 0) + (correct ? wager : -wager);
+    this.tally(player, correct);
 
     room.gameState.isDailyDouble = false;
     room.gameState.dailyDoubleWager = 0;
@@ -613,6 +635,7 @@ export class GameStateManager {
     } else {
       player.score = (player.score || 0) - wager;
     }
+    this.tally(player, correct);
 
     // Reset Daily Double state
     room.gameState.isDailyDouble = false;
@@ -799,6 +822,7 @@ export class GameStateManager {
 
       // Update player score
       player.score = finalScore;
+      this.tally(player, correct);
 
       results.push({
         playerId,
@@ -955,6 +979,9 @@ export class GameStateManager {
         isReady: false,
         isConnected: true,
         isHost: false,
+        userId: socket.userId || null,
+        correct: 0,
+        answered: 0,
       });
       this.playerRooms.set(socket.id, roomCode);
       this.sessionRooms.set(socket.sessionId, roomCode);
@@ -1015,6 +1042,9 @@ export class GameStateManager {
     // Restore player connection
     player.isConnected = true;
     player.socketId = socket.id;
+    // Someone who signed in between dropping and coming back gets their
+    // account attached; someone already attached keeps it.
+    if (socket.userId && !player.userId) player.userId = socket.userId;
 
     // Update mappings
     this.playerRooms.set(socket.id, roomCode);
@@ -1280,6 +1310,7 @@ export class GameStateManager {
 
       if (player) {
         player.score = (player.score || 0) + (correct ? points : 0);
+        this.tally(player, correct);
         results.push({
           playerId,
           playerName: player.displayName || player.name,

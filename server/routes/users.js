@@ -2,8 +2,23 @@ import { Router } from 'express';
 import { getDatabase } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { statsRow } from '../services/gameHistory.js';
 
 const router = Router();
+
+/* My own totals. Before the /:id routes, or "me" would be looked up as a
+   user id and answer 404. Read from user_stats, which the archive keeps in
+   step with game_history; see services/gameHistory.js. */
+router.get('/me/stats', authenticateToken, (req, res, next) => {
+  try {
+    const stats = getDatabase()
+      .prepare('SELECT * FROM user_stats WHERE user_id = ?')
+      .get(req.user.userId);
+    res.json({ stats: statsRow(stats) });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Get user stats
 router.get('/:id/stats', authenticateToken, (req, res, next) => {

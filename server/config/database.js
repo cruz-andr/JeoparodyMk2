@@ -90,6 +90,19 @@ export async function initializeDatabase() {
     ['boards', 'category_names', 'TEXT'],
     // Google's profile picture, when they sign in that way.
     ['users', 'avatar_url', 'TEXT'],
+    /* The archive. game_history was created as one row per room with the
+       standings inside it, and nothing ever wrote one. What a person wants to
+       read back is their own games, so a row is now one person's result in
+       one game: the player, how they played, what they scored. A multiplayer
+       game writes one row per signed-in player. */
+    ['game_history', 'user_id', 'TEXT REFERENCES users(id) ON DELETE CASCADE'],
+    ['game_history', 'mode', 'TEXT'],
+    ['game_history', 'score', 'INTEGER'],
+    ['game_history', 'correct', 'INTEGER'],
+    ['game_history', 'total', 'INTEGER'],
+    ['game_history', 'board_slug', 'TEXT'],
+    // When the record was last written to, so the profile can say so.
+    ['user_stats', 'last_played_at', 'TEXT'],
   ];
 
   // Create tables
@@ -278,6 +291,14 @@ export async function initializeDatabase() {
   database.exec(
     'CREATE UNIQUE INDEX IF NOT EXISTS users_google_id ' +
     'ON users(google_id) WHERE google_id IS NOT NULL'
+  );
+
+  /* After the migrations, because the column it indexes was added by one:
+     inside the big CREATE block above it would fail on any database that
+     predates the archive, and that is every database in production. */
+  database.exec(
+    'CREATE INDEX IF NOT EXISTS idx_game_history_user ' +
+    'ON game_history(user_id, played_at DESC)'
   );
 
   return database;

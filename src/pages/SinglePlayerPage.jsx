@@ -17,6 +17,7 @@ import GameResults from '../components/game/GameResults';
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
 import { boardToHost } from '../stores/boardShape';
 import { countPlay } from '../services/api/boardsService';
+import { finishGame } from '../services/api/gamesService';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
@@ -269,26 +270,49 @@ export default function SinglePlayerPage() {
     }
   };
 
+  /* The archive, when there is an account to write it to.
+
+     Local stats are kept as well, whoever you are: they are what the pages
+     show when the server cannot be reached, and what a visitor has instead of
+     an account. Never awaited and never surfaced. A game you played is not
+     going to be interrupted over a row that did not save. */
+  const fileGame = (finalScore, correct, total) => {
+    if (!token) return;
+    finishGame(token, {
+      mode: 'single',
+      score: finalScore,
+      correct,
+      total,
+      categories,
+      genre,
+      boardSlug: location.state?.boardSlug ?? null,
+    }).catch((err) => console.warn('Could not save the game:', err.message));
+  };
+
   const handleFinalJeopardyComplete = (result) => {
     // Update the score based on Final Jeopardy result
     const newScore = result.finalScore;
+    const correct = questionsCorrect + (result.isCorrect ? 1 : 0);
+    const total = questionsAttempted + 1;
 
     // Save stats and highscore with final score
     updateStats({
       score: newScore,
       won: true,
-      questionsCorrect: questionsCorrect + (result.isCorrect ? 1 : 0),
-      questionsTotal: questionsAttempted + 1,
+      questionsCorrect: correct,
+      questionsTotal: total,
     });
 
     addHighscore({
       score: newScore,
       genre,
-      questionsCorrect: questionsCorrect + (result.isCorrect ? 1 : 0),
-      questionsTotal: questionsAttempted + 1,
+      questionsCorrect: correct,
+      questionsTotal: total,
       rounds: currentRound,
       includedFinalJeopardy: true,
     });
+
+    fileGame(newScore, correct, total);
 
     // Update the game store score for display
     useGameStore.getState().setScore(newScore);
@@ -312,6 +336,8 @@ export default function SinglePlayerPage() {
       questionsTotal: questionsAttempted,
       rounds: currentRound,
     });
+
+    fileGame(score, questionsCorrect, questionsAttempted);
 
     setPhase('finished');
   };

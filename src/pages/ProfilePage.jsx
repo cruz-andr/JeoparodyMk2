@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { useDailyStore } from '../stores/dailyStore';
 import { currentWeekBest, toDateString } from '../stores/dailyLogic';
+import { useGameRecord } from '../hooks/useGameRecord';
+import { describeGame, modeLabel, money as gameMoney, whenPlayed } from '../utils/gameRecord';
 import Icon from '../components/common/Icon';
 import './ProfilePage.css';
 import AppTabBar from '../components/common/AppTabBar';
@@ -19,6 +21,10 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, restoreSession } = useUserStore();
   const dailyStats = useDailyStore((s) => s.stats);
+  /* The daily has its own record above; this is every other game. From the
+     archive when signed in, which on this page is always, and from
+     localStorage if the server is out of reach. */
+  const { record, source, loading: recordLoading } = useGameRecord({ limit: 10 });
 
   const [checked, setChecked] = useState(false);
   const leaving = useRef(false);
@@ -89,6 +95,49 @@ export default function ProfilePage() {
             <b>{dailyStats.board.gamesPlayed}</b><span>Boards played</span>
           </div>
         </div>
+
+        <section className="profile-games" aria-busy={recordLoading}>
+          <h2 className="profile-section-title">Games</h2>
+          <div className="profile-record profile-record-three">
+            <div className="profile-stat">
+              <b>{record.stats.gamesPlayed}</b><span>Games played</span>
+            </div>
+            <div className="profile-stat">
+              <b>{gameMoney(record.stats.bestScore)}</b><span>Best score</span>
+            </div>
+            <div className="profile-stat">
+              <b>{record.stats.accuracy}%</b><span>Accuracy</span>
+            </div>
+          </div>
+
+          <h2 className="profile-section-title">Recent games</h2>
+          {record.games.length === 0 ? (
+            <p className="profile-games-empty">
+              {recordLoading ? 'Looking up your games.' : 'No games yet. Every game you finish is kept here.'}
+            </p>
+          ) : (
+            <ol className="profile-games-list">
+              {record.games.map((game) => (
+                <li key={game.id} className="profile-game">
+                  <span className="profile-game-main">
+                    <span className="profile-game-name">{describeGame(game)}</span>
+                    <span className="profile-game-note">
+                      {modeLabel(game.mode)}
+                      {game.total ? ` · ${game.correct} of ${game.total} right` : ''}
+                      {game.playedAt ? ` · ${whenPlayed(game.playedAt)}` : ''}
+                    </span>
+                  </span>
+                  <b className={`profile-game-score${game.score < 0 ? ' is-negative' : ''}`}>
+                    {gameMoney(game.score)}
+                  </b>
+                </li>
+              ))}
+            </ol>
+          )}
+          {source === 'local' && !recordLoading && (
+            <p className="profile-games-note">Shown from this device. The server could not be reached.</p>
+          )}
+        </section>
 
         <nav className="profile-rows">
           <Link className="plain-btn profile-row" to="/settings">

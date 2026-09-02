@@ -1,7 +1,23 @@
 import { verifyToken } from '../middleware/auth.js';
+import { getDatabase } from '../config/database.js';
+import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager } from './GameStateManager.js';
 
 const gameManager = new GameStateManager();
+
+/* Write the finished room to every signed-in player's archive. Never throws:
+   a game that was played but could not be filed is a log line, not a reason
+   to hold back the standings from the people who just played it. */
+function archiveRoom(roomCode) {
+  const room = gameManager.rooms.get(roomCode);
+  if (!room) return;
+  try {
+    const written = recordRoomGame(getDatabase(), room);
+    if (written.length) console.log(`Archived room ${roomCode} for ${written.length} player(s)`);
+  } catch (err) {
+    console.error(`Could not archive room ${roomCode}:`, err.message);
+  }
+}
 
 // Lifecycle events (setting the board, ending rounds, starting Final Jeopardy)
 // change the game for everyone, so only the room's host may fire them. In
@@ -424,6 +440,7 @@ export function initializeSocketHandlers(io) {
       // straight to the results instead of a wager screen nobody can satisfy.
       if (fjData.eligibleCount === 0) {
         console.log(`No eligible players for Final Jeopardy in ${roomCode}, ending game`);
+        archiveRoom(roomCode);
         io.to(roomCode).emit('game:ended');
         return;
       }
@@ -458,6 +475,7 @@ export function initializeSocketHandlers(io) {
     socket.on('game:end', ({ roomCode }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game ended for room ${roomCode}`);
+      archiveRoom(roomCode);
       io.to(roomCode).emit('game:ended');
     });
 

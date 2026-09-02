@@ -15,6 +15,7 @@ import userRoutes from './routes/users.js';
 import roomRoutes from './routes/rooms.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import boardRoutes from './routes/boards.js';
+import gameRoutes from './routes/games.js';
 
 // Import socket handlers
 import { initializeSocketHandlers } from './socket/index.js';
@@ -117,6 +118,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
 app.use('/api/boards', boardRoutes);
+app.use('/api/games', gameRoutes);
 
 // Daily Challenge endpoint - scrapes J-Archive
 app.get('/api/daily/challenge', async (req, res) => {

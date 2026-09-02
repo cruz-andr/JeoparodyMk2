@@ -1205,6 +1205,61 @@ test('a room with someone connected is never reaped', () => {
   assert.ok(gm.rooms.has(code));
 });
 
+// =========================================================================
+// The archive's ledger: who a player is, and how they answered
+// =========================================================================
+
+test('a player carries the account behind the socket, or null', () => {
+  const gm = new GameStateManager();
+  const host = { ...mkSocket(), userId: 'u-host' };
+  const room = gm.createRoom('multiplayer', host);
+  gm.joinRoom(host, room.code, 'Host');
+  gm.joinRoom(mkSocket(), room.code, 'Visitor');
+  const [h, v] = [...room.players.values()];
+  assert.equal(h.userId, 'u-host');
+  assert.equal(v.userId, null);
+});
+
+test('a rejoin keeps the account and the tally along with the score', () => {
+  const gm = new GameStateManager();
+  const s = { ...mkSocket(), userId: 'u-ada' };
+  const room = gm.createRoom('multiplayer', s);
+  gm.joinRoom(s, room.code, 'Ada');
+  const p = room.players.get(s.sessionId);
+  p.score = 600; p.correct = 2; p.answered = 3;
+  gm.joinRoom({ id: 'socket-new', sessionId: s.sessionId }, room.code, 'Ada');
+  const again = room.players.get(s.sessionId);
+  assert.equal(again.score, 600);
+  assert.equal(again.userId, 'u-ada');
+  assert.equal(again.correct, 2);
+  assert.equal(again.answered, 3);
+});
+
+test('every judged answer is tallied, right or wrong', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  room.gameState.buzzWindowOpen = true;
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  room.gameState.buzzedPlayerId = sockets[1].sessionId;
+  gm.handleAnswer(code, sockets[1].sessionId, false);
+  const p1 = room.players.get(sockets[1].sessionId);
+  assert.equal(p1.answered, 1);
+  assert.equal(p1.correct, 0);
+
+  room.gameState.buzzedPlayerId = sockets[2].sessionId;
+  gm.handleAnswer(code, sockets[2].sessionId, true);
+  const p2 = room.players.get(sockets[2].sessionId);
+  assert.equal(p2.answered, 1);
+  assert.equal(p2.correct, 1);
+});
+
+test('a clue nobody answered is counted against nobody', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.handleBuzzTimeout(code);
+  for (const p of room.players.values()) assert.equal(p.answered || 0, 0);
+});
+
 // --- report --------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
