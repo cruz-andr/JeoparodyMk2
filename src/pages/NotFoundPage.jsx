@@ -12,7 +12,7 @@ import { VISITOR_COPY } from '../components/common/errorReport';
 export default function NotFoundPage() {
   return (
     <ErrorScreen title={VISITOR_COPY.notFound.title} body={VISITOR_COPY.notFound.body}>
-      <Link className="error-screen-link" to="/menu">Back to the menu</Link>
+      <Link className="quiet-action" to="/menu">Back to the menu</Link>
     </ErrorScreen>
   );
 }

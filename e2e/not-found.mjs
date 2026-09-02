@@ -33,7 +33,7 @@ try {
   const readPage = () => b.evaluate(`(() => ({
     text: document.body.innerText,
     title: (document.querySelector('.error-screen-title') || {}).textContent || '',
-    backTarget: document.querySelector('.error-screen a.error-screen-link')?.getAttribute('href') ?? '',
+    backTarget: document.querySelector('.error-screen a.quiet-action')?.getAttribute('href') ?? '',
     ground: getComputedStyle(document.querySelector('.error-screen') || document.body).backgroundColor,
     hasPre: !!document.querySelector('pre'),
   }))()`);
@@ -54,7 +54,7 @@ try {
     }
     check(`${label}: there is a way back`, page.backTarget === '/menu', page.backTarget);
 
-    await b.click('.error-screen a.error-screen-link');
+    await b.click('.error-screen a.quiet-action');
     await b.until("location.pathname === '/menu' && !!document.querySelector('.menu')", { timeout: 15000 });
     check(`${label}: the way back reaches the menu`, await b.evaluate("location.pathname") === '/menu');
     await b.shot(`not-found-${label.replace(/\s+/g, '-')}.png`);

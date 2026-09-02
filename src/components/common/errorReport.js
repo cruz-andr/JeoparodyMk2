@@ -21,16 +21,11 @@ export const VISITOR_COPY = {
   },
 };
 
-/* Words a visitor must never read on an error screen, lower case. Checked by
-   the tests and by the browser suite, and kept here so both look for the
-   same things. */
+/* Words a visitor must never read on an error screen, lower case. Nothing
+   at runtime checks them, because the copy above is fixed strings; the unit
+   test and the browser suite both read this list, so a word added here is
+   looked for in both places. */
 export const FORBIDDEN_WORDS = ['developer', 'application error', 'errorboundary', 'stack trace'];
-
-/* Says whether a piece of copy is fit for a visitor. */
-export function isVisitorSafe(text) {
-  const lower = String(text ?? '').toLowerCase();
-  return FORBIDDEN_WORDS.every((word) => !lower.includes(word));
-}
 
 /* Turns whatever was thrown into a plain object a reporter can serialise.
 

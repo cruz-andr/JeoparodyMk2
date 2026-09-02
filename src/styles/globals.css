@@ -150,8 +150,13 @@ button.plain-btn:focus {
    screen is for.
 
    Element-and-class weight to match `button.plain-btn` in the reset above,
-   which would otherwise win and take the colour back. */
-button.quiet-action {
+   which would otherwise win and take the colour back. A link may wear the
+   same class (the error screens put "Back to the menu" beside "Try again"),
+   so the anchor is named here too and there is one rule for both, not a
+   copy that has to track this one by hand. */
+button.quiet-action,
+a.quiet-action {
+  display: inline-block;
   padding: 10px 14px;
   background: none;
   border: none;
@@ -162,17 +167,20 @@ button.quiet-action {
   font-size: 0.76rem;
   letter-spacing: 0.9px;
   color: var(--jeopardy-gold-light);
+  text-decoration: none;
   cursor: pointer;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  button.quiet-action:hover:not(:disabled) {
+  button.quiet-action:hover:not(:disabled),
+  a.quiet-action:hover {
     background: rgba(214, 159, 76, 0.14);
     color: var(--jeopardy-gold);
   }
 }
 
-button.quiet-action:focus-visible {
+button.quiet-action:focus-visible,
+a.quiet-action:focus-visible {
   outline: none;
   background: rgba(214, 159, 76, 0.2);
   color: var(--jeopardy-gold);

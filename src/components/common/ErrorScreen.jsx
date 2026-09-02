@@ -11,17 +11,17 @@ import './ErrorScreen.css';
  * the safer way home anyway.
  */
 export function MenuLink({ children = 'Back to the menu' }) {
-  return <a className="error-screen-link" href="/menu">{children}</a>;
+  return <a className="quiet-action" href="/menu">{children}</a>;
 }
 
 export default function ErrorScreen({ title, body, children }) {
   return (
-    <div className="error-screen" role="main">
+    <main className="error-screen">
       <div className="error-screen-inner">
         <h1 className="error-screen-title">{title}</h1>
         <p className="error-screen-body">{body}</p>
         <div className="error-screen-actions">{children}</div>
       </div>
-    </div>
+    </main>
   );
 }

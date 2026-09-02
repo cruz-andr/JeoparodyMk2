@@ -47,33 +47,5 @@
   gap: 6px 18px;
 }
 
-/* A link dressed as the quiet button, so both kinds of action read as one.
-   `button.quiet-action` in globals.css is element-qualified, so an anchor has
-   to be given the same face here, and every value below must track that
-   rule. "Try again" is the button and "Back to the menu" is this anchor, side
-   by side, so a size that drifts is visible at once. */
-a.error-screen-link {
-  display: inline-block;
-  padding: 10px 14px;
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 700;
-  /* Same as button.quiet-action: the condensed face reads thin below this. */
-  font-size: 0.92rem;
-  letter-spacing: 0.9px;
-  color: var(--jeopardy-gold-light);
-  text-decoration: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  a.error-screen-link:hover {
-    background: rgba(214, 159, 76, 0.14);
-    color: var(--jeopardy-gold);
-  }
-}
-
-a.error-screen-link:focus-visible {
-  outline: none;
-  background: rgba(214, 159, 76, 0.2);
-  color: var(--jeopardy-gold);
-}
+/* Both actions wear `quiet-action` from globals.css, the anchor and the
+   button alike, so they are one rule there and nothing here. */

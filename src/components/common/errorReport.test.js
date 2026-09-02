@@ -8,10 +8,16 @@ import assert from 'node:assert/strict';
 import {
   VISITOR_COPY,
   FORBIDDEN_WORDS,
-  isVisitorSafe,
   describeError,
   reportError,
 } from './errorReport.js';
+
+/* Says whether a piece of copy is fit for a visitor. Lives in the test
+   because the app never checks copy at runtime: the strings are fixed. */
+function isVisitorSafe(text) {
+  const lower = String(text ?? '').toLowerCase();
+  return FORBIDDEN_WORDS.every((word) => !lower.includes(word));
+}
 
 let passed = 0;
 const failures = [];
