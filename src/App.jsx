@@ -1,6 +1,13 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { useSettingsStore } from './stores/settingsStore';
+import ErrorBoundary from './components/common/ErrorBoundary';
+/* Not lazy. A chunk that fails to load is one of the errors this page
+   exists to show, and the page for that cannot itself be a chunk. It draws
+   NotFoundPage for a 404, so that page is in the main chunk too; a lazy()
+   around it here would be inert, and Vite says so on every build. */
+import RouteErrorPage from './pages/RouteErrorPage';
+import NotFoundPage from './pages/NotFoundPage';
 import './styles/globals.css';
 
 // Lazy-load all pages — each becomes its own chunk,
@@ -43,7 +50,10 @@ function PageLoader() {
   );
 }
 
-const router = createBrowserRouter([
+/* One pathless root holds every page so a single errorElement covers them
+   all. Without it react-router draws its own error page, which tells the
+   visitor to check the console and is addressed to a developer. */
+const routes = [
   { path: '/', element: <SplashPage /> },
   { path: '/menu', element: <HomePage /> },
   { path: '/daily', element: <DailyPage /> },
@@ -77,6 +87,13 @@ const router = createBrowserRouter([
   { path: '/boards/:slug', element: <BoardPage /> },
   { path: '/boards/:slug/edit', element: <BoardEditPage /> },
   { path: '/guidelines', element: <GuidelinesPage /> },
+
+  /* Last, and matched only when nothing above did. */
+  { path: '*', element: <NotFoundPage /> },
+];
+
+const router = createBrowserRouter([
+  { errorElement: <RouteErrorPage />, children: routes },
 ]);
 
 function App() {
@@ -89,9 +106,11 @@ function App() {
   }, [textScale]);
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <RouterProvider router={router} />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <RouterProvider router={router} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

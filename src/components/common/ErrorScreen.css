@@ -1,0 +1,51 @@
+/*
+ * The screen behind every dead end: a wrong address, a crash.
+ *
+ * Same ground as the menu, one title in the board face, one sentence, and the
+ * actions as words. It must not look like an alert, and it must not look like
+ * anything a framework prints for its own authors.
+ */
+
+.error-screen {
+  min-height: 100vh;
+  background: #05081c;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.error-screen-inner {
+  max-width: 34rem;
+  text-align: center;
+}
+
+.error-screen-title {
+  font-family: var(--font-board);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  line-height: 1;
+  color: var(--jeopardy-gold);
+  text-shadow: none;
+  margin: 0 0 18px;
+}
+
+.error-screen-body {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 1.02rem;
+  margin: 0 0 30px;
+}
+
+.error-screen-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+/* Both actions wear `quiet-action` from globals.css, the anchor and the
+   button alike, so they are one rule there and nothing here. */
