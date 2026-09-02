@@ -13,7 +13,7 @@
  * downstream of src/services/api/aiService.js knows the road changed.
  */
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth.js';
+import { optionalAuth } from '../middleware/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
 import * as model from '../services/gemini.js';
 
@@ -68,7 +68,11 @@ function values(value) {
 /* Express 4 does not catch a rejected promise from a handler. */
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-router.use(authenticateToken);
+/* Signed in or not. Single player has always worked without an account, and
+   gating the model behind sign in would turn the front door into a wall. A
+   guest is rate limited by address instead of by account, which is what the
+   limiter's key already does when there is no user on the request. */
+router.use(optionalAuth);
 
 /** Six category names for a topic. Answers with a bare array of strings. */
 router.post('/categories', wrap(async (req, res) => {

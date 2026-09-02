@@ -110,16 +110,18 @@ const refusing = (status, message) => model.useGenerateContent(async () => {
 
 // ============================================================ who may ask
 
-await test('nobody signed out may ask', async () => {
+await test('a guest may ask, because single player never needed an account', async () => {
   answering();
   const { status } = await post('/categories', { topic: 'Rivers' }, null);
-  assert.equal(status, 401);
+  assert.equal(status, 200);
 });
 
-await test('a forged token is refused', async () => {
+await test('a forged token is treated as no token, not refused', async () => {
+  /* optionalAuth drops a token it cannot verify and carries on as a guest.
+     Refusing would let a stale token in a browser turn the AI off entirely. */
   answering();
   const { status } = await post('/categories', { topic: 'Rivers' }, 'not-a-token');
-  assert.equal(status, 403);
+  assert.equal(status, 200);
 });
 
 // ============================================================ the shapes
