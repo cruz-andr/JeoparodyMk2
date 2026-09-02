@@ -9,7 +9,7 @@
  */
 import { launch } from './driver.mjs';
 const STAMP = String(Date.now()).slice(-7);
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 
 /* Its own account, like every suite, so a signed-in host screen is the one

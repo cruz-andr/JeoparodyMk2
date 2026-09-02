@@ -6,7 +6,7 @@
    nobody else is looking and offered a way forward. Slow by nature: the
    thresholds are 20 and 45 seconds, and the server checks every five. */
 import { launch } from './driver.mjs';
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 
 let bad = 0;
 const check = (n, ok, d = '') => { if (!ok) bad++; console.log(`${ok ? '  ok  ' : ' FAIL '} ${n}${d ? '  ' + d : ''}`); };

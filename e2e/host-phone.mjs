@@ -7,7 +7,7 @@
  */
 import { io } from 'socket.io-client';
 import { launch } from './driver.mjs';
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 const STAMP = String(Date.now()).slice(-7);
 
