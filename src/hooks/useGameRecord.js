@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUserStore } from '../stores';
 import { gameHistory, myStats } from '../services/api/gamesService';
-import { apiRecord, localRecord } from '../utils/gameRecord';
+import { apiRecord, deviceOnlyGames, localRecord } from '../utils/gameRecord';
 
 /**
  * Your record: the archive when you are signed in, localStorage when not.
@@ -12,6 +12,12 @@ import { apiRecord, localRecord } from '../utils/gameRecord';
  *
  * If the server cannot be reached the local record stands in rather than an
  * empty page: a number that is a little behind beats no number at all.
+ *
+ * Signed in, the archive is the record and the local copy is not merged into
+ * it: a game the server never saw cannot be filed after the fact without
+ * taking the client's word for the score. `deviceOnly` says how many such
+ * games this device has, so the page can say so instead of showing someone
+ * with forty local games "No games yet" and nothing else.
  */
 export function useGameRecord({ limit = 20 } = {}) {
   const token = useUserStore((s) => s.token);
@@ -48,6 +54,7 @@ export function useGameRecord({ limit = 20 } = {}) {
   return {
     record: remote ?? local,
     source: remote ? 'account' : 'local',
+    deviceOnly: deviceOnlyGames(local, remote),
     loading,
   };
 }

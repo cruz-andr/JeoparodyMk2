@@ -169,6 +169,15 @@ await test('a guest token is refused with a sentence', async () => {
   assert.equal(status, 403);
   assert.equal(data.error.code, 'GUEST');
   assert.match(data.error.message, /Sign in/);
+
+  // The same answer from every door to the archive, so a client that asks
+  // for stats and history together never gets one of each.
+  const history = await api('/games/history', { token: guest.token });
+  assert.equal(history.status, 403);
+  assert.equal(history.data.error.code, 'GUEST');
+  const stats = await api('/users/me/stats', { token: guest.token });
+  assert.equal(stats.status, 403);
+  assert.equal(stats.data.error.code, 'GUEST');
 });
 
 await test('a fresh account has an empty record', async () => {

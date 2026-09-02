@@ -467,6 +467,12 @@ export function initializeSocketHandlers(io) {
       if (allIn) {
         // All answers are in, reveal results
         const results = gameManager.getFJResults(roomCode);
+        /* The scores are final here, so file the game now rather than at
+           game:end, which only arrives if the host goes on to press "See
+           Final Standings". A host who closed the tab on the reveal used to
+           cost every other player their row. game:end still archives a game
+           that ended without a Final, and a second call is a no-op. */
+        archiveRoom(roomCode);
         io.to(roomCode).emit('game:fj-reveal', { results });
       }
     });

@@ -1253,6 +1253,85 @@ test('every judged answer is tallied, right or wrong', () => {
   assert.equal(p2.correct, 1);
 });
 
+test('a hosted room tallies every answer the host judges', () => {
+  // Reviewer repro: hostJudgeAnswer moved the score and left the tally at 0,
+  // so every hosted game was archived as 0 of 0.
+  const gm = new GameStateManager();
+  const sockets = [mkSocket(), mkSocket(), mkSocket()];
+  const room = gm.createRoom('host', sockets[0], { answerMode: 'verbal' });
+  const code = room.code;
+  sockets.forEach((s, i) => gm.joinRoom(s, code, `N${i}`));
+  gm.setHostQuestions(code, mkBoard(), ['A', 'B', 'C', 'D', 'E', 'F'], sockets[0].sessionId);
+  room.gameState.phase = 'playing';
+  const host = sockets[0].sessionId;
+  const p = room.players.get(sockets[1].sessionId);
+
+  const buzzIn = (categoryIndex, pointIndex) => {
+    gm.selectQuestionHostMode(sockets[0], code, categoryIndex, pointIndex);
+    gm.startBuzzWindow(code);
+    gm.recordBuzz(code, p.id, 10);
+    gm.determineBuzzerWinner(code);
+  };
+
+  buzzIn(0, 1);
+  assert.ok(gm.hostJudgeAnswer(code, host, p.id, true));
+  assert.equal(p.score, 400);
+  assert.equal(p.answered, 1);
+  assert.equal(p.correct, 1);
+
+  buzzIn(1, 0);
+  assert.ok(gm.hostJudgeAnswer(code, host, p.id, false));
+  assert.equal(p.score, 200);
+  assert.equal(p.answered, 2);
+  assert.equal(p.correct, 1);
+
+  // A double-clicked judge button is still one answer.
+  assert.equal(gm.hostJudgeAnswer(code, host, p.id, false), null);
+  assert.equal(p.answered, 2);
+});
+
+test('the legacy answer path tallies too', () => {
+  const gm = new GameStateManager();
+  const s = mkSocket();
+  const room = gm.createRoom('multiplayer', s);
+  gm.joinRoom(s, room.code, 'Solo');
+  room.status = 'waiting';
+  gm.startGame(room.code);
+  room.gameState.currentQuestion = { points: 600, question: 'What is Paris?' };
+  room.gameState.buzzedPlayerId = s.sessionId;
+  gm.submitAnswer(s, room.code, 'paris');
+  const p = room.players.get(s.sessionId);
+  assert.equal(p.score, 600);
+  assert.equal(p.answered, 1);
+  assert.equal(p.correct, 1);
+});
+
+test('players go out to the room without the account id or the tally', () => {
+  const gm = new GameStateManager();
+  const s = { ...mkSocket(), userId: 'u-ada' };
+  const room = gm.createRoom('multiplayer', s);
+  const joined = gm.joinRoom(s, room.code, 'Ada');
+  const other = gm.joinRoom(mkSocket(), room.code, 'Bob');
+  for (const payload of [joined, other]) {
+    for (const p of payload.players) {
+      assert.ok(!('userId' in p), 'userId must not leave the server');
+      assert.ok(!('correct' in p));
+      assert.ok(!('answered' in p));
+      assert.equal(typeof p.displayName, 'string');
+      assert.equal(typeof p.score, 'number');
+    }
+  }
+  // The server's own copy keeps them, for the archive.
+  assert.equal(room.players.get(s.sessionId).userId, 'u-ada');
+
+  // A rejoin and the legacy start both carry players and go through the same door.
+  const back = gm.joinRoom({ id: 'socket-back', sessionId: s.sessionId }, room.code, 'Ada');
+  assert.ok(back.players.every((p) => !('userId' in p)));
+  room.status = 'waiting';
+  const started = gm.startGame(room.code);
+  assert.ok(started.players.every((p) => !('userId' in p)));
+});
+
 test('a clue nobody answered is counted against nobody', () => {
   const { gm, code, sockets, room } = mkGame();
   gm.selectQuestion(sockets[0], code, 0, 0);

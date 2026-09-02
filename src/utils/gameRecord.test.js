@@ -9,6 +9,8 @@ import {
   accuracyOf,
   apiRecord,
   describeGame,
+  deviceOnlyGames,
+  deviceOnlyNote,
   localRecord,
   modeLabel,
   money,
@@ -174,6 +176,29 @@ test('the two records have the same keys', () => {
   const b = apiRecord({ stats: {}, games: [{ id: 'x' }] });
   assert.deepEqual(Object.keys(a.stats).sort(), Object.keys(b.stats).sort());
   assert.deepEqual(Object.keys(a.games[0]).sort(), Object.keys(b.games[0]).sort());
+});
+
+// ---------------------------------------------------------------- deviceOnly
+
+test('deviceOnlyGames is the excess of the local count over the account', () => {
+  const local = localRecord({ stats: { gamesPlayed: 40 }, localHighscores: [] });
+  const account = apiRecord({ stats: { gamesPlayed: 3 }, games: [] });
+  assert.equal(deviceOnlyGames(local, account), 37);
+});
+
+test('deviceOnlyGames is zero when the account has every game, or more', () => {
+  const local = localRecord({ stats: { gamesPlayed: 3 }, localHighscores: [] });
+  assert.equal(deviceOnlyGames(local, apiRecord({ stats: { gamesPlayed: 3 } })), 0);
+  assert.equal(deviceOnlyGames(local, apiRecord({ stats: { gamesPlayed: 9 } })), 0);
+  assert.equal(deviceOnlyGames(local, null), 0);
+  assert.equal(deviceOnlyGames(null, apiRecord({})), 0);
+});
+
+test('deviceOnlyNote reads as a sentence, singular and plural, and is empty at zero', () => {
+  assert.equal(deviceOnlyNote(0), '');
+  assert.match(deviceOnlyNote(1), /^1 game .*is kept here only\.$/);
+  assert.match(deviceOnlyNote(12), /^12 games .*are kept here only\.$/);
+  assert.ok(!deviceOnlyNote(12).includes('\u2014'));
 });
 
 // ---------------------------------------------------------------- report

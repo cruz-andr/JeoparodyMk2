@@ -4,7 +4,7 @@ import { useUserStore } from '../stores';
 import { useDailyStore } from '../stores/dailyStore';
 import { currentWeekBest, toDateString } from '../stores/dailyLogic';
 import { useGameRecord } from '../hooks/useGameRecord';
-import { describeGame, modeLabel, money as gameMoney, whenPlayed } from '../utils/gameRecord';
+import { describeGame, deviceOnlyNote, modeLabel, money as gameMoney, whenPlayed } from '../utils/gameRecord';
 import Icon from '../components/common/Icon';
 import './ProfilePage.css';
 import AppTabBar from '../components/common/AppTabBar';
@@ -24,7 +24,7 @@ export default function ProfilePage() {
   /* The daily has its own record above; this is every other game. From the
      archive when signed in, which on this page is always, and from
      localStorage if the server is out of reach. */
-  const { record, source, loading: recordLoading } = useGameRecord({ limit: 10 });
+  const { record, source, deviceOnly, loading: recordLoading } = useGameRecord({ limit: 10 });
 
   const [checked, setChecked] = useState(false);
   const leaving = useRef(false);
@@ -136,6 +136,9 @@ export default function ProfilePage() {
           )}
           {source === 'local' && !recordLoading && (
             <p className="profile-games-note">Shown from this device. The server could not be reached.</p>
+          )}
+          {source === 'account' && deviceOnly > 0 && (
+            <p className="profile-games-note">{deviceOnlyNote(deviceOnly)}</p>
           )}
         </section>
 

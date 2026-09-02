@@ -149,3 +149,26 @@ export function apiRecord({ stats, games } = {}) {
     })),
   };
 }
+
+/**
+ * How many games this device has that the account does not.
+ *
+ * The local record keeps counting after you sign in, so it is never simply
+ * "the games from before". But it can only exceed the account's count by
+ * games the account never saw: played signed out, or filed and lost. That
+ * excess is what the pages mention, in one quiet line.
+ */
+export function deviceOnlyGames(local, account) {
+  if (!local || !account) return 0;
+  const mine = local.stats?.gamesPlayed || 0;
+  const filed = account.stats?.gamesPlayed || 0;
+  return Math.max(0, mine - filed);
+}
+
+/** The line under the list when deviceOnlyGames() is not zero. */
+export function deviceOnlyNote(count) {
+  if (!count) return '';
+  return count === 1
+    ? '1 game played on this device while signed out is kept here only.'
+    : `${count} games played on this device while signed out are kept here only.`;
+}

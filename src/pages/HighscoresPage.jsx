@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useDailyStore } from '../stores/dailyStore';
 import { useGameRecord } from '../hooks/useGameRecord';
-import { describeGame, modeLabel, money, whenPlayed } from '../utils/gameRecord';
+import { describeGame, deviceOnlyNote, modeLabel, money, whenPlayed } from '../utils/gameRecord';
 import './HighscoresPage.css';
 import AppTabBar from '../components/common/AppTabBar';
 
@@ -10,7 +10,7 @@ export default function HighscoresPage() {
   const navigate = useNavigate();
   /* The same record the profile shows: the archive when signed in, this
      device's own when not. See hooks/useGameRecord.js. */
-  const { record, source, loading } = useGameRecord({ limit: 10 });
+  const { record, source, deviceOnly, loading } = useGameRecord({ limit: 10 });
   // The all-time board best lives here rather than on the menu: the menu's job
   // is a target you can beat today, this is the record.
   const dailyStats = useDailyStore((s) => s.stats);
@@ -37,7 +37,7 @@ export default function HighscoresPage() {
           <div className="stat-card">
             <span className="stat-value">
               {dailyStats.board.bestScore === null
-                ? '—'
+                ? 'None yet'
                 : `${dailyStats.board.bestScore < 0 ? '-' : ''}$${Math.abs(dailyStats.board.bestScore).toLocaleString()}`}
             </span>
             <span className="stat-label">Best Board, All Time</span>
@@ -86,6 +86,9 @@ export default function HighscoresPage() {
           )}
           {source === 'local' && !loading && (
             <p className="scores-note">Kept on this device. Sign in to keep your record with your account.</p>
+          )}
+          {source === 'account' && deviceOnly > 0 && (
+            <p className="scores-note">{deviceOnlyNote(deviceOnly)}</p>
           )}
         </div>
 

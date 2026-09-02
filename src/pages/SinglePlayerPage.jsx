@@ -59,7 +59,7 @@ export default function SinglePlayerPage() {
     questionsCorrect,
   } = useGameStore();
 
-  const { updateStats, addHighscore, token } = useUserStore();
+  const { updateStats, addHighscore, token, isGuest } = useUserStore();
   const { playCorrect, playWrong } = useAudio();
   const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy, difficulty } =
     useSettingsStore();
@@ -277,7 +277,10 @@ export default function SinglePlayerPage() {
      an account. Never awaited and never surfaced. A game you played is not
      going to be interrupted over a row that did not save. */
   const fileGame = (finalScore, correct, total) => {
-    if (!token) return;
+    /* The server refuses a guest token outright (see routes/games.js), so
+       a guest is not asked: a request that is known to fail is a warning in
+       the console after every game and nothing else. */
+    if (!token || isGuest) return;
     finishGame(token, {
       mode: 'single',
       score: finalScore,
