@@ -32,3 +32,6 @@ e2e/tmp-*.sqlite*
 
 # Screenshots the browser suite takes while it runs
 e2e/shots/
+
+# Claude Code worktrees for parallel agents
+.claude/worktrees/
