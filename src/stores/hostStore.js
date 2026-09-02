@@ -254,7 +254,7 @@ export const useHostStore = create((set, get) => ({
       if (categoryQuestions.length !== 5) {
         errors.push(`Category ${catIdx + 1} must have 5 questions`);
       }
-      categoryQuestions.forEach((q, qIdx) => {
+      categoryQuestions.forEach((q) => {
         if (!q.answer || q.answer.trim() === '') {
           errors.push(
             `Category ${catIdx + 1}, $${q.points}: Missing clue`

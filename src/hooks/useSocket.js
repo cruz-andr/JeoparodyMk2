@@ -27,7 +27,7 @@ export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
-  const { user, isGuest, sessionId } = useUserStore();
+  const { user, sessionId } = useUserStore();
   const mountedRef = useRef(true);
 
   // Connect on mount

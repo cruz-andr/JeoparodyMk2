@@ -38,7 +38,6 @@ export default function SinglePlayerPage() {
     currentRound,
     loading,
     error,
-    dailyDoubles,
     setMode,
     setGenre,
     setCategories,

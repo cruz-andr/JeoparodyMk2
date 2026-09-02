@@ -2,15 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom, useAudio } from '../hooks';
-import { useRoomStore, useGameStore, useUserStore, useSettingsStore } from '../stores';
+import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameSettingsPanel from '../components/setup/GameSettingsPanel';
 import GameBoard from '../components/game/GameBoard';
-import QuestionModal from '../components/game/QuestionModal';
-import GameResults from '../components/game/GameResults';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
@@ -38,8 +36,7 @@ export default function GamePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { leaveRoom, setReady, subscribe, isConnected } = useRoom(roomCode);
-  const { players, isHost, resetRoom, settings, updateSettings, roomType, hostModeState, clearHostModeAnswers, getTypedAnswers } = useRoomStore();
-  const { setCategories, setQuestions, setPhase: setGamePhase } = useGameStore();
+  const { players, isHost, resetRoom, settings, updateSettings, roomType, clearHostModeAnswers } = useRoomStore();
   const sessionId = useUserStore((s) => s.sessionId);
   const currentPlayerId = sessionId || socketClient.getSocketId();
 
@@ -88,7 +85,7 @@ export default function GamePage() {
   const [answerTimerKey, setAnswerTimerKey] = useState(0); // Key for answer phase timer
   const [buzzTimedOut, setBuzzTimedOut] = useState(false); // Show timeout view with answer
   const [hasContinued, setHasContinued] = useState(false); // Player clicked Continue
-  const [waitingForOthers, setWaitingForOthers] = useState(false); // Waiting for other players to continue
+  const [_waitingForOthers, setWaitingForOthers] = useState(false); // Waiting for other players to continue
   const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
   const [hasSkipped, setHasSkipped] = useState(false); // Player clicked "I Don't Know"
   const [hasAlreadyBuzzed, setHasAlreadyBuzzed] = useState(false); // Player already buzzed (wrong answer) this question
@@ -402,7 +399,7 @@ export default function GamePage() {
     });
 
     // Someone buzzed first
-    const unsubBuzzerWinner = subscribe('game:buzzer-winner', ({ playerId, playerName, reactionTime }) => {
+    const unsubBuzzerWinner = subscribe('game:buzzer-winner', ({ playerId, reactionTime }) => {
       setBuzzerWinnerId(playerId);
       setBuzzerWinnerReactionTime(reactionTime);  // Store reaction time to display
       setCanBuzz(false);
@@ -491,7 +488,7 @@ export default function GamePage() {
     });
 
     // Answer revealed by buzzer winner (broadcast to all players)
-    const unsubAnswerRevealed = subscribe('game:answer-revealed', ({ playerId, answer }) => {
+    const unsubAnswerRevealed = subscribe('game:answer-revealed', () => {
       setShowAnswer(true);
     });
 
@@ -505,7 +502,7 @@ export default function GamePage() {
     });
 
     // Daily Double result - update scores and reset
-    const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, wager, newScore, nextPickerId }) => {
+    const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, newScore, nextPickerId }) => {
       if (correct) {
         audioRef.current.playCorrect();
       } else {
@@ -523,7 +520,7 @@ export default function GamePage() {
     });
 
     // Round 1 ended - show transition screen
-    const unsubRoundEnd = subscribe('game:round-ended', ({ round }) => {
+    const unsubRoundEnd = subscribe('game:round-ended', () => {
       setPhase('roundEnd');
     });
 
@@ -1227,7 +1224,6 @@ export default function GamePage() {
         buzzerWinnerId={buzzerWinnerId}
         iAmBuzzerWinner={buzzerWinnerId === currentPlayerId}
         buzzTimedOut={buzzTimedOut}
-        showAnswer={showAnswer}
         hasSkipped={hasSkipped}
         hasAlreadyBuzzed={hasAlreadyBuzzed}
         hostBuzzerOpen={hostBuzzerOpen}
@@ -1237,7 +1233,6 @@ export default function GamePage() {
         onSkip={() => socketClient.emit('game:skip-question', { roomCode })}
         onSubmitTypedAnswer={(answer) => socketClient.emit('player:submit-typed-answer', { roomCode, answer })}
         onSelectMCOption={(idx) => socketClient.emit('player:select-mc-option', { roomCode, optionIndex: idx })}
-        currentPlayerId={currentPlayerId}
         score={myScore}
       />
       </>

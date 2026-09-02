@@ -34,8 +34,6 @@ const timeLimitOptions = [
   { value: 60000, label: '60s' },
 ];
 
-const playerLimitOptions = [10, 15, 20, 25, 30];
-
 export default function HostSettingsPanel({ onNext, onBack }) {
   const { answerMode, setAnswerMode, projectorMode, setProjectorMode } = useHostStore();
   const {

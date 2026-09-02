@@ -5,7 +5,7 @@ import { parseQuestionFile, downloadSampleTemplate } from '../../services/questi
 import './ImportQuestionsPanel.css';
 
 export default function ImportQuestionsPanel({ onBack, onNext }) {
-  const { setImportedData, setImportError, importedData, importError } = useHostStore();
+  const { setImportedData, setImportError, importedData } = useHostStore();
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);

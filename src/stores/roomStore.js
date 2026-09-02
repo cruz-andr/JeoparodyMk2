@@ -92,7 +92,7 @@ export const useRoomStore = create((set, get) => ({
     });
   },
 
-  joinRoom: (roomCode, playerData) => {
+  joinRoom: (roomCode, _playerData) => {
     // This will be called after socket confirms join
     set({
       roomCode,
