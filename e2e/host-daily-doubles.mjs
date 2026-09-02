@@ -6,7 +6,7 @@
  * it on, mark the cells, and check the board says what it did.
  */
 import { launch } from './driver.mjs';
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 const STAMP = String(Date.now()).slice(-7);
 

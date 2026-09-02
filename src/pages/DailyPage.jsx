@@ -6,11 +6,13 @@ import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
 import { useAudio } from '../hooks';
 import DailyResults from '../components/daily/DailyResults';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './DailyPage.css';
 
 const FORMAT = 'sixer';
 
 export default function DailyPage() {
+  usePageTitle('The Sixer');
   const navigate = useNavigate();
   const { playCorrect, playWrong } = useAudio();
   const [userInput, setUserInput] = useState('');
@@ -96,7 +98,6 @@ export default function DailyPage() {
 
   const currentQuestion = questions[currentIndex];
   const currentAnswer = answers[currentIndex];
-  const allRevealed = answers.every((a) => a.revealed);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();

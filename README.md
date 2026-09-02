@@ -46,21 +46,18 @@ cd ..
 Create a `.env` file in the project root:
 
 ```env
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 VITE_SOCKET_URL=http://localhost:3001
 ```
 
+The Gemini key is read by the server only (see `server/.env.example`). It is
+never sent to the browser, so AI generation needs the backend running and an
+account signed in.
+
 ### 3. Start the Application
 
-#### Option A: Frontend Only (Single Player)
-
-```bash
-npm run dev
-```
-
-Open http://localhost:5000
-
-#### Option B: Full Application (Multiplayer)
+Every mode that asks the AI for a board, single player included, goes through
+the backend, so both halves need to be running.
 
 **Terminal 1 - Start Backend:**
 ```bash

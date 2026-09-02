@@ -1127,7 +1127,7 @@ test('a quickplay match identifies players the way every other event does', () =
   const sockets = [mkSocket(), mkSocket(), mkSocket()];
   sockets.forEach((s, i) => gm.joinMatchmakingQueue(s, `P${i}`));
 
-  const match = gm.tryCreateMatch();
+  const { match } = gm.tryCreateMatch();
   assert.ok(match, 'three players is a match');
 
   const room = gm.rooms.get(match.roomCode);
@@ -1137,6 +1137,147 @@ test('a quickplay match identifies players the way every other event does', () =
       'the id in the payload must be the key the room stores'
     );
   }
+});
+
+/* A matchmaker on a clock we control. Real time would make these tests take
+   a minute each. */
+function mkMatchmaker({ pairAfterMs = 20000, giveUpAfterMs = 45000 } = {}) {
+  let t = 1_000_000;
+  const gm = new GameStateManager({ now: () => t, pairAfterMs, giveUpAfterMs });
+  const advance = (ms) => { t += ms; };
+  return { gm, advance };
+}
+
+const NOTHING = { match: null, noMatchFor: null };
+
+test('an empty queue settles nothing', () => {
+  const { gm } = mkMatchmaker();
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING);
+});
+
+test('three in the queue match at once', () => {
+  const { gm } = mkMatchmaker();
+  const sockets = [mkSocket(), mkSocket(), mkSocket()];
+  sockets.forEach((s, i) => gm.joinMatchmakingQueue(s, `P${i}`));
+
+  const { match, noMatchFor } = gm.tryCreateMatch();
+  assert.ok(match);
+  assert.equal(noMatchFor, null);
+  assert.equal(match.players.length, 3);
+  assert.equal(gm.matchmakingQueue.length, 0);
+  assert.equal(gm.rooms.get(match.roomCode).settings.maxPlayers, 3);
+});
+
+test('two in the queue wait for a third until the pairing threshold', () => {
+  const { gm, advance } = mkMatchmaker();
+  gm.joinMatchmakingQueue(mkSocket(), 'A');
+  advance(5000);
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'two fresh players keep waiting');
+  advance(14_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'still under 20s for the first player');
+  advance(1);
+
+  const { match } = gm.tryCreateMatch();
+  assert.ok(match, 'the first player has waited 20s, so two will do');
+  assert.deepEqual(match.players.map(p => p.displayName), ['A', 'B']);
+  assert.equal(gm.matchmakingQueue.length, 0);
+  assert.equal(gm.rooms.get(match.roomCode).players.size, 2);
+});
+
+test('a third arrival before the pairing threshold makes a full match', () => {
+  const { gm, advance } = mkMatchmaker();
+  gm.joinMatchmakingQueue(mkSocket(), 'A');
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+  advance(10_000);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING);
+  gm.joinMatchmakingQueue(mkSocket(), 'C');
+  assert.equal(gm.tryCreateMatch().match.players.length, 3);
+});
+
+test('a player alone past the give-up threshold is named for release and leaves the queue', () => {
+  const { gm, advance } = mkMatchmaker();
+  const lone = mkSocket();
+  gm.joinMatchmakingQueue(lone, 'A');
+
+  advance(44_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'nothing before 45s');
+  assert.equal(gm.matchmakingQueue.length, 1);
+
+  advance(1);
+  assert.deepEqual(gm.tryCreateMatch(), { match: null, noMatchFor: lone });
+  assert.equal(gm.matchmakingQueue.length, 0, 'out of the queue');
+
+  advance(60_000);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'not named twice');
+});
+
+test('a player who leaves mid-wait is not matched', () => {
+  const { gm, advance } = mkMatchmaker();
+  const quitter = mkSocket();
+  const stayer = mkSocket();
+  gm.joinMatchmakingQueue(quitter, 'Q');
+  gm.joinMatchmakingQueue(stayer, 'S');
+  advance(10_000);
+  gm.leaveMatchmakingQueue(quitter);
+  advance(15_000);
+
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'one player left, no pair to make');
+  assert.equal(gm.matchmakingQueue.length, 1);
+  assert.equal(gm.matchmakingQueue[0].socket.id, stayer.id);
+
+  const third = mkSocket();
+  gm.joinMatchmakingQueue(third, 'T');
+  const { match } = gm.tryCreateMatch();
+  assert.ok(match, 'the stayer has waited 25s, so the newcomer pairs with them');
+  assert.ok(!match.players.some(p => p.id === quitter.sessionId));
+});
+
+test('a disconnect mid-wait leaves the queue the same way', () => {
+  const { gm, advance } = mkMatchmaker();
+  const gone = mkSocket();
+  gm.joinMatchmakingQueue(gone, 'G');
+  gm.handleDisconnect(gone);
+  advance(50_000);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'nobody is named for a queue they already left');
+});
+
+test('a reconnected player who asks again is back on a fresh clock', () => {
+  // The transport drops the old socket; the client comes back on a new one
+  // with the same session and asks to queue again. That must be a normal
+  // join, not a ghost of the old wait.
+  const { gm, advance } = mkMatchmaker();
+  const before = mkSocket('same-session');
+  gm.joinMatchmakingQueue(before, 'R');
+  advance(30_000);
+  gm.handleDisconnect(before);
+
+  const after = mkSocket('same-session');
+  gm.joinMatchmakingQueue(after, 'R');
+  assert.equal(gm.matchmakingQueue.length, 1, 'one entry, not two for one person');
+  assert.equal(gm.matchmakingQueue[0].socket.id, after.id);
+
+  advance(44_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'the old 30s do not count');
+  advance(1);
+  assert.deepEqual(gm.tryCreateMatch(), { match: null, noMatchFor: after });
+});
+
+test('rejoining the queue restarts the wait', () => {
+  const { gm, advance } = mkMatchmaker();
+  const a = mkSocket();
+  gm.joinMatchmakingQueue(a, 'A');
+  advance(30_000);
+  gm.joinMatchmakingQueue(a, 'A');
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'the rejoin is fresh, so two do not yet do');
+  assert.equal(gm.matchmakingQueue.length, 2);
+});
+
+test('the pairing thresholds are what the client is told', () => {
+  const { gm } = mkMatchmaker({ pairAfterMs: 1234, giveUpAfterMs: 5678 });
+  assert.deepEqual(gm.matchmakingTimings(), { pairAfterMs: 1234, giveUpAfterMs: 5678 });
 });
 
 // =========================================================================
@@ -1203,6 +1344,140 @@ test('a room with someone connected is never reaped', () => {
   room.createdAt = Date.now() - 48 * 60 * 60 * 1000;
   gm.cleanupStaleRooms();
   assert.ok(gm.rooms.has(code));
+});
+
+// =========================================================================
+// The archive's ledger: who a player is, and how they answered
+// =========================================================================
+
+test('a player carries the account behind the socket, or null', () => {
+  const gm = new GameStateManager();
+  const host = { ...mkSocket(), userId: 'u-host' };
+  const room = gm.createRoom('multiplayer', host);
+  gm.joinRoom(host, room.code, 'Host');
+  gm.joinRoom(mkSocket(), room.code, 'Visitor');
+  const [h, v] = [...room.players.values()];
+  assert.equal(h.userId, 'u-host');
+  assert.equal(v.userId, null);
+});
+
+test('a rejoin keeps the account and the tally along with the score', () => {
+  const gm = new GameStateManager();
+  const s = { ...mkSocket(), userId: 'u-ada' };
+  const room = gm.createRoom('multiplayer', s);
+  gm.joinRoom(s, room.code, 'Ada');
+  const p = room.players.get(s.sessionId);
+  p.score = 600; p.correct = 2; p.answered = 3;
+  gm.joinRoom({ id: 'socket-new', sessionId: s.sessionId }, room.code, 'Ada');
+  const again = room.players.get(s.sessionId);
+  assert.equal(again.score, 600);
+  assert.equal(again.userId, 'u-ada');
+  assert.equal(again.correct, 2);
+  assert.equal(again.answered, 3);
+});
+
+test('every judged answer is tallied, right or wrong', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  room.gameState.buzzWindowOpen = true;
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  room.gameState.buzzedPlayerId = sockets[1].sessionId;
+  gm.handleAnswer(code, sockets[1].sessionId, false);
+  const p1 = room.players.get(sockets[1].sessionId);
+  assert.equal(p1.answered, 1);
+  assert.equal(p1.correct, 0);
+
+  room.gameState.buzzedPlayerId = sockets[2].sessionId;
+  gm.handleAnswer(code, sockets[2].sessionId, true);
+  const p2 = room.players.get(sockets[2].sessionId);
+  assert.equal(p2.answered, 1);
+  assert.equal(p2.correct, 1);
+});
+
+test('a hosted room tallies every answer the host judges', () => {
+  // Reviewer repro: hostJudgeAnswer moved the score and left the tally at 0,
+  // so every hosted game was archived as 0 of 0.
+  const gm = new GameStateManager();
+  const sockets = [mkSocket(), mkSocket(), mkSocket()];
+  const room = gm.createRoom('host', sockets[0], { answerMode: 'verbal' });
+  const code = room.code;
+  sockets.forEach((s, i) => gm.joinRoom(s, code, `N${i}`));
+  gm.setHostQuestions(code, mkBoard(), ['A', 'B', 'C', 'D', 'E', 'F'], sockets[0].sessionId);
+  room.gameState.phase = 'playing';
+  const host = sockets[0].sessionId;
+  const p = room.players.get(sockets[1].sessionId);
+
+  const buzzIn = (categoryIndex, pointIndex) => {
+    gm.selectQuestionHostMode(sockets[0], code, categoryIndex, pointIndex);
+    gm.startBuzzWindow(code);
+    gm.recordBuzz(code, p.id, 10);
+    gm.determineBuzzerWinner(code);
+  };
+
+  buzzIn(0, 1);
+  assert.ok(gm.hostJudgeAnswer(code, host, p.id, true));
+  assert.equal(p.score, 400);
+  assert.equal(p.answered, 1);
+  assert.equal(p.correct, 1);
+
+  buzzIn(1, 0);
+  assert.ok(gm.hostJudgeAnswer(code, host, p.id, false));
+  assert.equal(p.score, 200);
+  assert.equal(p.answered, 2);
+  assert.equal(p.correct, 1);
+
+  // A double-clicked judge button is still one answer.
+  assert.equal(gm.hostJudgeAnswer(code, host, p.id, false), null);
+  assert.equal(p.answered, 2);
+});
+
+test('the legacy answer path tallies too', () => {
+  const gm = new GameStateManager();
+  const s = mkSocket();
+  const room = gm.createRoom('multiplayer', s);
+  gm.joinRoom(s, room.code, 'Solo');
+  room.status = 'waiting';
+  gm.startGame(room.code);
+  room.gameState.currentQuestion = { points: 600, question: 'What is Paris?' };
+  room.gameState.buzzedPlayerId = s.sessionId;
+  gm.submitAnswer(s, room.code, 'paris');
+  const p = room.players.get(s.sessionId);
+  assert.equal(p.score, 600);
+  assert.equal(p.answered, 1);
+  assert.equal(p.correct, 1);
+});
+
+test('players go out to the room without the account id or the tally', () => {
+  const gm = new GameStateManager();
+  const s = { ...mkSocket(), userId: 'u-ada' };
+  const room = gm.createRoom('multiplayer', s);
+  const joined = gm.joinRoom(s, room.code, 'Ada');
+  const other = gm.joinRoom(mkSocket(), room.code, 'Bob');
+  for (const payload of [joined, other]) {
+    for (const p of payload.players) {
+      assert.ok(!('userId' in p), 'userId must not leave the server');
+      assert.ok(!('correct' in p));
+      assert.ok(!('answered' in p));
+      assert.equal(typeof p.displayName, 'string');
+      assert.equal(typeof p.score, 'number');
+    }
+  }
+  // The server's own copy keeps them, for the archive.
+  assert.equal(room.players.get(s.sessionId).userId, 'u-ada');
+
+  // A rejoin and the legacy start both carry players and go through the same door.
+  const back = gm.joinRoom({ id: 'socket-back', sessionId: s.sessionId }, room.code, 'Ada');
+  assert.ok(back.players.every((p) => !('userId' in p)));
+  room.status = 'waiting';
+  const started = gm.startGame(room.code);
+  assert.ok(started.players.every((p) => !('userId' in p)));
+});
+
+test('a clue nobody answered is counted against nobody', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.handleBuzzTimeout(code);
+  for (const p of room.players.values()) assert.equal(p.answered || 0, 0);
 });
 
 // --- report --------------------------------------------------------------

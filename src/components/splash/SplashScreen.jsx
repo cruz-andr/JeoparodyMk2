@@ -8,7 +8,7 @@ import './SplashScreen.css';
 
 export default function SplashScreen() {
   const navigate = useNavigate();
-  const [isReady, setIsReady] = useState(false);
+  const [_isReady, setIsReady] = useState(false);
   const { playTheme, fadeOutTheme } = useAudio();
   const { musicEnabled } = useSettingsStore();
   const hasPlayedTheme = useRef(false);

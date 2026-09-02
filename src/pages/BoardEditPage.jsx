@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useUserStore } from '../stores';
 import { getBoard, saveBoard } from '../services/api/boardsService';
 import { CLUE_COUNT, countClues, MAX_TITLE } from '@shared/boardFormat.js';
@@ -33,6 +34,7 @@ export default function BoardEditPage() {
   const [conflict, setConflict] = useState(null);
   const [undoDepth, setUndoDepth] = useState(0);
   const [justCleared, setJustCleared] = useState(null);
+  usePageTitle(title ? `Edit ${title}` : 'Edit');
 
   const timer = useRef(null);
   const version = useRef(1);

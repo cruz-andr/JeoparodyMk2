@@ -4,6 +4,7 @@ import { useUserStore } from '../stores';
 import { readableError } from '../services/api/authService';
 import AuthLayout from '../components/auth/AuthLayout';
 import SignatureCanvas from '../components/common/SignatureCanvas';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
 import '../components/auth/auth-forms.css';
 
@@ -15,6 +16,7 @@ import '../components/auth/auth-forms.css';
  * signing up, and again from the account screen whenever you want to change it.
  */
 export default function AccountNamePage() {
+  usePageTitle('Draw your name');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const isNew = params.get('new') === '1';

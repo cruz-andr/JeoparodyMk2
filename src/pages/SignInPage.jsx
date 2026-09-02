@@ -4,9 +4,11 @@ import { useUserStore } from '../stores';
 import { readableError, readableGoogleError } from '../services/api/authService';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/auth/auth-forms.css';
 
 export default function SignInPage() {
+  usePageTitle('Welcome back');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const login = useUserStore((s) => s.login);

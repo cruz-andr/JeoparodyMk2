@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { CHANNEL } from '../components/host/projectorFeed';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './ProjectorPage.css';
 
 const VALUES = { 1: [200, 400, 600, 800, 1000], 2: [400, 800, 1200, 1600, 2000] };
@@ -19,6 +20,8 @@ const money = (n) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString()}`;
 export default function ProjectorPage() {
   const { roomCode } = useParams();
   const [feed, setFeed] = useState(null);
+  // Reads "Board · CODE · Jeoparody" in the window the host opens.
+  usePageTitle(`Board · ${roomCode}`);
 
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return undefined;
@@ -31,8 +34,6 @@ export default function ProjectorPage() {
 
     return () => channel.close();
   }, [roomCode]);
-
-  useEffect(() => { document.title = `Board · ${roomCode}`; }, [roomCode]);
 
   if (!feed) {
     return (

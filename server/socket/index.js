@@ -1,7 +1,44 @@
 import { verifyToken } from '../middleware/auth.js';
+import { getDatabase } from '../config/database.js';
+import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager } from './GameStateManager.js';
+import { info as logInfo } from '../utils/log.js';
 
 const gameManager = new GameStateManager();
+
+/* Write the finished room to every signed-in player's archive. Never throws:
+   a game that was played but could not be filed is a log line, not a reason
+   to hold back the standings from the people who just played it. */
+function archiveRoom(roomCode) {
+  const room = gameManager.rooms.get(roomCode);
+  if (!room) return;
+  try {
+    const written = recordRoomGame(getDatabase(), room);
+    if (written.length) console.log(`Archived room ${roomCode} for ${written.length} player(s)`);
+  } catch (err) {
+    console.error(`Could not archive room ${roomCode}:`, err.message);
+  }
+}
+
+const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
+
+// One place for what the matchmaker decided, whether a join or the tick asked.
+// A match goes to everyone seated; a player released after waiting alone is
+// told so once, and only here: the manager never touches a socket itself.
+function settleMatchmaking(io) {
+  const { match, noMatchFor } = gameManager.tryCreateMatch();
+  if (match) {
+    match.players.forEach(player => {
+      io.to(player.socketId).emit('quickplay:match-found', {
+        roomCode: match.roomCode,
+        players: match.players,
+      });
+    });
+  }
+  if (noMatchFor) {
+    io.to(noMatchFor.id).emit('quickplay:no-match', { message: NO_MATCH_MESSAGE });
+  }
+}
 
 // Lifecycle events (setting the board, ending rounds, starting Final Jeopardy)
 // change the game for everyone, so only the room's host may fire them. In
@@ -67,7 +104,12 @@ export function initializeSocketHandlers(io) {
   });
 
   io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}, Session: ${socket.sessionId}, User: ${socket.userId || 'anonymous'}`);
+    logInfo({
+      msg: 'Socket connected',
+      socketId: socket.id,
+      sessionId: socket.sessionId,
+      userId: socket.userId || 'anonymous',
+    });
 
     // Send connection confirmation
     socket.emit('connected', {
@@ -424,6 +466,7 @@ export function initializeSocketHandlers(io) {
       // straight to the results instead of a wager screen nobody can satisfy.
       if (fjData.eligibleCount === 0) {
         console.log(`No eligible players for Final Jeopardy in ${roomCode}, ending game`);
+        archiveRoom(roomCode);
         io.to(roomCode).emit('game:ended');
         return;
       }
@@ -450,6 +493,12 @@ export function initializeSocketHandlers(io) {
       if (allIn) {
         // All answers are in, reveal results
         const results = gameManager.getFJResults(roomCode);
+        /* The scores are final here, so file the game now rather than at
+           game:end, which only arrives if the host goes on to press "See
+           Final Standings". A host who closed the tab on the reveal used to
+           cost every other player their row. game:end still archives a game
+           that ended without a Final, and a second call is a no-op. */
+        archiveRoom(roomCode);
         io.to(roomCode).emit('game:fj-reveal', { results });
       }
     });
@@ -458,6 +507,7 @@ export function initializeSocketHandlers(io) {
     socket.on('game:end', ({ roomCode }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game ended for room ${roomCode}`);
+      archiveRoom(roomCode);
       io.to(roomCode).emit('game:ended');
     });
 
@@ -488,18 +538,12 @@ export function initializeSocketHandlers(io) {
     // Quickplay matchmaking
     socket.on('quickplay:join-queue', ({ displayName, signature }) => {
       gameManager.joinMatchmakingQueue(socket, displayName, signature);
-      socket.emit('quickplay:queue-joined');
+      // The thresholds travel with the ack so the waiting screen and the
+      // matchmaker never disagree about when "two will do".
+      socket.emit('quickplay:queue-joined', gameManager.matchmakingTimings());
 
       // Check if we can make a match
-      const match = gameManager.tryCreateMatch();
-      if (match) {
-        match.players.forEach(player => {
-          io.to(player.socketId).emit('quickplay:match-found', {
-            roomCode: match.roomCode,
-            players: match.players,
-          });
-        });
-      }
+      settleMatchmaking(io);
     });
 
     socket.on('quickplay:leave-queue', () => {
@@ -818,7 +862,7 @@ export function initializeSocketHandlers(io) {
 
     // Disconnect handling
     socket.on('disconnect', (reason) => {
-      console.log(`Socket disconnected: ${socket.id}, Reason: ${reason}`);
+      logInfo({ msg: 'Socket disconnected', socketId: socket.id, reason });
       gameManager.handleDisconnect(socket);
     });
   });
@@ -829,14 +873,6 @@ export function initializeSocketHandlers(io) {
     gameManager.cleanupStaleRooms();
 
     // Update matchmaking queue
-    const match = gameManager.tryCreateMatch();
-    if (match) {
-      match.players.forEach(player => {
-        io.to(player.socketId).emit('quickplay:match-found', {
-          roomCode: match.roomCode,
-          players: match.players,
-        });
-      });
-    }
+    settleMatchmaking(io);
   }, 5000);
 }

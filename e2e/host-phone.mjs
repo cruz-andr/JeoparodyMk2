@@ -7,7 +7,7 @@
  */
 import { io } from 'socket.io-client';
 import { launch } from './driver.mjs';
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 const STAMP = String(Date.now()).slice(-7);
 
@@ -94,6 +94,10 @@ try {
   // ---------- becomes a phone ----------
   await b.resize(PHONE);
   const fits = async (what) => {
+    /* Measured once the web font is in. Before it arrives the fallback face is
+       wider, and a runner with a cold cache can measure a page no visitor sees
+       for more than a moment. */
+    await b.evaluate("document.fonts.ready");
     const wide = await b.evaluate("document.documentElement.scrollWidth > document.documentElement.clientWidth + 1");
     check(`${what} does not push the page sideways`, wide === false,
       await b.evaluate("`${document.documentElement.scrollWidth} in ${document.documentElement.clientWidth}`"));

@@ -1,11 +1,38 @@
 // Minimal CDP driver: real Chrome, real viewport, real clicks.
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdtempSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, delimiter } from 'node:path';
 import WebSocket from './ws.mjs';
 
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+/* Where Chrome is. CHROME=<path or command> wins, which is how CI hands over
+   the browser it installed. Without it, the usual place on a Mac, or on Linux
+   the first of the usual names that is on PATH. This was a hard coded Mac
+   path, so the suites could only ever run on a developer's laptop. */
+const DEFAULTS = {
+  darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'],
+  linux: ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium'],
+  win32: ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'],
+};
+const onPath = (name, path) => name.includes('/') || name.includes('\\')
+  ? existsSync(name)
+  : (path ?? '').split(delimiter).some((d) => d && existsSync(join(d, name)));
+
+export function findChrome(env = process.env, platform = process.platform) {
+  if (env.CHROME) return env.CHROME;
+  const candidates = DEFAULTS[platform] ?? DEFAULTS.linux;
+  return candidates.find((c) => onPath(c, env.PATH)) ?? candidates[0];
+}
+const CHROME = findChrome();
+
+/* On Linux the sandbox needs unprivileged user namespaces, which Ubuntu 24.04
+   (and so the GitHub runner) restricts, and Chrome then dies before it listens
+   on the debugging port. Headless on a throwaway profile driving localhost has
+   nothing to protect, so the sandbox goes on Linux only. /dev/shm is small in
+   a container, and Chrome falls over when it fills. */
+const PLATFORM_FLAGS = process.platform === 'linux'
+  ? ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+  : [];
 
 /* Every browser gets its own port, and the port is checked free first.
    Sharing one meant a second launch() bound nothing and /json/list handed back
@@ -34,8 +61,11 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
   const profile = mkdtempSync(join(tmpdir(), 'cdp-'));
   const proc = spawn(CHROME, [
     '--headless=new', `--remote-debugging-port=${port}`, '--no-first-run',
-    `--user-data-dir=${profile}`, `--window-size=${width},${height}`, 'about:blank',
+    `--user-data-dir=${profile}`, `--window-size=${width},${height}`, ...PLATFORM_FLAGS, 'about:blank',
   ], { stdio: 'ignore' });
+  /* A missing binary used to surface as "chrome never came up" fifteen
+     seconds later, which points at everything except the actual problem. */
+  proc.on('error', (err) => { console.error(`could not start Chrome at ${CHROME}: ${err.message}`); });
   strays.add(proc);
 
   let target;
@@ -153,6 +183,13 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
       if (!box) throw new Error('no element for ' + sel);
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, buttons: 0 });
       await new Promise((r) => setTimeout(r, 120));
+    },
+    /* Refuse requests matching these patterns, so a suite can see the page the
+       way a visitor with no web fonts sees it: the fallback face is wider than
+       the condensed one and layouts that only fit with the real font show up. */
+    async block(patterns) {
+      await send('Network.enable');
+      await send('Network.setBlockedURLs', { urls: patterns });
     },
     /* Become a different device without reloading. A suite that has to reach a
        screen through several steps can walk there once and then look at it at

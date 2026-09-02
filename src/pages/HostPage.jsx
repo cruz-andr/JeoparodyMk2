@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useHostStore } from '../stores/hostStore';
 import { useRoomStore, useSettingsStore, useUserStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
-import { hostToBoard, boardToHost } from '../stores/boardShape';
+import { boardToHost } from '../stores/boardShape';
 import socketClient from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import { emptyBoard, countClues, POINT_VALUES } from '@shared/boardFormat.js';
@@ -13,6 +13,7 @@ import BoardGridEditor from '../components/boards/BoardGridEditor';
 import HostSettingsSheet from '../components/host/HostSettingsSheet';
 import HostFillPanel from '../components/host/HostFillPanel';
 import Icon from '../components/common/Icon';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './HostPage.css';
 
 const DOUBLE_VALUES = [400, 800, 1200, 1600, 2000];
@@ -27,6 +28,10 @@ const DOUBLE_VALUES = [400, 800, 1200, 1600, 2000];
  */
 function aiTrouble(err) {
   const raw = String(err?.message ?? '');
+  /* The model now answers through the server, which asks who is asking. */
+  if (/sign in/i.test(raw)) {
+    return 'Sign in to have the AI write the board, or write it yourself.';
+  }
   if (/API[_ ]?key|not set|invalid key|401|403|PERMISSION/i.test(raw)) {
     return 'The AI is not set up on this site. Write the board yourself, upload a file, or duplicate a community board.';
   }
@@ -66,6 +71,7 @@ function doubledBoard() {
  * are still writing.
  */
 export default function HostPage() {
+  usePageTitle('Host a game');
   const navigate = useNavigate();
   const { isConnected } = useSocket();
 
@@ -521,6 +527,7 @@ export default function HostPage() {
 
             {atWork && (
               <p className="host-writing" role="status">
+                <span className="host-writing-dot" aria-hidden="true" />
                 {writing.stage === 'categories'
                   ? 'Thinking of six categories'
                   : `Writing thirty clues for ${writing.names.slice(0, 3).join(', ')}${
@@ -528,6 +535,7 @@ export default function HostPage() {
               </p>
             )}
 
+            <div className={atWork ? 'host-board is-writing' : 'host-board'}>
             <BoardGridEditor
               board={board}
               onChange={onBoardChange}
@@ -545,6 +553,7 @@ export default function HostPage() {
               dailyDoublesWanted={wanted}
               onToggleDailyDouble={marking ? markDouble : undefined}
             />
+            </div>
           </>
         )}
 

@@ -43,7 +43,6 @@ export default function HostControlPanel({
   answerMode = 'verbal',
   buzzerOpen = false,
   answerWindowOpen = false,
-  onClose,
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);

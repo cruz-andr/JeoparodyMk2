@@ -11,7 +11,7 @@ export default function PlayerBuzzer({
   onBuzz,
 }) {
   const [isPressed, setIsPressed] = useState(false);
-  const [buzzTime, setBuzzTime] = useState(null);
+  const [_buzzTime, setBuzzTime] = useState(null);
 
   // Reset when buzzer is enabled
   useEffect(() => {

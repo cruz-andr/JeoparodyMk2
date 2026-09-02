@@ -78,7 +78,6 @@ export default function SignatureCanvas({
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
 
     // Clear and fill with blue background
     ctx.fillStyle = SIGNATURE_GROUND;

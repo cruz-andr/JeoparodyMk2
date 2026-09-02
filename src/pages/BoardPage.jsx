@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useUserStore } from '../stores';
 import {
   copyBoard, coverUrl, getBoard, reportBoard, setCover, setVisibility,
@@ -34,6 +35,7 @@ export default function BoardPage() {
   const [reported, setReported] = useState(false);
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
+  usePageTitle(board ? (board.title || 'Untitled board') : 'Community Boards');
 
   const load = useCallback(async () => {
     try {

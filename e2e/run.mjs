@@ -20,7 +20,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 
 const API_PORT = 3995;
-const APP_PORT = 5000;
+const APP_PORT = 5100;
 const DB = join(here, 'tmp-e2e.sqlite');
 
 /* Alphabetical, and each file creates its own account and its own board. A
@@ -87,14 +87,33 @@ const api = start('api', 'node', [join(root, 'server', 'index.js')], {
   DATABASE_PATH: DB,
   JWT_SECRET: 'e2e-secret-not-a-real-one',
   NODE_ENV: 'test',
+  /* The API's CORS allowlist names localhost:5000 and whatever CLIENT_URL is.
+     The page lives on APP_PORT now, so it has to be told, or every fetch the
+     browser makes to the API is refused and twenty two suites time out on a
+     board that never loads. */
+  CLIENT_URL: `http://localhost:${APP_PORT}`,
+  /* A key that is present but worthless. The model is behind the server now,
+     so the server has to believe it is set up for a request to get as far as
+     the route, where a suite answers it from fakeModel.mjs before it leaves
+     the browser. Nothing here ever reaches Google. E2E_REAL_AI=1 hands the
+     real key over for the rare check that has to watch a live generation. */
+  GEMINI_API_KEY: process.env.E2E_REAL_AI === '1'
+    ? (process.env.GEMINI_API_KEY ?? '')
+    : 'e2e-offline-not-a-real-key',
 }, root);
 
-const app = start('app', process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(APP_PORT), '--strictPort'], {
+/* Port 5100, not 5000, and --host so Vite listens on both address families.
+
+   On macOS, ControlCenter (AirPlay Receiver) holds 127.0.0.1:5000. Left to
+   itself Vite bound "localhost" as IPv6 only, the probe below hit
+   ControlCenter's 403 on IPv4 and called that "up", and Chrome reached Vite
+   through ::1. It worked by accident. On the Ubuntu runner there is no
+   squatter, Vite bound IPv6 only, and the IPv4 probe was refused: "app never
+   came up" with Vite reporting ready. Any IPv4 bind on 5000 here collides
+   with ControlCenter under --strictPort and Vite does not start at all.
+   A port nobody squats on, bound on both families, behaves the same on both. */
+const app = start('app', process.execPath, [join(root, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(APP_PORT), '--strictPort', '--host'], {
   VITE_SOCKET_URL: `http://localhost:${API_PORT}`,
-  /* No model key. A suite must never spend real quota or wait on somebody
-     else's service, and the path worth covering here is what a host sees when
-     the model cannot be reached. */
-  VITE_GEMINI_API_KEY: '',
 }, root);
 
 await waitFor(`http://127.0.0.1:${API_PORT}/health`, api);
@@ -118,13 +137,17 @@ for (const suite of suites) {
       /* With ONLY set you are looking at one suite on purpose, so its own
          output is worth seeing whether or not it passed. */
       if (only && c === 0) console.log(out);
+      /* In CI the six greppable lines are all anyone gets, and a width or a
+         count that differs from a laptop's is invisible in them. A failed
+         suite prints everything it said there, the way ONLY does here. */
+      const verbose = only || process.env.CI;
       if (c !== 0) {
-        console.log(only
+        console.log(verbose
           ? out
           : out.split('\n').filter((l) => /FAIL|THREW|Error/.test(l)).slice(0, 6).join('\n'));
         /* The server's own account of what it did. Half of a failing suite's
            causes are on this side, and guessing from the browser is slow. */
-        if (only) console.log(`\n--- api log ---\n${api.log.split('\n').slice(-40).join('\n')}`);
+        if (verbose) console.log(`\n--- api log ---\n${api.log.split('\n').slice(-40).join('\n')}`);
       }
       resolve(c);
     });

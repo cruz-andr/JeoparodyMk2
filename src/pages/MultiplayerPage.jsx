@@ -6,10 +6,12 @@ import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
 import { socketClient } from '../services/socket/socketClient';
 import SignatureCanvas from '../components/common/SignatureCanvas';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
 import './MultiplayerPage.css';
 
 export default function MultiplayerPage() {
+  usePageTitle('Multiplayer');
   const navigate = useNavigate();
   const [phase, setPhase] = useState('menu'); // 'menu' | 'creating' | 'lobby'
   const [displayName, setDisplayName] = useState('');
@@ -17,7 +19,7 @@ export default function MultiplayerPage() {
   const [error, setError] = useState(null);
 
   const { isConnected, isConnecting, error: socketError, joinRoom, leaveRoom, setReady, startGame } = useSocket();
-  const { roomCode, players, isHost, createRoom, resetRoom, settings } = useRoomStore();
+  const { roomCode, players, isHost, resetRoom } = useRoomStore();
   const { user, isGuest } = useUserStore();
 
   // Set default display name from user

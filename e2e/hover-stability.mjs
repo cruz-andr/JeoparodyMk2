@@ -13,7 +13,7 @@
  * must not flare gold when the pointer reaches it.
  */
 import { launch } from './driver.mjs';
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 const STAMP = String(Date.now()).slice(-7);
 
@@ -33,13 +33,16 @@ const typeOf = (b, sel) => b.evaluate(`(()=>{const e=document.querySelector(${JS
   return { transform: s.textTransform, family: s.fontFamily, weight: s.fontWeight,
            size: s.fontSize, spacing: s.letterSpacing, shown: e.innerText };})()`);
 
-/* Opacity of the button's own ground. A quiet hover wash is a low alpha tint;
-   the gold slab the reset exists to prevent is opaque. Comparing before with
-   after is what separates a flare from a cell that is meant to be gold because
-   it is selected. */
+/* The button's own ground, as rgba parts. A quiet hover wash is a low alpha
+   tint; the gold slab the reset exists to prevent is opaque and gold. Board
+   tiles are not in this at all: a category or clue tile going solid navy on
+   hover is what a tile does, and reading one mid transition is how a green
+   run here became a red one on the Linux runner. */
 const groundOf = (b, sel) => b.evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(sel)});
   if(!e) return null; const m = getComputedStyle(e).backgroundColor.match(/[\\d.]+/g) || [];
-  return m.length > 3 ? Number(m[3]) : 1;})()`);
+  return { r: Number(m[0]||0), g: Number(m[1]||0), b: Number(m[2]||0), a: m.length > 3 ? Number(m[3]) : 1 };})()`);
+const isGoldSlab = (g) => g && g.a > 0.5 && g.r > 150 && g.g > 110 && g.b < 130;
+const TILE = '.ge-head, .ge-cell, .ge-row, .ge-tab, .ge-final, .question-cell, .category-header';
 
 const b = await launch({ width: 1440, height: 900, dpr: 2 });
 try {
@@ -77,8 +80,12 @@ try {
       const before = await typeOf(b, sel);
       const groundBefore = await groundOf(b, sel);
       await b.hover(sel);
+      /* Buttons here transition "all", so a reading taken the instant the
+         pointer lands reports the value being left. Let it finish. */
+      await new Promise((r) => setTimeout(r, 400));
       const after = await typeOf(b, sel);
       const groundAfter = await groundOf(b, sel);
+      const isTile = await b.evaluate(`document.querySelector(${JSON.stringify(sel)}).matches(${JSON.stringify(TILE)})`);
       if (!before || !after) continue;
       for (const key of ['transform', 'family', 'weight', 'size', 'spacing', 'shown']) {
         if (before[key] !== after[key]) {
@@ -88,8 +95,8 @@ try {
       }
       /* A wash appearing is the point of a quiet button. A ground going fully
          opaque is the gold slab this reset exists to prevent. */
-      if (groundAfter > 0.5 && groundBefore <= 0.5) {
-        flared.push(`${before.shown?.slice(0, 24)} ${groundBefore} -> ${groundAfter}`);
+      if (!isTile && isGoldSlab(groundAfter) && !isGoldSlab(groundBefore)) {
+        flared.push(`${before.shown?.slice(0, 24)} a ${groundBefore?.a} -> gold a ${groundAfter?.a}`);
       }
     }
 

@@ -1,5 +1,5 @@
 import { launch } from './driver.mjs';
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 
 const tok = async (email, username) => {
@@ -37,7 +37,7 @@ const POINTS = [200, 400, 600, 800, 1000];
 const NAMES = ['RIVERS', 'MOUNTAINS', 'DESERTS', 'ISLANDS', 'CAPITALS', 'FLAGS'];
 const board = {
   version: 1,
-  categories: NAMES.map((name, c) => ({
+  categories: NAMES.map((name) => ({
     name,
     questions: POINTS.map((points, r) => ({
       points,

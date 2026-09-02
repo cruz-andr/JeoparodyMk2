@@ -1,6 +1,6 @@
 import { launch } from './driver.mjs';
 const STAMP = String(Date.now()).slice(-7);
-const APP = 'http://localhost:5000';
+const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 
 const { token } = await (await fetch(`${API}/api/auth/register`, {
@@ -37,7 +37,7 @@ try {
     JSON.stringify({ state: { token, isAuthenticated: true, isGuest: false }, version: 0 })
   )});`);
 
-  const noOutlines = (where) => b.evaluate(`(() => {
+  const noOutlines = () => b.evaluate(`(() => {
     const bad = [...document.querySelectorAll('button.quiet-action, .board-cover-pick')]
       .filter(el => {
         const s = getComputedStyle(el);
@@ -58,7 +58,7 @@ try {
   ]) {
     await b.goto(`${APP}${path}`);
     await b.until(`!!document.querySelector(${JSON.stringify(ready)})`, { timeout: 15000 });
-    const outlined = await noOutlines(path);
+    const outlined = await noOutlines();
     const count = await b.evaluate("document.querySelectorAll('button.quiet-action, .board-cover-pick').length");
     check(`${name}: no outlined secondary buttons`, outlined.length === 0,
       outlined.length ? JSON.stringify(outlined) : `${count} quiet controls`);

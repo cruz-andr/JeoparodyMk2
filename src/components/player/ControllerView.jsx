@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import './ControllerView.css';
 
 /**
@@ -14,7 +14,6 @@ export default function ControllerView({
   buzzerWinnerId,
   iAmBuzzerWinner,
   buzzTimedOut,
-  showAnswer,
   hasSkipped,
   hasAlreadyBuzzed,
   hostBuzzerOpen,
@@ -26,11 +25,7 @@ export default function ControllerView({
   onSkip,
   onSubmitTypedAnswer,
   onSelectMCOption,
-  onRevealAnswer,
-  onCorrect,
-  onIncorrect,
   // Player info
-  currentPlayerId,
   score = 0,
 }) {
   const [typedAnswer, setTypedAnswer] = useState('');
