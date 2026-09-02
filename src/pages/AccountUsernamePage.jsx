@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { checkUsername, readableError } from '../services/api/authService';
 import AuthLayout from '../components/auth/AuthLayout';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/auth/auth-forms.css';
 
 /**
@@ -21,6 +22,7 @@ export default function AccountUsernamePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const isNew = params.get('new') === '1';
+  usePageTitle(isNew ? 'Pick a username' : 'Change your username');
 
   const user = useUserStore((s) => s.user);
   const saveUsername = useUserStore((s) => s.saveUsername);

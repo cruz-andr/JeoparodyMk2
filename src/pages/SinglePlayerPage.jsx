@@ -17,9 +17,11 @@ import GameResults from '../components/game/GameResults';
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
 import { boardToHost } from '../stores/boardShape';
 import { countPlay } from '../services/api/boardsService';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
+  usePageTitle('Single Player');
   const navigate = useNavigate();
   const location = useLocation();
   /* Same breakpoint the daily board uses. A six by five grid needs about 600px

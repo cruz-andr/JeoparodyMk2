@@ -6,6 +6,7 @@ import { currentWeekBest, toDateString } from '../stores/dailyLogic';
 import Icon from '../components/common/Icon';
 import './ProfilePage.css';
 import AppTabBar from '../components/common/AppTabBar';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 /**
  * Your profile: what you have done, then what is yours.
@@ -16,6 +17,7 @@ import AppTabBar from '../components/common/AppTabBar';
  * row here, which is the reason for building it this way now.
  */
 export default function ProfilePage() {
+  usePageTitle('You');
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, restoreSession } = useUserStore();
   const dailyStats = useDailyStore((s) => s.stats);

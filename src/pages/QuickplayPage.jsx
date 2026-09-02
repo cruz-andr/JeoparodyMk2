@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMatchmaking } from '../hooks';
 import { useUserStore, useSettingsStore, useRoomStore } from '../stores';
 import SignatureCanvas from '../components/common/SignatureCanvas';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
 import './QuickplayPage.css';
 
@@ -33,6 +34,7 @@ const QUICKPLAY_PRESETS = [
 ];
 
 export default function QuickplayPage() {
+  usePageTitle('Quickplay');
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [signature, setSignature] = useState(null);

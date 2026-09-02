@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoom, useAudio } from '../hooks';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { useRoomStore, useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
@@ -37,6 +38,7 @@ export default function GamePage() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  usePageTitle(`Room ${roomCode}`);
   const { leaveRoom, setReady, subscribe, isConnected } = useRoom(roomCode);
   const { players, isHost, resetRoom, settings, updateSettings, roomType, hostModeState, clearHostModeAnswers, getTypedAnswers } = useRoomStore();
   const { setCategories, setQuestions, setPhase: setGamePhase } = useGameStore();

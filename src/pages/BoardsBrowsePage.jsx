@@ -4,6 +4,7 @@ import { useUserStore } from '../stores';
 import { browse, coverUrl } from '../services/api/boardsService';
 import { TOPICS } from '@shared/boardFormat.js';
 import BoardMiniature from '../components/boards/BoardMiniature';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/boards/BoardsChrome.css';
 import './BoardsBrowsePage.css';
 
@@ -84,6 +85,7 @@ function Card({ board, onOpen }) {
 }
 
 export default function BoardsBrowsePage() {
+  usePageTitle('Community Boards');
   const navigate = useNavigate();
   const { token, isAuthenticated } = useUserStore();
   const [params, setParams] = useSearchParams();

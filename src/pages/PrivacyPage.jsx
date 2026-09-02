@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './PrivacyPage.css';
 
 /**
@@ -13,6 +14,7 @@ const UPDATED = '30 August 2026';
 const CONTACT = 'acruz24100@gmail.com';
 
 export default function PrivacyPage() {
+  usePageTitle('Privacy Policy');
   return (
     <div className="legal-page">
       <div className="legal-inner">

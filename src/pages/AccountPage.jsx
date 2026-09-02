@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { readableError } from '../services/api/authService';
 import AuthLayout from '../components/auth/AuthLayout';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/auth/auth-forms.css';
 import './AccountPage.css';
 
 export default function AccountPage() {
+  usePageTitle('Your account');
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, clearSignature, deleteAccount, restoreSession } =
     useUserStore();

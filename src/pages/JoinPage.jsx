@@ -4,10 +4,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useUserStore } from '../stores';
 import SignatureCanvas from '../components/common/SignatureCanvas';
+import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/common/SignatureCanvas.css';
 import './JoinPage.css';
 
 export default function JoinPage() {
+  usePageTitle('Join Room');
   const navigate = useNavigate();
   const { roomCode: urlRoomCode } = useParams();
   const [roomCode, setRoomCode] = useState(urlRoomCode || '');
