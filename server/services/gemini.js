@@ -20,6 +20,9 @@ import { AppError } from '../middleware/errorHandler.js';
 const MODEL = 'gemini-3-flash-preview';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
+/* A board has six columns. */
+const BOARD_CATEGORIES = 6;
+
 /* How long to wait on the model. A full board is thirty clues and can take a
    while; a request that hangs forever would hold a connection and a limiter
    slot for nothing. */
@@ -55,6 +58,12 @@ function modelError(err) {
   /* A key the model refuses is the same problem as no key at all: the site is
      not set up. Nothing a host does will fix it. */
   if ([400, 401, 403].includes(status) && /API key|PERMISSION_DENIED|UNAUTHENTICATED/i.test(said)) {
+    return new AppError(NOT_SET_UP, 503, 'AI_NOT_CONFIGURED');
+  }
+  /* Nothing at the address the server asks: the model name in this file has
+     been retired or the endpoint moved. That is a setup problem, not a bad
+     answer, and telling a host to try again would only have them try again. */
+  if (status === 404) {
     return new AppError(NOT_SET_UP, 503, 'AI_NOT_CONFIGURED');
   }
   if (status >= 400 && status < 500) {
@@ -223,13 +232,17 @@ Return ONLY a valid JSON array of 6 strings, with no additional text, markdown, 
 
   const names = await ask(prompt);
   if (!Array.isArray(names)) throw new AppError(UNUSABLE, 502, 'AI_BAD_REPLY');
-  return names.map((n) => String(n ?? ''));
+  /* Asked for six, not forced to six. A seventh would not fit the board and
+     would be refused by the /questions route that follows. */
+  return names.slice(0, BOARD_CATEGORIES).map((n) => String(n ?? ''));
 }
 
 export async function regenerateCategory(genre, existingCategories, indexToReplace) {
   const seed = generateSeed();
+  /* A header the host has cleared is an empty string in the list. There is
+     nothing there to be different from, so it stays out of the prompt. */
   const otherCategories = existingCategories
-    .filter((_, i) => i !== indexToReplace)
+    .filter((name, i) => i !== indexToReplace && String(name ?? '').trim())
     .join(', ');
 
   const prompt = `You are a Jeopardy game assistant. Generate 1 unique and interesting Jeopardy category related to the genre: ${genre}.

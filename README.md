@@ -56,15 +56,8 @@ account signed in.
 
 ### 3. Start the Application
 
-#### Option A: Frontend Only (Single Player)
-
-```bash
-npm run dev
-```
-
-Open http://localhost:5000
-
-#### Option B: Full Application (Multiplayer)
+Every mode that asks the AI for a board, single player included, goes through
+the backend, so both halves need to be running.
 
 **Terminal 1 - Start Backend:**
 ```bash

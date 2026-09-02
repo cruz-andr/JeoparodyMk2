@@ -33,12 +33,16 @@ const token = () => {
 };
 
 /** What to tell somebody for a status, when the server's own words will not do. */
-function wording(status, said) {
+function wording(status, code, said) {
   if (status === 401 || status === 403) return 'Sign in to use the AI.';
   /* Either the site's key is out, or this account has spent its hour. Both
      are "quota" to the page, which is the word HostPage looks for. */
   if (status === 429) return 'The AI has used up its quota for now. Try again in a few minutes.';
   if (status === 503) return said || 'The AI is not set up on this site.';
+  /* The server was reached but could not reach the model. To the page that
+     is the same trouble as the browser failing to reach the server: a road
+     that is down, worth trying again, and "network" is the word it reads. */
+  if (code === 'AI_UNREACHABLE') return 'Network error: the server could not reach the AI. Try again in a moment.';
   return said || 'The AI could not answer. Try again.';
 }
 
@@ -62,7 +66,8 @@ async function call(path, body) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const said = typeof data?.error?.message === 'string' ? data.error.message : '';
-    throw new AiError(wording(response.status, said), data?.error?.code, response.status);
+    const code = data?.error?.code;
+    throw new AiError(wording(response.status, code, said), code, response.status);
   }
   return data;
 }

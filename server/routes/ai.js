@@ -38,6 +38,26 @@ function names(value, field) {
   return value.map((v) => line(v, field));
 }
 
+/**
+ * The names already on a board, blanks and all.
+ *
+ * The pages send the board's headers verbatim, and a header a host has
+ * cleared to rewrite by hand is an empty string in that list. It is not an
+ * error: it is just nothing for the model to steer clear of, so it is kept
+ * as a blank here (so the index still points at the same slot) and dropped
+ * from the prompt in services/gemini.js.
+ */
+function headers(value, field) {
+  if (!Array.isArray(value) || value.length > MAX_CATEGORIES) {
+    throw new AppError(`${field} must be a list of up to ${MAX_CATEGORIES} names.`, 400, 'AI_BAD_INPUT');
+  }
+  return value.map((v) => {
+    const text = String(v ?? '').trim();
+    if (text.length > MAX_TOPIC) throw new AppError(`${field} is too long.`, 400, 'AI_BAD_INPUT');
+    return text;
+  });
+}
+
 function values(value) {
   if (!Array.isArray(value) || value.length !== 5 || !value.every((v) => Number.isFinite(Number(v)))) {
     throw new AppError('pointValues must be five numbers.', 400, 'AI_BAD_INPUT');
@@ -59,9 +79,9 @@ router.post('/categories', wrap(async (req, res) => {
 /** One replacement name, different from the others on the board. */
 router.post('/category', wrap(async (req, res) => {
   const topic = line(req.body?.topic, 'topic');
-  const existing = names(req.body?.existing ?? [], 'existing');
+  const existing = headers(req.body?.existing ?? [], 'existing');
   const index = Number(req.body?.index);
-  if (!Number.isInteger(index) || index < 0 || index >= existing.length) {
+  if (!Number.isInteger(index) || index < 0 || index >= Math.max(existing.length, 1)) {
     throw new AppError('index must point at one of the existing names.', 400, 'AI_BAD_INPUT');
   }
   res.json({ category: await model.regenerateCategory(topic, existing, index) });

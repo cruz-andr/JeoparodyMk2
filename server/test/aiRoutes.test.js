@@ -140,6 +140,36 @@ await test('category: one replacement, different from the rest', async () => {
   assert.match(calls[0], /DIFFERENT from these existing categories: A, C/);
 });
 
+await test('category: a header the host has cleared is not an error, and not in the prompt', async () => {
+  const calls = answering();
+  const { status, data } = await post('/category', {
+    topic: 'Rivers', existing: ['A', 'B', '', 'D', 'E', 'F'], index: 4,
+  });
+  assert.equal(status, 200);
+  assert.deepEqual(data, { category: 'SOMETHING NEW' });
+  assert.match(calls[0], /DIFFERENT from these existing categories: A, B, D, F\n/);
+});
+
+await test('category: an empty board is still a board to reroll on', async () => {
+  answering();
+  const { status } = await post('/category', { topic: 'Rivers', existing: [], index: 0 });
+  assert.equal(status, 200);
+});
+
+await test('category: an index off the end of the list is refused', async () => {
+  answering();
+  const { status, data } = await post('/category', { topic: 'Rivers', existing: ['A', 'B'], index: 2 });
+  assert.equal(status, 400);
+  assert.match(data.error.message, /index/);
+});
+
+await test('categories: a seventh name from the model is dropped, so the board that follows fits', async () => {
+  says(JSON.stringify(['A', 'B', 'C', 'D', 'E', 'F', 'G']));
+  const { status, data } = await post('/categories', { topic: 'Rivers' });
+  assert.equal(status, 200);
+  assert.deepEqual(data, ['A', 'B', 'C', 'D', 'E', 'F']);
+});
+
 await test('questions: five clues per category, tidied to one answer each', async () => {
   const calls = answering();
   const values = [200, 400, 600, 800, 1000];
@@ -241,6 +271,13 @@ await test('a key Google refuses is the same as no key', async () => {
   assert.match(data.error.message, /not set up/);
 });
 
+await test('a model name Google no longer serves is not set up, not something to retry', async () => {
+  refusing(404, 'models/gemini-3-flash-preview is not found for API version v1beta');
+  const { status, data } = await post('/categories', { topic: 'Rivers' });
+  assert.equal(status, 503);
+  assert.match(data.error.message, /not set up/);
+});
+
 await test('429 from the model: 429, and it says quota', async () => {
   refusing(429, 'Resource has been exhausted (e.g. check quota).');
   const { status, data } = await post('/categories', { topic: 'Rivers' });
@@ -252,6 +289,7 @@ await test('the model being down is a 502, not a 500 with a stack in it', async 
   refusing(0, 'network: fetch failed');
   const { status, data } = await post('/categories', { topic: 'Rivers' });
   assert.equal(status, 502);
+  assert.equal(data.error.code, 'AI_UNREACHABLE', 'the client tells the road being down apart from a bad answer by this code');
   assert.doesNotMatch(data.error.message, /fetch|stack|undefined/i);
 });
 
