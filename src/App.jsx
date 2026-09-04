@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { useSettingsStore } from './stores/settingsStore';
 import ErrorBoundary from './components/common/ErrorBoundary';
 /* Not lazy. A chunk that fails to load is one of the errors this page
@@ -107,9 +108,15 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoader />}>
-        <RouterProvider router={router} />
-      </Suspense>
+      {/* Every animation in the app is framer-motion's, and none of them asked
+          whether the person wanted motion. Set once here so the answer covers
+          the whole tree rather than the handful of CSS transitions that
+          remembered to check. */}
+      <MotionConfig reducedMotion="user">
+        <Suspense fallback={<PageLoader />}>
+          <RouterProvider router={router} />
+        </Suspense>
+      </MotionConfig>
     </ErrorBoundary>
   );
 }

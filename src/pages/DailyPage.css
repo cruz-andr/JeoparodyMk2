@@ -25,7 +25,7 @@
   cursor: pointer;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .btn-back:hover {
@@ -70,256 +70,116 @@
   justify-content: flex-end;
 }
 
-/* Progress Dots */
-.progress-dots {
+
+/* The clue surface is blue. Left on the app's black the overlay fades in from
+   black to blue and back on every clue, which reads as a flicker between them. */
+.daily-sixer-page {
+  background-color: var(--jeopardy-blue);
+}
+
+/* The clue is a fixed, full screen surface, so the header has to be lifted
+   over it by hand. Without this there is no Menu button and no progress for the
+   length of a run: the clue covers them both. */
+.daily-sixer-page .daily-header {
+  position: relative;
+  z-index: calc(var(--z-modal) + 1);
+  max-width: var(--board-max-width);
+}
+
+/* And the clue has to clear the header rather than centre under it. Padded on
+   both sides so the clue still sits optically centred between them. */
+.daily-sixer-page .question-modal-overlay {
+  padding-top: 88px;
+  /* Clears the progress marks, which are fixed to the bottom of the window. */
+  padding-bottom: 68px;
+  overflow-y: auto;
+}
+
+.daily-sixer-page .question-modal {
+  margin: auto;
+}
+
+/* The header is chrome over the clue, so it steps back: the run's own title
+   competes with the clue for the same eye. */
+.daily-sixer-page .daily-title h1 {
+  font-family: var(--font-board);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(214, 159, 76, 0.75);
+  text-shadow: none;
+}
+
+.daily-sixer-page .daily-date {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.78rem;
+}
+
+/* Six clues in a fixed order is a sequence, so marking position along it is
+   information rather than decoration. Sits at the foot of the screen, above
+   the clue, and says where you are without keeping score. */
+.sixer-pips {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 26px;
+  z-index: calc(var(--z-modal) + 1);
   display: flex;
   justify-content: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-xl);
+  gap: 10px;
+  pointer-events: none;
+  /* An ordered list for the screen reader, marks for everyone else: without
+     this the browser prints its own "1. 2. 3." across the foot of the clue. */
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.progress-dot {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: var(--jeopardy-blue-dark);
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: default;
-  transition: all var(--transition-normal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sixer-pip {
+  width: 26px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background var(--transition-normal);
 }
 
-.progress-dot.current {
-  border-color: var(--jeopardy-gold);
-  color: var(--jeopardy-gold);
-  background: var(--jeopardy-blue);
-  transform: scale(1.08);
+.sixer-pip.played { background: rgba(214, 159, 76, 0.5); }
+
+.sixer-pip.current { background: var(--jeopardy-gold); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sixer-pip { transition: none; }
 }
 
-.progress-dot.correct {
-  border-color: var(--color-success);
-  background: var(--color-success);
-  color: var(--text-primary);
+@media (max-width: 640px) {
+  .daily-sixer-page .question-modal-overlay {
+    padding-bottom: 70px;
+  }
+
+  .sixer-pip { width: 18px; }
 }
 
-.progress-dot.incorrect {
-  border-color: var(--color-error);
-  background: rgba(255, 107, 107, 0.3);
-  color: var(--text-secondary);
+/* A short window is the case that put Pass under the marks. The clue already
+   scales with height; the space around it has to give as well. */
+@media (max-height: 640px) {
+  .daily-sixer-page .question-modal-overlay {
+    padding-top: 68px;
+    padding-bottom: 52px;
+  }
+
+  .sixer-pips { bottom: 16px; }
 }
 
-/* Question Card */
-.daily-question-card {
-  max-width: 560px;
-  width: 100%;
-  background: linear-gradient(135deg, var(--jeopardy-blue), var(--jeopardy-blue-dark));
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-xl) var(--spacing-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: var(--shadow-lg);
-}
-
-.category-badge {
-  text-align: center;
-  color: var(--jeopardy-gold);
-  padding: 6px var(--spacing-md);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: var(--spacing-sm);
-}
-
-.value-badge {
-  text-align: center;
-  color: var(--jeopardy-gold-light);
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: var(--spacing-lg);
-  text-shadow: var(--shadow-text);
-}
-
-.clue-text {
-  font-size: 1.35rem;
-  line-height: 1.7;
-  color: var(--text-primary);
-  text-align: center;
-  margin-bottom: var(--spacing-xl);
-  font-family: var(--font-display);
-  text-shadow: var(--shadow-text);
-}
-
-/* Answer Form */
-.answer-form {
+.daily-stats-mini {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.answer-input {
-  width: 100%;
-  padding: var(--spacing-md) var(--spacing-lg);
-  font-size: 1.1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  text-align: center;
-  transition: all var(--transition-fast);
-}
-
-.answer-input:focus {
-  outline: none;
-  border-color: var(--jeopardy-gold);
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.answer-input::placeholder {
-  color: var(--text-muted);
-}
-
-.answer-actions {
-  display: flex;
-  gap: var(--spacing-md);
-  justify-content: center;
-}
-
-.btn-submit {
-  padding: 14px 48px;
-  font-size: 1rem;
+.daily-progress {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
   font-weight: 600;
-  background: var(--jeopardy-gold);
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--jeopardy-black);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-transform: uppercase;
-}
-
-.btn-submit:hover:not(:disabled) {
-  background: var(--jeopardy-gold-light);
-  transform: translateY(-1px);
-}
-
-.btn-submit:disabled {
-  background: var(--text-muted);
-  color: var(--text-secondary);
-  cursor: not-allowed;
-}
-
-.btn-skip {
-  padding: 14px var(--spacing-lg);
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-transform: uppercase;
-}
-
-.btn-skip:hover {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
-}
-
-/* Result Display */
-.result-display {
-  text-align: center;
-}
-
-.result-badge {
-  display: inline-block;
-  padding: 10px 28px;
-  border-radius: var(--radius-md);
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: var(--spacing-lg);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.result-badge.correct {
-  background: var(--color-success);
-  color: var(--text-primary);
-}
-
-.result-badge.incorrect {
-  background: rgba(255, 107, 107, 0.3);
-  color: var(--color-error);
-  border: 1px solid var(--color-error);
-}
-
-.your-answer {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-bottom: var(--spacing-sm);
-}
-
-.your-answer span {
-  color: var(--text-primary);
-}
-
-.correct-answer {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  margin-bottom: var(--spacing-lg);
-}
-
-.correct-answer span {
-  color: var(--jeopardy-gold);
-  font-weight: 600;
-}
-
-.btn-override {
-  display: block;
-  margin: 0 auto var(--spacing-lg);
-  padding: 10px var(--spacing-lg);
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-override:hover {
-  border-color: var(--color-success);
-  color: var(--color-success);
-}
-
-.btn-next {
-  padding: 14px 48px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: var(--jeopardy-gold);
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--jeopardy-black);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-transform: uppercase;
-}
-
-.btn-next:hover {
-  background: var(--jeopardy-gold-light);
-  transform: translateY(-1px);
-}
-
-/* Question Counter */
-.question-counter {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-top: var(--spacing-lg);
 }
 
 /* Loading State */
@@ -407,36 +267,5 @@
 
   .daily-title h1 {
     font-size: 1.25rem;
-  }
-
-  .progress-dots {
-    gap: 6px;
-    margin-bottom: var(--spacing-lg);
-  }
-
-  .progress-dot {
-    width: 36px;
-    height: 36px;
-    font-size: 0.85rem;
-  }
-
-  .daily-question-card {
-    padding: var(--spacing-lg) var(--spacing-md);
-    border-radius: var(--radius-md);
-  }
-
-  .clue-text {
-    font-size: 1.15rem;
-    margin-bottom: var(--spacing-lg);
-  }
-
-  .answer-actions {
-    flex-direction: column;
-  }
-
-  .btn-submit,
-  .btn-skip,
-  .btn-next {
-    width: 100%;
   }
 }

@@ -126,6 +126,9 @@ export default function QuestionModal({
           result ? (
             <motion.div
               className="typed-result"
+              /* The verdict replaces the input in place; without this it is
+                 announced to nobody. */
+              aria-live="polite"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >

@@ -33,33 +33,55 @@
   justify-content: center;
   align-items: center;
   gap: 20px;
-  margin-bottom: 40px;
+  margin-bottom: 28px;
 }
 
 .question-category {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-family: var(--font-board);
+  font-size: 1.4rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
   color: var(--jeopardy-gold);
 }
 
 .question-points {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-family: var(--font-board);
+  font-size: 1.4rem;
+  font-weight: 700;
   color: var(--jeopardy-gold);
 }
 
 .question-content {
-  margin-bottom: 40px;
+  margin-bottom: 28px;
 }
 
 .clue-text {
-  font-size: 2.5rem;
-  line-height: 1.4;
+  /* The clue is the one thing on screen, so it is sized to the viewport rather
+     than set at a fixed rem. Height is in the sum because width alone cannot
+     see the problem: on a short laptop window a clue sized off the width alone
+     is what pushed Pass under the run's own progress marks. */
+  font-size: clamp(1.4rem, min(3.4vw, 5vh), 3rem);
+  line-height: 1.3;
   text-transform: uppercase;
-  font-family: var(--font-jeopardy);
+  font-family: var(--font-clue);
+  font-weight: 400;
+  /* The show breaks a clue into short lines on its monitors, but too narrow a
+     measure buys those lines with height: at 20ch a long clue ran six lines and
+     pushed Pass off the bottom of a laptop window. Wide enough to stay two or
+     three lines, short enough not to read as a paragraph. */
+  max-width: 34ch;
+  margin-inline: auto;
+  text-wrap: balance;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Once a clue has been graded, the response is what is being read and the clue
+   is context. Holding it at full display size pushes Continue off the bottom of
+   a laptop window, and makes the player hunt for the thing they came back for. */
+.question-modal:has(.typed-result) .clue-text {
+  font-size: clamp(1.15rem, 2.1vw, 1.75rem);
+  max-width: 36ch;
 }
 
 .reveal-button {
@@ -212,50 +234,71 @@
   color: var(--jeopardy-black);
 }
 
-.typed-submit:disabled { background-color: var(--text-muted); }
+.typed-submit:disabled {
+  background-color: transparent;
+  color: rgba(214, 159, 76, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(214, 159, 76, 0.3);
+}
 
 /* Skip is a sibling of the form, and .close-button carries no margin of its
    own, so without this it sits flush against Submit and reads as one control
    split in two. */
 .question-modal-overlay.typed .close-button {
-  margin-top: 16px;
+  margin-top: 18px;
+  background: none;
+  color: rgba(255, 255, 255, 0.5);
+  /* 44px is the minimum comfortable touch target; the quiet styling is in the
+     colour and weight, not in making it small enough to miss. */
+  min-height: 44px;
+  padding: 10px 24px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color var(--transition-fast);
+}
+
+.question-modal-overlay.typed .close-button:hover {
+  background: none;
+  color: var(--text-primary);
 }
 
 .typed-result { margin-top: 8px; }
 
 .typed-badge {
-  display: inline-block;
-  padding: 10px 28px;
-  margin-bottom: 18px;
-  border-radius: var(--radius-md);
+  display: block;
+  padding: 0;
+  margin-bottom: 26px;
+  font-family: var(--font-board);
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.typed-badge.correct { background: var(--color-success); color: var(--text-primary); }
+.typed-badge.correct { color: var(--color-success); }
 
 /* A pass is neither, so it wears neither colour. */
-.typed-badge.passed {
-  background: rgba(242, 236, 224, 0.12);
-  color: var(--text-secondary);
-  border: 1px solid rgba(242, 236, 224, 0.3);
-}
+.typed-badge.passed { color: var(--text-secondary); }
 
-.typed-badge.incorrect {
-  background: rgba(255, 107, 107, 0.3);
-  color: var(--color-error);
-  border: 1px solid var(--color-error);
-}
+.typed-badge.incorrect { color: var(--color-error); }
 
 .typed-said { margin-bottom: 6px; color: var(--text-secondary); }
 .typed-said span { color: var(--text-primary); font-weight: 600; }
 
-.typed-truth { margin-bottom: 20px; color: var(--text-secondary); }
+.typed-truth {
+  margin-bottom: 26px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .typed-truth span {
   color: var(--jeopardy-gold);
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-family: var(--font-clue);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  line-height: 1.2;
 }
 
 .typed-after {
