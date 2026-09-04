@@ -1,45 +1,105 @@
 .daily-results {
   max-width: 600px;
   margin: 0 auto;
-  padding: 30px 20px;
+  padding: 30px 20px calc(40px + env(safe-area-inset-bottom));
   text-align: center;
 }
 
+/* The heading is chrome: the reader already knows they just finished. The
+   score is the thing they came for, so the title stays out of its way. */
 .daily-results h2 {
-  color: var(--jeopardy-gold);
-  font-family: var(--font-display);
-  font-size: 2rem;
+  color: rgba(214, 159, 76, 0.75);
+  font-family: var(--font-board);
+  font-size: 1.15rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
 }
 
 .results-date {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  margin-bottom: 30px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.82rem;
+  margin-bottom: 28px;
 }
 
-/* Emoji Grid */
+/* The run, as the board draws it */
 .emoji-grid {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 26px;
 }
 
-.emoji-block {
-  font-size: 2.5rem;
-  line-height: 1;
+.emoji-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.result-mark {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* These are the same three squares the share text posts, so they carry the
+   same colours: a grid that reads green on the page and pastes green into a
+   message is one grid, and gold here would have meant a fourth thing on a page
+   already using gold for the score, the categories and the answers. */
+.result-mark.correct {
+  background: var(--color-success);
+  box-shadow: none;
+}
+
+.result-mark.wrong {
+  background: var(--color-error);
+  box-shadow: none;
+}
+
+/* A pass is neither, so it wears neither colour. Grey rather than the share
+   text's white square: white is the brightest thing available on this ground,
+   so it out-shouted both the hits and the misses for the state that matters
+   least. The shared grid keeps the white square, which has no such problem in
+   a message. */
+.result-mark.passed {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: none;
+}
+
+/* Red against green is the one pairing red-green colour blindness cannot
+   separate, and it affects roughly one man in twelve. The share text already
+   answers this by swapping to orange and blue; the page follows it exactly. */
+.emoji-grid.high-contrast .result-mark.correct {
+  background: #E8871E;
+}
+
+.emoji-grid.high-contrast .result-mark.wrong {
+  background: #3B82C4;
+}
+
+.board .result-mark {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 640px) {
+  .board .result-mark { width: 16px; height: 16px; }
+  .result-mark { width: 28px; height: 28px; }
 }
 
 /* Score */
 .results-score {
-  font-size: 3rem;
+  font-size: clamp(3.4rem, 9vw, 5rem);
   font-weight: 700;
+  line-height: 0.9;
   color: var(--text-primary);
-  margin-bottom: 8px;
-  font-family: var(--font-display);
+  margin-bottom: 10px;
+  font-family: var(--font-board);
+  /* The two halves of a tally have to line up as figures, not as text. */
+  font-variant-numeric: tabular-nums;
 }
 
 .score-number {
@@ -47,8 +107,8 @@
 }
 
 .score-divider {
-  color: var(--text-muted);
-  margin: 0 4px;
+  color: rgba(255, 255, 255, 0.3);
+  margin: 0 2px;
 }
 
 .score-total {
@@ -56,9 +116,15 @@
 }
 
 .score-percentage {
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  margin-bottom: 24px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.95rem;
+  margin-bottom: 26px;
+}
+
+.share-failed {
+  margin-top: 14px;
+  color: var(--color-warning);
+  font-size: 0.9rem;
 }
 
 /* Share Button */
@@ -154,18 +220,20 @@
 
 /* Stats Section */
 .stats-section {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  margin-bottom: 30px;
+  padding: 22px 0;
+  margin-bottom: 26px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .stats-section h3 {
-  color: var(--text-primary);
-  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--font-board);
+  font-size: 0.8rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 20px;
+  letter-spacing: 0.12em;
+  margin-bottom: 16px;
 }
 
 .stats-grid {
@@ -180,11 +248,16 @@
   align-items: center;
 }
 
+.stat-item + .stat-item {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .stat-value {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: var(--jeopardy-gold);
-  font-family: var(--font-display);
+  font-family: var(--font-board);
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
@@ -202,10 +275,12 @@
 }
 
 .review-section h3 {
-  color: var(--text-primary);
-  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--font-board);
+  font-size: 0.8rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.12em;
   margin-bottom: 16px;
   text-align: center;
 }
@@ -213,37 +288,63 @@
 .review-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* The board is made of blue tiles with hard edges, so a clue sits on one here
+   too. Tinted white panels on a dark page are the stock card and were the one
+   thing here that belonged to no particular game; laying the clue flat on the
+   page instead left nothing for the eye to hold on to. The game's own blue
+   carries the contrast and the theme at once. */
 .review-item {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: var(--radius-md);
-  padding: 16px;
+  position: relative;
+  display: block;
+  background: var(--jeopardy-blue);
+  padding: 16px 20px 18px;
   border-left: 4px solid transparent;
+  text-align: left;
 }
 
-.review-item.correct {
-  border-left-color: var(--color-success);
-}
+.review-item.correct { border-left-color: var(--color-success); }
+.review-item.wrong { border-left-color: var(--color-error); }
+.review-item.passed { border-left-color: rgba(255, 255, 255, 0.3); }
 
-.review-item.incorrect {
-  border-left-color: var(--color-error);
-}
-
-.review-header {
+/* The same square as the grid at the top of the page, so that grid reads as
+   this list's legend. It carries its sign as well as its colour: colour on its
+   own says nothing to a player who cannot separate these two. */
+.review-mark {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  justify-content: center;
+  font-family: var(--font-board);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--jeopardy-blue);
+}
+
+.review-mark.correct { background: var(--color-success); }
+.review-mark.wrong { background: var(--color-error); }
+.review-mark.passed { background: rgba(255, 255, 255, 0.28); color: #fff; }
+
+.review-body {
+  min-width: 0;
+  padding-right: 34px;
 }
 
 .review-category {
-  font-size: 0.8rem;
-  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-board);
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--jeopardy-gold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 .review-result {
@@ -255,24 +356,40 @@
   color: var(--color-success);
 }
 
-.review-result.incorrect {
+.review-result.wrong {
   color: var(--color-error);
 }
 
+.review-result.passed {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* The clue is set in the face it was read in, at a length that reads. */
 .review-clue {
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-  line-height: 1.4;
+  font-family: var(--font-clue);
+  font-size: 1.08rem;
+  color: #fff;
+  margin-bottom: 12px;
+  line-height: 1.55;
+  max-width: 60ch;
 }
 
+/* The response, in the face it was given in and on its own line above the
+   fold of the tile. It needs no label to say what it is. */
 .review-answer {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-family: var(--font-clue);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--jeopardy-gold);
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.review-answer strong {
-  color: var(--color-success);
+/* "Answer" and "You said" label the line rather than shouting it. */
+.review-answer span,
+.review-your-answer span {
+  color: rgba(255, 255, 255, 0.4);
+  margin-right: 4px;
 }
 
 .review-your-answer {
@@ -288,25 +405,39 @@
 
 /* Actions */
 .results-actions {
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 26px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-back-to-menu {
+  min-height: 44px;
+  padding: 10px 24px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--font-board);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.btn-back-to-menu:hover {
+  color: var(--text-primary);
 }
 
 .comeback-text {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-top: 16px;
-  font-style: italic;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.85rem;
+  margin-top: 10px;
 }
 
 /* Responsive */
 @media (max-width: 600px) {
   .daily-results h2 {
     font-size: 1.5rem;
-  }
-
-  .emoji-block {
-    font-size: 2rem;
   }
 
   .results-score {
@@ -323,30 +454,6 @@
   }
 }
 
-/* The Board's results are a grid, not a row: thirty cells side by side would
-   run about 1400px wide and burst the card. */
-.emoji-grid.board {
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.emoji-row {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.emoji-grid.board .emoji-block {
-  font-size: 1.6rem;
-}
-
 @media (max-width: 520px) {
-  .emoji-grid.board .emoji-block {
-    font-size: 1.1rem;
-  }
-
-  .emoji-row {
-    gap: 5px;
-  }
+  .emoji-row { gap: 5px; }
 }
