@@ -8,6 +8,11 @@ dist/
 .env
 .env.local
 .env.*.local
+# Timestamped copies made before editing .env. They hold the same live keys as
+# .env itself, so they have to be ignored by the same rule or one stray
+# `git add -A` publishes them.
+.env.bak*
+*.env.bak*
 
 # IDE
 .vscode/
