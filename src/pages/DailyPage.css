@@ -1,6 +1,9 @@
 .daily-page {
   min-height: 100vh;
-  background-color: var(--jeopardy-black);
+  /* The same ground The Board's own screens use. A run played on blue used to
+     finish on flat black, which read as leaving the game rather than ending
+     it, and the two dailies disagreed about where a result lives. */
+  background-color: #05081c;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -90,9 +93,13 @@
    both sides so the clue still sits optically centred between them. */
 .daily-sixer-page .question-modal-overlay {
   padding-top: 88px;
-  /* Clears the progress marks, which are fixed to the bottom of the window. */
-  padding-bottom: 68px;
+  /* Clears the progress marks, which are fixed to the bottom of the window,
+     and the home indicator underneath them on a phone without a bezel. */
+  padding-bottom: calc(68px + env(safe-area-inset-bottom));
   overflow-y: auto;
+  /* The clue is the scrolling surface; scrolling past its end should not start
+     scrolling the page behind it. */
+  overscroll-behavior: contain;
 }
 
 .daily-sixer-page .question-modal {
@@ -122,7 +129,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 26px;
+  bottom: calc(26px + env(safe-area-inset-bottom));
   z-index: calc(var(--z-modal) + 1);
   display: flex;
   justify-content: center;
@@ -152,7 +159,7 @@
 
 @media (max-width: 640px) {
   .daily-sixer-page .question-modal-overlay {
-    padding-bottom: 70px;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
 
   .sixer-pip { width: 18px; }
@@ -163,10 +170,10 @@
 @media (max-height: 640px) {
   .daily-sixer-page .question-modal-overlay {
     padding-top: 68px;
-    padding-bottom: 52px;
+    padding-bottom: calc(52px + env(safe-area-inset-bottom));
   }
 
-  .sixer-pips { bottom: 16px; }
+  .sixer-pips { bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
 
 .daily-stats-mini {

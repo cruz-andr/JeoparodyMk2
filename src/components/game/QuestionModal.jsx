@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Timer from '../common/Timer';
 import MediaClueDisplay from '../media/MediaClueDisplay';
 import { useSettingsStore } from '../../stores';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import './QuestionModal.css';
 
 export default function QuestionModal({
@@ -34,6 +35,9 @@ export default function QuestionModal({
      would be measuring the same thing twice and rushing the typing besides. */
   const hasTimer = questionTimeLimit !== null && showTimerSetting && !typed;
   const [entry, setEntry] = useState('');
+  /* Autofocus is a desktop convenience. On a phone it throws the keyboard up
+     over the clue the moment it appears, so the clue is read around it. */
+  const isPhone = useMediaQuery('(max-width: 768px)');
 
   // A new clue starts with an empty box, not the last one's text.
   useEffect(() => {
@@ -180,9 +184,9 @@ export default function QuestionModal({
                 className="typed-input"
                 value={entry}
                 onChange={(e) => setEntry(e.target.value)}
-                placeholder="What is..."
+                placeholder="What is…"
                 aria-label="Your response"
-                autoFocus
+                autoFocus={!isPhone}
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="none"

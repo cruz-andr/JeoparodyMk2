@@ -54,16 +54,18 @@ export default function DailyPage() {
   const formatStats = stats[FORMAT];
   const alreadyPlayed = hasPlayedToday(FORMAT);
 
-  // Format today's date for display
+  /* Formatted for whoever is reading it. A hardcoded 'en-US' prints an
+     American date to someone whose browser asked for anything else; passing no
+     locale lets Intl use theirs. */
   const formatDisplayDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
+    }).format(date);
   };
 
   // Load daily challenge on mount
@@ -199,7 +201,7 @@ export default function DailyPage() {
       <div className="daily-page">
         <div className="daily-loading">
           <div className="spinner" />
-          <p>Loading today's challenge...</p>
+          <p>Loading today’s challenge…</p>
         </div>
       </div>
     );
@@ -238,7 +240,7 @@ export default function DailyPage() {
       <div className="daily-page">
         <div className="daily-loading">
           <div className="spinner" />
-          <p>Preparing questions...</p>
+          <p>Preparing questions…</p>
         </div>
       </div>
     );
@@ -266,7 +268,11 @@ export default function DailyPage() {
       </header>
 
       {/* Where you are in the six, without keeping score. */}
-      <ol className="sixer-pips" aria-label={`Clue ${(openIndex ?? activeIndex) + 1} of ${questions.length}`}>
+      <ol
+        className="sixer-pips"
+        role="img"
+        aria-label={`Clue ${(openIndex ?? activeIndex) + 1} of ${questions.length}`}
+      >
         {questions.map((_, i) => (
           <li
             key={i}

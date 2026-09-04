@@ -10,6 +10,17 @@
   align-items: center;
   z-index: var(--z-modal);
   padding: 20px;
+  /* Reaching the end of the clue should not hand the scroll to the page under
+     it, which on a phone drags the whole board around behind the clue. */
+  overscroll-behavior: contain;
+}
+
+/* Every control on the clue is a tap target on a phone: without this the
+   browser holds each tap for 300ms to see whether a second one is coming. */
+.question-modal-overlay button,
+.question-modal-overlay input {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(214, 159, 76, 0.2);
 }
 
 .question-modal {
