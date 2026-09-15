@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
+import { usePrefersReducedMotion } from './hooks/useMediaQuery';
 import { useSettingsStore } from './stores/settingsStore';
 import ErrorBoundary from './components/common/ErrorBoundary';
 /* Not lazy. A chunk that fails to load is one of the errors this page
@@ -100,6 +102,7 @@ function App() {
   /* Text size is set on the document rather than passed down, because it has to
      reach every page including the ones rendered inside a portal. Type here is
      mostly in rem, so moving the root size moves the whole app with it. */
+  const reduceMotion = usePrefersReducedMotion();
   const textScale = useSettingsStore((s) => s.textScale);
   useEffect(() => {
     document.documentElement.dataset.textScale = textScale;
@@ -107,9 +110,17 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoader />}>
-        <RouterProvider router={router} />
-      </Suspense>
+      {/* Every animation in the app is framer-motion's, and none of them asked
+          whether the person wanted motion. Set once here so the answer covers
+          the whole tree rather than the handful of CSS transitions that
+          remembered to check. Read through the hook rather than framer-motion's
+          own "user": Settings offers a Reduce motion switch that can force it
+          either way, and "user" can only see the operating system. */}
+      <MotionConfig reducedMotion={reduceMotion ? 'always' : 'never'}>
+        <Suspense fallback={<PageLoader />}>
+          <RouterProvider router={router} />
+        </Suspense>
+      </MotionConfig>
     </ErrorBoundary>
   );
 }

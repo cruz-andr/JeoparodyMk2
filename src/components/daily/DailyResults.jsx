@@ -4,7 +4,6 @@ import { useDailyStore } from '../../stores/dailyStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { boardGridRows, decodeAnswers,
   answerMark,
-  markEmoji,
   elapsedMs,
   formatDuration,
 } from '../../stores/dailyLogic';
@@ -13,8 +12,28 @@ import './DailyResults.css';
 // Clues per run, used to turn a running total into an accuracy percentage.
 const CLUES_PER_RUN = { board: 30, sixer: 6 };
 
+/* The two formats name the halves of a clue the other way round: the Board
+   carries the scraper's shape, where `answer` is what gets read out and
+   `question` is the correct response. Reading the Sixer's names off a Board
+   clue leaves the clue blank and prints the clue where the answer belongs. */
+const clueText = (q, format) => (format === 'board' ? q?.answer : q?.clue) || '';
+const responseText = (q, format) => (format === 'board' ? q?.question : q?.answer) || '';
+
+const MARK_SIGN = { correct: '\u2713', wrong: '\u2717', passed: '\u2014', unplayed: '' };
+
+/* Both dailies turn over at midnight UTC, because that is the boundary the
+   board itself is chosen on. Said in the reader's own clock, it is something
+   they can act on; "come back tomorrow" is not. */
+const nextRollover = () => {
+  const next = new Date();
+  next.setUTCHours(24, 0, 0, 0);
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(next);
+};
+const MARK_WORD = { correct: 'Correct', wrong: 'Wrong', passed: 'Passed', unplayed: 'Unplayed' };
+
 export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer' }) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [showTheirAnswers, setShowTheirAnswers] = useState(false);
   const [theirAnswers, setTheirAnswers] = useState(null);
 
@@ -65,7 +84,7 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
-        alert('Unable to copy to clipboard');
+        setCopyFailed(true);
       }
     }
   };
@@ -74,11 +93,11 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
   const formatDisplayDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-    });
+    }).format(date);
   };
 
   return (
@@ -88,13 +107,17 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4 }}
     >
-      <h2>Today's Results</h2>
+      <h2>Today’s Results</h2>
       <p className="results-date">{formatDisplayDate(todayDate)}</p>
 
       {/* Results grid. The Board is laid out the way the board reads, six
           categories across and five values down, matching the shared text.
           The Sixer stays a single row. */}
-      <div className={`emoji-grid ${format === 'board' ? 'board' : ''}`}>
+      <div
+        className={`emoji-grid ${format === 'board' ? 'board' : ''} ${highContrast ? 'high-contrast' : ''}`}
+        role="img"
+        aria-label={`${correctCount} of ${totalQuestions} correct${passedCount > 0 ? `, ${passedCount} passed` : ''}`}
+      >
         {emojiRows.map((row, rowIndex) => (
           <div className="emoji-row" key={rowIndex}>
             {row.map((mark, colIndex) => {
@@ -102,14 +125,13 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
               return (
                 <motion.span
                   key={colIndex}
-                  className={`emoji-block ${mark}`}
-                  initial={{ opacity: 0, scale: 0 }}
+                  className={`result-mark ${mark}`}
+                  title={MARK_WORD[mark]}
+                  initial={{ opacity: 0, scale: 0.6 }}
                   animate={{ opacity: 1, scale: 1 }}
                   // capped so a thirty cell board does not take three seconds
                   transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
-                >
-                  {markEmoji(mark, highContrast)}
-                </motion.span>
+                />
               );
             })}
           </div>
@@ -136,6 +158,13 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
       >
         {copied ? 'Copied!' : 'Share Results'}
       </button>
+
+      {copyFailed && (
+        <p className="share-failed" role="status">
+          Your browser blocked the copy. Select the text of this page to share it
+          by hand.
+        </p>
+      )}
 
       {/* View Their Answers (if verification code present) */}
       {verifyCode && !showTheirAnswers && (
@@ -196,37 +225,37 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
       <div className="review-section">
         <h3>Review</h3>
         <div className="review-list">
-          {questions.map((question, index) => (
-            <div
-              key={index}
-              className={`review-item ${answers[index]?.correct ? 'correct' : 'incorrect'}`}
-            >
-              <div className="review-header">
-                <span className="review-category">{question.category || 'CATEGORY'}</span>
-                <span className={`review-result ${answers[index]?.correct ? 'correct' : 'incorrect'}`}>
-                  {answers[index]?.correct ? '✓' : '✗'}
+          {questions.map((question, index) => {
+            const mark = answerMark(answers[index]);
+            return (
+              <div key={index} className={`review-item ${mark}`}>
+                <span className={`review-mark ${mark}`} title={MARK_WORD[mark]}>
+                  {MARK_SIGN[mark]}
                 </span>
+                <div className="review-body">
+                  <span className="review-category">{question.category || 'Category'}</span>
+                  <p className="review-clue">{clueText(question, format)}</p>
+                  <p className="review-answer">{responseText(question, format)}</p>
+                  {answers[index]?.playerAnswer && mark === 'wrong' && (
+                    <p className="review-your-answer">
+                      <span>You said</span> {answers[index].playerAnswer}
+                    </p>
+                  )}
+                </div>
               </div>
-              <p className="review-clue">{question.clue || ''}</p>
-              <p className="review-answer">
-                <strong>Answer:</strong> {question.answer || ''}
-              </p>
-              {answers[index]?.playerAnswer && !answers[index]?.correct && (
-                <p className="review-your-answer">
-                  <strong>You said:</strong> {answers[index].playerAnswer}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Back to Menu */}
       <div className="results-actions">
-        <button onClick={onBackToMenu} className="btn-secondary">
+        <button onClick={onBackToMenu} className="btn-back-to-menu">
           Back to Menu
         </button>
-        <p className="comeback-text">Come back tomorrow for a new challenge!</p>
+        <p className="comeback-text">
+          {format === 'board' ? 'Next board' : 'Next six'} at {nextRollover()}
+        </p>
       </div>
     </motion.div>
   );
