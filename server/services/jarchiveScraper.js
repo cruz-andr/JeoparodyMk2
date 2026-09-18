@@ -3,13 +3,20 @@ import { buildDailyChallenge } from './dailyBuilder.js';
 
 const JARCHIVE_BASE = 'https://www.j-archive.com';
 
-// Generate a daily seed from the date (same for everyone worldwide)
-export function getDailySeed() {
-  const today = new Date();
+/**
+ * The seed for a given day, the same for everyone worldwide.
+ *
+ * Takes the day rather than reading the clock, because the archive asks this
+ * question about days that are not today. The whole build below it is pure in
+ * the date: the same string always picks the same game and the same clues,
+ * which is what makes an archive possible at all without storing a thing.
+ */
+export function getDailySeed(dateString = getTodayDateString()) {
+  const day = new Date(`${dateString}T00:00:00Z`);
   return (
-    today.getUTCFullYear() * 10000 +
-    (today.getUTCMonth() + 1) * 100 +
-    today.getUTCDate()
+    day.getUTCFullYear() * 10000 +
+    (day.getUTCMonth() + 1) * 100 +
+    day.getUTCDate()
   );
 }
 
@@ -212,17 +219,29 @@ export function candidateGameIds(seed, attempts = CANDIDATE_ATTEMPTS) {
 // held in memory. Without this, every visitor would re-scrape J-Archive up to
 // CANDIDATE_ATTEMPTS times for a board that never changes, which is both
 // pointless and a good way to get the server blocked.
-let dailyCache = null; // { date, challenge }
-let dailyInFlight = null; // { date, promise }
+/* Keyed by date, because the archive asks for days other than today. Bounded,
+   because it is no longer one entry that turns over at midnight: ninety days
+   of boards left in memory forever is a leak with a calendar attached. Oldest
+   out first, which for this access pattern is close enough to least used. */
+const CACHE_LIMIT = 24;
+const dailyCache = new Map(); // date -> challenge
+const dailyInFlight = new Map(); // date -> promise
 
 // Exposed for tests; there is no reason to call this in normal operation.
 export function _clearDailyCache() {
-  dailyCache = null;
-  dailyInFlight = null;
+  dailyCache.clear();
+  dailyInFlight.clear();
 }
 
-async function buildTodaysChallenge(fetchGame, dateString) {
-  const seed = getDailySeed();
+function remember(dateString, challenge) {
+  dailyCache.set(dateString, challenge);
+  while (dailyCache.size > CACHE_LIMIT) {
+    dailyCache.delete(dailyCache.keys().next().value);
+  }
+}
+
+async function buildChallengeFor(fetchGame, dateString) {
+  const seed = getDailySeed(dateString);
   const problems = [];
 
   for (const gameId of candidateGameIds(seed)) {
@@ -246,26 +265,31 @@ async function buildTodaysChallenge(fetchGame, dateString) {
   throw new Error(`Could not build a daily challenge. Tried ${problems.join('; ')}`);
 }
 
-// Get a deterministic pair of boards for today's daily challenge
-export async function getDailyChallenge({ fetchGame = fetchGameById } = {}) {
-  const dateString = getTodayDateString();
+/**
+ * The deterministic pair of boards for a day, today by default.
+ *
+ * Callers above this have already decided the day is one they are willing to
+ * serve; this will happily build any date it is handed.
+ */
+export async function getDailyChallenge({ fetchGame = fetchGameById, date } = {}) {
+  const dateString = date ?? getTodayDateString();
 
-  if (dailyCache?.date === dateString) return dailyCache.challenge;
+  if (dailyCache.has(dateString)) return dailyCache.get(dateString);
 
   // Share one build across everyone who asks while it is still running, so a
   // burst of visitors does not become a burst of scrapes.
-  if (dailyInFlight?.date === dateString) return dailyInFlight.promise;
+  if (dailyInFlight.has(dateString)) return dailyInFlight.get(dateString);
 
-  const promise = buildTodaysChallenge(fetchGame, dateString)
+  const promise = buildChallengeFor(fetchGame, dateString)
     .then((challenge) => {
-      dailyCache = { date: dateString, challenge };
+      remember(dateString, challenge);
       return challenge;
     })
     .finally(() => {
       // A failure must not be cached: the next request should try again.
-      if (dailyInFlight?.promise === promise) dailyInFlight = null;
+      if (dailyInFlight.get(dateString) === promise) dailyInFlight.delete(dateString);
     });
 
-  dailyInFlight = { date: dateString, promise };
+  dailyInFlight.set(dateString, promise);
   return promise;
 }

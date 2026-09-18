@@ -6,6 +6,7 @@ import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
 import { currentWeekBest, toDateString } from '../../stores/dailyLogic';
 import './MainMenu.css';
 import AppTabBar from '../common/AppTabBar';
+import ArchiveRow from './ArchiveRow';
 
 /**
  * The board is the menu: six category headers are the six ways to play, and
@@ -325,6 +326,9 @@ export default function MainMenu() {
           Join &rarr;
         </button>
       </form>
+
+      {/* The days just gone, and the way into the rest of them. */}
+      <ArchiveRow />
 
       <AppTabBar />
     </div>

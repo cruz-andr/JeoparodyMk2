@@ -30,6 +30,11 @@ import { info as logInfo, error as logError, fatal as logFatal } from './utils/l
 
 // Import J-Archive scraper for Daily Challenge
 import { getDailyChallenge } from './services/jarchiveScraper.js';
+import {
+  ARCHIVE_DAYS,
+  isValidDateString,
+  isWithinArchive,
+} from './shared/archiveWindow.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -127,10 +132,29 @@ app.use('/api/games', gameRoutes);
    for. */
 app.use('/api/ai', aiLimiter, aiRoutes);
 
-// Daily Challenge endpoint - scrapes J-Archive
+/* Daily Challenge endpoint - scrapes J-Archive.
+
+   `?date=` opens the archive. The whole build is deterministic in the date, so
+   a past day costs no storage, only the scrape it takes to build it once. The
+   window is enforced here rather than trusted from the client: without it this
+   is an open invitation to walk the API backwards through every game on
+   J-Archive, one request per day, forever. */
 app.get('/api/daily/challenge', async (req, res) => {
+  const { date } = req.query;
+
+  if (date !== undefined) {
+    if (!isValidDateString(date)) {
+      return res.status(400).json({ error: 'Expected a date as YYYY-MM-DD.' });
+    }
+    if (!isWithinArchive(date)) {
+      return res.status(404).json({
+        error: `The archive holds the last ${ARCHIVE_DAYS} days. That day is outside it.`,
+      });
+    }
+  }
+
   try {
-    const challenge = await getDailyChallenge();
+    const challenge = await getDailyChallenge({ date });
     res.json(challenge);
   } catch (error) {
     logError({ msg: 'Daily challenge failed', path: req.originalUrl, method: req.method }, error);

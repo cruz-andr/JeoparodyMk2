@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
 import {
@@ -19,6 +19,9 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useAudio } from '../hooks';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyResults from '../components/daily/DailyResults';
+import { useUserStore } from '../stores';
+import { canPlayDate } from '@shared/archiveWindow.js';
+import { getChallengeForDate } from '../services/api/jeopardyService';
 import { usePageTitle } from '../hooks/usePageTitle';
 import './DailyBoardPage.css';
 
@@ -31,6 +34,18 @@ const flatIndex = (categoryIndex, pointIndex) => categoryIndex * BOARD_ROW_COUNT
 export default function DailyBoardPage() {
   usePageTitle('The Board');
   const navigate = useNavigate();
+
+  /* `?date=` opens a day from the archive. Today's own date is not archive, so
+     a link carrying it plays the ordinary board rather than a second copy of
+     it in the archive slot. */
+  const [params] = useSearchParams();
+  const requestedDate = params.get('date');
+  const archiveDate =
+    requestedDate && requestedDate !== toDateString() ? requestedDate : null;
+  /* Where the run lives. An archive day gets its own slot, so a board half
+     played today survives a trip through the archive. */
+  const SLOT = archiveDate ? 'archiveRun' : FORMAT;
+
   const [openCell, setOpenCell] = useState(null); // { categoryIndex, pointIndex }
   // Null while the player is still typing; set once the answer has been graded.
   const [result, setResult] = useState(null);
@@ -45,8 +60,12 @@ export default function DailyBoardPage() {
   /* The scroll lock lives in BoardWheel now: it is the thing that needs the
      document to hold still, so it is the thing that asks. */
 
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
+
   const {
     board,
+    archiveRun,
+    startArchiveRun,
     isLoading,
     error,
     stats,
@@ -63,8 +82,12 @@ export default function DailyBoardPage() {
     completeGame,
   } = useDailyStore();
 
-  const { date, questions, answers, isComplete } = board;
-  const alreadyPlayed = hasPlayedToday(FORMAT);
+  const run = archiveDate ? archiveRun : board;
+  const { date, questions, answers, isComplete } = run;
+  /* An archive day is always replayable: nothing is at stake on it, and the
+     "come back tomorrow" that guards today's board would be a lie about a day
+     that has already been and gone. */
+  const alreadyPlayed = archiveDate ? false : hasPlayedToday(FORMAT);
   // The number to chase while playing. Null until there is one this week.
   const weekBest = currentWeekBest(stats[FORMAT], toDateString());
 
@@ -74,6 +97,37 @@ export default function DailyBoardPage() {
       // `error` is shared by both daily pages and outlives a route change, so
       // a failure on the other one would strand this screen on "Oops!".
       setError(null);
+
+      if (archiveDate) {
+        /* The gate is checked here as well as on the way in, because this is
+           the URL: a locked day is one typed address away otherwise. The API
+           enforces the window itself, but not who is asking. */
+        if (!canPlayDate({ date: archiveDate, format: FORMAT, isAuthenticated })) {
+          setLoading(false);
+          setError('That day is locked. Sign in to play the whole archive.');
+          return;
+        }
+
+        // Already open on this very day, part way through: leave it alone.
+        if (archiveRun.date === archiveDate && archiveRun.questions.length > 0) {
+          setLoading(false);
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const challenge = await getChallengeForDate(archiveDate);
+          startArchiveRun(FORMAT, {
+            date: archiveDate,
+            questions: challenge.board.questions,
+            categories: challenge.board.categories,
+          });
+        } catch (err) {
+          console.error('Failed to load that day:', err);
+          setError(err.message || 'Failed to load that day. Please try again.');
+        }
+        return;
+      }
 
       if (hasPlayedToday(FORMAT)) {
         setLoading(false);
@@ -106,18 +160,18 @@ export default function DailyBoardPage() {
      the phone down is not the same as playing. */
   useEffect(() => {
     if (!playable) return undefined;
-    startClock(FORMAT);
+    startClock(SLOT);
 
     const onVisibility = () => {
-      if (document.hidden) pauseClock(FORMAT);
-      else startClock(FORMAT);
+      if (document.hidden) pauseClock(SLOT);
+      else startClock(SLOT);
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
-      pauseClock(FORMAT);
+      pauseClock(SLOT);
     };
-  }, [playable, startClock, pauseClock]);
+  }, [playable, startClock, pauseClock, SLOT]);
 
   // Redraw the clock once a second. The time itself lives in the store.
   const [now, setNow] = useState(() => Date.now());
@@ -127,7 +181,7 @@ export default function DailyBoardPage() {
     return () => clearInterval(id);
   }, [playable]);
 
-  const onTheClock = formatDuration(elapsedMs(board.timing, now)) ?? '0:00';
+  const onTheClock = formatDuration(elapsedMs(run.timing, now)) ?? '0:00';
 
   /* Every clue used but the run never closed. Reachable by reloading on the
      last clue, which used to leave the board unplayable and unfinishable with
@@ -136,8 +190,8 @@ export default function DailyBoardPage() {
   useEffect(() => {
     if (!playable || openCell) return;
     if (!answers.length || !answers.every((a) => a?.revealed)) return;
-    completeGame(FORMAT, { score: boardScore(answers, POINT_VALUES) });
-  }, [playable, openCell, answers, completeGame]);
+    completeGame(SLOT, { score: boardScore(answers, POINT_VALUES) });
+  }, [playable, openCell, answers, completeGame, SLOT]);
 
   const grid = useMemo(() => toBoardGrid(questions), [questions]);
 
@@ -171,30 +225,30 @@ export default function DailyBoardPage() {
       if (!openCell || !openQuestion) return;
       const index = flatIndex(openCell.categoryIndex, openCell.pointIndex);
       const { isCorrect } = checkAnswer(given, openQuestion.question);
-      revealAnswer(FORMAT, index, isCorrect, given);
+      revealAnswer(SLOT, index, isCorrect, given);
       setResult({ correct: isCorrect, playerAnswer: given });
       if (isCorrect) playCorrect();
       else playWrong();
     },
-    [openCell, openQuestion, revealAnswer, playCorrect, playWrong]
+    [openCell, openQuestion, revealAnswer, playCorrect, playWrong, SLOT]
   );
 
   // Fuzzy matching gets things wrong, so the player has the last word.
   const override = useCallback(() => {
     if (!openCell) return;
-    overrideAnswer(FORMAT, flatIndex(openCell.categoryIndex, openCell.pointIndex));
+    overrideAnswer(SLOT, flatIndex(openCell.categoryIndex, openCell.pointIndex));
     setResult((r) => (r ? { ...r, correct: true } : r));
     playCorrect();
-  }, [openCell, overrideAnswer, playCorrect]);
+  }, [openCell, overrideAnswer, playCorrect, SLOT]);
 
   // Read the store rather than the memo: the answer that just landed is not in
   // `score` yet.
   const finishIfDone = useCallback(() => {
-    const settled = useDailyStore.getState().board.answers;
+    const settled = useDailyStore.getState()[SLOT].answers;
     if (settled.every((a) => a?.revealed)) {
-      completeGame(FORMAT, { score: boardScore(settled, POINT_VALUES) });
+      completeGame(SLOT, { score: boardScore(settled, POINT_VALUES) });
     }
-  }, [completeGame]);
+  }, [completeGame, SLOT]);
 
   /* Closing the clue is what ends the run, not grading it: completing at
      submit would swap the board for the results screen while the player is
@@ -213,9 +267,9 @@ export default function DailyBoardPage() {
      the last clue cannot end the run before you have read the answer. */
   const passClue = useCallback(() => {
     if (!openCell) return;
-    passQuestion(FORMAT, flatIndex(openCell.categoryIndex, openCell.pointIndex));
+    passQuestion(SLOT, flatIndex(openCell.categoryIndex, openCell.pointIndex));
     setResult({ correct: false, passed: true, playerAnswer: '' });
-  }, [openCell, passQuestion]);
+  }, [openCell, passQuestion, SLOT]);
 
   const backToMenu = () => navigate('/menu');
 
@@ -250,7 +304,7 @@ export default function DailyBoardPage() {
   if (alreadyPlayed || isComplete) {
     return (
       <div className="daily-board-page">
-        <DailyResults onBackToMenu={backToMenu} format={FORMAT} />
+        <DailyResults onBackToMenu={backToMenu} format={FORMAT} slot={SLOT} />
       </div>
     );
   }

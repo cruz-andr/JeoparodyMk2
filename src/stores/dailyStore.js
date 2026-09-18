@@ -32,6 +32,18 @@ const makeInitialState = () => ({
   board: emptyRun(),
   sixer: emptyRun(),
 
+  /* An archive day is played in a slot of its own rather than in the format's.
+     The Board is twenty minutes; someone half way through today's and curious
+     about last Tuesday would otherwise come back to an empty grid. Only one
+     archive run is held: it carries the format it belongs to, because every
+     action below takes the slot and no longer knows which daily it is. */
+  archiveRun: { ...emptyRun(), format: null },
+
+  /* What the archive has been played to, by format and date. Kept apart from
+     `stats` on purpose: this records the run without letting it near a streak.
+     Shape: { board: { 'YYYY-MM-DD': { score, correctCount, ... } }, sixer: {} } */
+  archiveResults: { board: {}, sixer: {} },
+
   // Shared UI state; only one format is ever being fetched at a time.
   isLoading: false,
   error: null,
@@ -43,6 +55,10 @@ const makeInitialState = () => ({
 });
 
 const isFormat = (format) => format === 'board' || format === 'sixer';
+
+/* Where a run lives. The two dailies keep theirs under their own name, so the
+   persisted shape is unchanged; the archive adds a third. */
+const isSlot = (slot) => isFormat(slot) || slot === 'archiveRun';
 
 export const useDailyStore = create(
   persist(
@@ -86,67 +102,67 @@ export const useDailyStore = create(
         });
       },
 
-      setUserAnswer: (format, index, answer) => {
-        if (!isFormat(format)) return;
+      setUserAnswer: (slot, index, answer) => {
+        if (!isSlot(slot)) return;
         set((state) => {
-          const userAnswers = [...state[format].userAnswers];
+          const userAnswers = [...state[slot].userAnswers];
           userAnswers[index] = answer;
-          return { [format]: { ...state[format], userAnswers } };
+          return { [slot]: { ...state[slot], userAnswers } };
         });
       },
 
-      revealAnswer: (format, index, isCorrect, playerAnswer = '') => {
-        if (!isFormat(format)) return;
+      revealAnswer: (slot, index, isCorrect, playerAnswer = '') => {
+        if (!isSlot(slot)) return;
         set((state) => {
-          const answers = [...state[format].answers];
+          const answers = [...state[slot].answers];
           answers[index] = { correct: isCorrect, revealed: true, playerAnswer };
-          return { [format]: { ...state[format], answers } };
+          return { [slot]: { ...state[slot], answers } };
         });
       },
 
       /* A pass uses the clue up without scoring it. Recorded rather than just
          closed, so the clue cannot be reopened for another free look and the
          run always reaches an end. */
-      passQuestion: (format, index) => {
-        if (!isFormat(format)) return;
+      passQuestion: (slot, index) => {
+        if (!isSlot(slot)) return;
         set((state) => {
-          const answers = [...state[format].answers];
+          const answers = [...state[slot].answers];
           answers[index] = { correct: false, passed: true, revealed: true, playerAnswer: '' };
-          return { [format]: { ...state[format], answers } };
+          return { [slot]: { ...state[slot], answers } };
         });
       },
 
-      overrideAnswer: (format, index) => {
-        if (!isFormat(format)) return;
+      overrideAnswer: (slot, index) => {
+        if (!isSlot(slot)) return;
         set((state) => {
-          const answers = [...state[format].answers];
+          const answers = [...state[slot].answers];
           if (!answers[index]) return {};
           answers[index] = { ...answers[index], correct: true, passed: false };
-          return { [format]: { ...state[format], answers } };
+          return { [slot]: { ...state[slot], answers } };
         });
       },
 
-      nextQuestion: (format) => {
-        if (!isFormat(format)) return;
+      nextQuestion: (slot) => {
+        if (!isSlot(slot)) return;
         set((state) => ({
-          [format]: {
-            ...state[format],
+          [slot]: {
+            ...state[slot],
             currentIndex: Math.min(
-              state[format].currentIndex + 1,
-              state[format].questions.length - 1
+              state[slot].currentIndex + 1,
+              state[slot].questions.length - 1
             ),
           },
         }));
       },
 
-      goToQuestion: (format, index) => {
-        if (!isFormat(format)) return;
+      goToQuestion: (slot, index) => {
+        if (!isSlot(slot)) return;
         set((state) => ({
-          [format]: {
-            ...state[format],
+          [slot]: {
+            ...state[slot],
             currentIndex: Math.max(
               0,
-              Math.min(index, state[format].questions.length - 1)
+              Math.min(index, state[slot].questions.length - 1)
             ),
           },
         }));
@@ -155,47 +171,82 @@ export const useDailyStore = create(
       /** `score` applies to formats that have one; The Sixer passes none. */
       /* The board is timed like a crossword. Time with the tab shut is not
          time playing, so the clock banks each stretch as it stops. */
-      startClock: (format) => {
-        if (!isFormat(format)) return;
+      startClock: (slot) => {
+        if (!isSlot(slot)) return;
         set((state) => {
-          const timing = state[format].timing ?? { elapsedMs: 0, startedAt: null };
+          const timing = state[slot].timing ?? { elapsedMs: 0, startedAt: null };
           if (timing.startedAt) return {}; // already running
-          return { [format]: { ...state[format], timing: { ...timing, startedAt: Date.now() } } };
+          return { [slot]: { ...state[slot], timing: { ...timing, startedAt: Date.now() } } };
         });
       },
 
-      pauseClock: (format) => {
-        if (!isFormat(format)) return;
+      pauseClock: (slot) => {
+        if (!isSlot(slot)) return;
         set((state) => {
-          const timing = state[format].timing;
+          const timing = state[slot].timing;
           if (!timing?.startedAt) return {};
           return {
-            [format]: {
-              ...state[format],
+            [slot]: {
+              ...state[slot],
               timing: { elapsedMs: elapsedMs(timing), startedAt: null },
             },
           };
         });
       },
 
-      completeGame: (format, { score = null } = {}) => {
-        if (!isFormat(format)) return;
+      completeGame: (slot, { score = null } = {}) => {
+        if (!isSlot(slot)) return;
         const state = get();
-        const run = state[format];
+        const run = state[slot];
         // Stop the clock on the same tick the run ends, so the time recorded is
         // the time played and not the time the results screen stayed open.
         const timeMs = run.timing ? elapsedMs(run.timing) : null;
+        const correctCount = run.answers.filter((a) => a.correct).length;
+
+        const finished = {
+          ...run,
+          isComplete: true,
+          timing: { elapsedMs: timeMs ?? 0, startedAt: null },
+        };
+
+        /* An archive day is recorded but never counted. A streak is a claim
+           about showing up on consecutive days, and a player who works back
+           through ninety of them in an afternoon has not done that; letting
+           the archive feed it would turn the number on the menu into a measure
+           of free time. The same goes for the week's best and the all time
+           one, which is why none of `stats` is touched here.
+
+           This is what both NYT and chess.com do with their own archives: the
+           solve is saved, the streak is left alone. */
+        if (slot === 'archiveRun') {
+          const format = run.format;
+          if (!isFormat(format) || !run.date) return;
+
+          set({
+            archiveRun: finished,
+            archiveResults: {
+              ...state.archiveResults,
+              [format]: {
+                ...state.archiveResults[format],
+                [run.date]: {
+                  score,
+                  correctCount,
+                  totalQuestions: run.questions.length,
+                  timeMs,
+                  playedAt: toDateString(),
+                },
+              },
+            },
+          });
+          return;
+        }
 
         set({
-          [format]: {
-            ...run,
-            isComplete: true,
-            timing: { elapsedMs: timeMs ?? 0, startedAt: null },
-          },
+          [slot]: finished,
           stats: {
             ...state.stats,
-            [format]: applyCompletion(state.stats[format], {
-              correctCount: run.answers.filter((a) => a.correct).length,
+            [slot]: applyCompletion(state.stats[slot], {
+              correctCount,
               totalQuestions: run.questions.length,
               today: toDateString(),
               score,
@@ -205,9 +256,47 @@ export const useDailyStore = create(
         });
       },
 
-      getShareText: (format) => {
+      /**
+       * Open a past day in the archive slot.
+       *
+       * No "already played" guard: replaying an archived day is the point, and
+       * nothing about it is at stake. The previous archive run is dropped,
+       * which is why there is only ever one.
+       */
+      startArchiveRun: (format, data) => {
+        if (!isFormat(format) || !data?.date) return;
+        set({
+          archiveRun: {
+            ...freshRun(data.date, data.questions ?? [], data.categories ?? null),
+            format,
+          },
+          isLoading: false,
+          error: null,
+        });
+      },
+
+      /* Left behind on the way out, so returning to the menu and back in does
+         not show the last day's grid while the new one loads. */
+      clearArchiveRun: () => set({ archiveRun: { ...emptyRun(), format: null } }),
+
+      /** What a past day was played to, or null if it has not been. */
+      archiveResult: (format, date) => {
+        if (!isFormat(format) || !date) return null;
+        return get().archiveResults[format]?.[date] ?? null;
+      },
+
+      /** Every date of a format that has been played in the archive. */
+      playedArchiveDates: (format) => {
+        if (!isFormat(format)) return [];
+        return Object.keys(get().archiveResults[format] ?? {});
+      },
+
+      getShareText: (slot) => {
+        if (!isSlot(slot)) return '';
+        const run = get()[slot];
+        // The archive slot carries the daily it is standing in for.
+        const format = slot === 'archiveRun' ? run.format : slot;
         if (!isFormat(format)) return '';
-        const run = get()[format];
         const label = format === 'board' ? 'The Board' : 'The Sixer';
         /* A pass is neither a hit nor a miss, so it cannot share a colour with
            either without misreporting the board. The palette follows the
@@ -251,9 +340,9 @@ export const useDailyStore = create(
         return `Jeoparody ${label} ${dateStr}\n${emoji}\n${tally}\n${origin}${path}${query}`;
       },
 
-      shareResults: async (format) => {
+      shareResults: async (slot) => {
         try {
-          await navigator.clipboard.writeText(get().getShareText(format));
+          await navigator.clipboard.writeText(get().getShareText(slot));
           return true;
         } catch {
           return false;
@@ -276,17 +365,26 @@ export const useDailyStore = create(
     }),
     {
       name: 'jeoparody-daily',
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         board: state.board,
         sixer: state.sixer,
         stats: state.stats,
+        archiveRun: state.archiveRun,
+        archiveResults: state.archiveResults,
       }),
       // v1 stored a single flat run and one streak. That daily was the Sixer,
       // so its history moves there and The Board starts clean.
+      /* v3 added the archive. Nothing about the older shapes is lost by it:
+         an install that has never opened the archive simply has none. */
       migrate: (persisted, version) => {
-        if (version >= 2) return persisted;
-        return migrateToTwoFormats(persisted) ?? undefined;
+        const twoFormat = version >= 2 ? persisted : migrateToTwoFormats(persisted);
+        if (!twoFormat) return undefined;
+        return {
+          ...twoFormat,
+          archiveRun: twoFormat.archiveRun ?? { ...emptyRun(), format: null },
+          archiveResults: twoFormat.archiveResults ?? { board: {}, sixer: {} },
+        };
       },
     }
   )

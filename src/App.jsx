@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Outlet, RouterProvider, ScrollRestoration } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { usePrefersReducedMotion } from './hooks/useMediaQuery';
 import { useSettingsStore } from './stores/settingsStore';
@@ -27,6 +27,7 @@ const ProjectorPage = lazy(() => import('./pages/ProjectorPage'));
 const HighscoresPage = lazy(() => import('./pages/HighscoresPage'));
 const DailyPage = lazy(() => import('./pages/DailyPage'));
 const DailyBoardPage = lazy(() => import('./pages/DailyBoardPage'));
+const ArchivePage = lazy(() => import('./pages/ArchivePage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const SignUpPage = lazy(() => import('./pages/SignUpPage'));
 const SignInPage = lazy(() => import('./pages/SignInPage'));
@@ -60,6 +61,7 @@ const routes = [
   { path: '/menu', element: <HomePage /> },
   { path: '/daily', element: <DailyPage /> },
   { path: '/daily/board', element: <DailyBoardPage /> },
+  { path: '/archive', element: <ArchivePage /> },
   { path: '/singleplayer', element: <SinglePlayerPage /> },
   { path: '/quickplay', element: <QuickplayPage /> },
   { path: '/multiplayer', element: <MultiplayerPage /> },
@@ -94,8 +96,26 @@ const routes = [
   { path: '*', element: <NotFoundPage /> },
 ];
 
+/**
+ * Every page starts at the top, and going back returns to where you were.
+ *
+ * A browser keeps the scroll offset across a client side navigation, because
+ * as far as it is concerned nothing was navigated: clicking More at the foot
+ * of the menu opened the archive already scrolled halfway down it. This is
+ * react-router's own answer, and it restores the old position on Back rather
+ * than only slamming to the top, which a bare scrollTo(0, 0) would lose.
+ */
+function Root() {
+  return (
+    <>
+      <ScrollRestoration />
+      <Outlet />
+    </>
+  );
+}
+
 const router = createBrowserRouter([
-  { errorElement: <RouteErrorPage />, children: routes },
+  { element: <Root />, errorElement: <RouteErrorPage />, children: routes },
 ]);
 
 function App() {

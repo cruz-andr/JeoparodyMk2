@@ -1,0 +1,424 @@
+/*
+ * The archive calendar.
+ *
+ * The calendar keeps the menu's geometry: flat rectangles on a dark ground,
+ * black gutters, no radius. The tabs above it do not, and are the exception on
+ * purpose — see the note on .archive-tabs.
+ *
+ * A locked day is not hidden and not removed — it is drawn back, so the shape
+ * of what an account opens is visible before anyone signs up.
+ */
+
+.archive-page {
+  --ground: #05081c;
+  --tile: #1a2080;
+  --tile-deep: #0e1467;
+  --bone: #f2ece0;
+
+  min-height: 100vh;
+  background: var(--ground);
+  color: var(--bone);
+  padding: 26px 30px 40px;
+  box-sizing: border-box;
+}
+
+.archive-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+  padding-bottom: 12px;
+}
+
+.archive-back,
+.archive-top-spacer {
+  flex: 1;
+  text-align: left;
+}
+
+.archive-back {
+  color: rgba(242, 236, 224, 0.7);
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: color var(--transition-fast);
+}
+
+.archive-back:hover { color: var(--bone); }
+
+.archive-top-title {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: rgba(242, 236, 224, 0.5);
+}
+
+.archive-body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-top: 24px;
+}
+
+/* ── Which daily ─────────────────────────────────────────── */
+
+/* Real tabs, in the filing sense: one recessed bar holding both, with the
+   selected one lifted out of it and running into the page below.
+
+   Two flat rectangles side by side said "here are two buttons" and left which
+   one was live to a colour difference. A folder tab says which is open by its
+   shape, which is the whole reason the form exists. This is why the archive
+   has a radius on it and the board it came from does not. */
+.archive-tabs {
+  /* One edge colour for the bar and for the tab cut into it. Declared here so
+     the two cannot drift: they are the same line, interrupted. The brighter of
+     the two the tabs started with — the bar came up to meet the selection
+     rather than the selection dropping back to the bar. */
+  --tab-edge: rgba(242, 236, 224, 0.32);
+
+  display: flex;
+  /* Bottom aligned: the selected tab is taller than this bar and grows upward
+     out of it, so every tab keeps the same foot. */
+  align-items: flex-end;
+  margin-bottom: 20px;
+  background: rgba(14, 20, 103, 0.5);
+  border: 1px solid var(--tab-edge);
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.archive-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 13px 18px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  color: rgba(242, 236, 224, 0.45);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+/* The selected one grows upward out of the bar and keeps its foot on the same
+   line as the others: all the extra height is on top, and the negative margin
+   matches it exactly so the bar does not simply grow to fit its tallest child.
+
+   Open at the bottom — square corners, no outline — and carried down through
+   the bar's own 6px of padding and 1px border by the negative bottom margin,
+   so its ground meets the page's without a seam. Left short of that, a stripe
+   of bar showed beneath it and the tab read as a box floating inside.
+
+   The two negative margins come to exactly the extra padding, so the bar still
+   sizes itself to an ordinary tab and only the selected one breaks its edges.
+
+   Three inset shadows rather than a border: a border on three sides would add
+   to the height the margin above has just been calculated against, and a
+   single inset would close the bottom edge this is trying to leave open. */
+.archive-tab.active {
+  background: var(--ground);
+  color: var(--bone);
+  border-radius: 5px 5px 0 0;
+  padding-top: 23px;
+  padding-bottom: 20px;
+  margin-top: -10px;
+  margin-bottom: -7px;
+  box-shadow:
+    inset 0 1px 0 var(--tab-edge),
+    inset 1px 0 0 var(--tab-edge),
+    inset -1px 0 0 var(--tab-edge);
+}
+
+/* An inactive tab is dimmed, and a dimmed icon on a dimmed label is a lot of
+   nothing; the selected one comes back to full strength. */
+.archive-tab:not(.active) .archive-tab-icon { opacity: 0.4; }
+
+/* Qualified with the element, and both states stated.
+
+   globals.css gives every button a gold ground and a gold hover, and
+   `button:hover:not(:disabled)` is 0,2,1 — so `.archive-tab:hover:not(.active)`
+   at 0,2,0 loses and the tab flares gold under the pointer. The selected tab
+   had no hover rule at all and went gold outright. Each of these is 0,3,1 or
+   better, so both hold. */
+@media (hover: hover) and (pointer: fine) {
+  /* Text only. A ground that lights up under the pointer made the unselected
+     tab look half selected, which is the one thing this bar has to be clear
+     about. */
+  button.archive-tab:hover:not(:disabled) {
+    background: transparent;
+    color: rgba(242, 236, 224, 0.8);
+  }
+
+  /* Selected is already where it is going, so hovering it does nothing at all.
+     `transform` and `transition` are named because globals.css gives every
+     button a scale(1.02) on hover and a transition on all: without these the
+     tab that is cut into the bar lifts and swells out of its own slot. */
+  button.archive-tab.active:hover:not(:disabled) {
+    background: var(--ground);
+    color: var(--bone);
+    transform: none;
+    transition: none;
+  }
+}
+
+.archive-tab-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* ── The month ───────────────────────────────────────────── */
+
+.archive-monthbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.archive-monthbar-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.archive-month {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.archive-step,
+.archive-today {
+  background: var(--tile-deep);
+  border: none;
+  cursor: pointer;
+  color: var(--bone);
+  /* 44px is the minimum comfortable touch target. */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  transition: background-color var(--transition-fast);
+}
+
+.archive-step { font-size: 1.3rem; }
+
+.archive-step:hover:not(:disabled),
+.archive-today:hover:not(:disabled) { background: var(--tile); }
+
+.archive-step:disabled,
+.archive-today:disabled {
+  color: rgba(242, 236, 224, 0.22);
+  cursor: default;
+}
+
+/* ── The grid ────────────────────────────────────────────── */
+
+/* The preview fades out down the page and into the pitch, so a guest reads it
+   as a sample of something rather than a calendar that has gone wrong. Drawn
+   over the grid rather than masking it: a mask would take the playable days at
+   the foot of the month down with it, and those are the whole point. */
+.archive-grid-wrap {
+  position: relative;
+}
+
+.archive-grid-wrap.preview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Tuned for the two rows the preview shows, not a whole month: the first
+     row stays legible and the second goes under. */
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 38%,
+    rgba(5, 8, 28, 0.6) 78%,
+    var(--ground) 100%
+  );
+}
+
+.archive-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px;
+  table-layout: fixed;
+}
+
+.archive-grid th {
+  padding-bottom: 6px;
+  font-family: var(--font-board);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.archive-grid th abbr {
+  text-decoration: none;
+  cursor: default;
+}
+
+.archive-cell { padding: 0; }
+
+.archive-day {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px 8px;
+  background: var(--tile-deep);
+  border: none;
+  color: var(--bone);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.archive-day:hover:not(:disabled) { background: var(--tile); }
+
+.archive-day-icon {
+  width: 38px;
+  height: 38px;
+  display: block;
+}
+
+.archive-day-number {
+  font-size: 0.8rem;
+  color: rgba(242, 236, 224, 0.62);
+}
+
+/* A locked day keeps its shape and loses its colour, which is what makes the
+   size of the archive legible without opening any of it. */
+.archive-day.shut {
+  background: rgba(14, 20, 103, 0.35);
+  cursor: default;
+}
+
+.archive-day.shut .archive-day-icon {
+  opacity: 0.22;
+  filter: grayscale(1);
+}
+
+.archive-day.shut .archive-day-number { color: rgba(242, 236, 224, 0.25); }
+
+/* Days before the archive begins are not locked, they are absent. */
+.archive-day.outside { background: none; }
+.archive-day.outside .archive-day-icon { opacity: 0.08; }
+
+/* A locked day shows no date. Kept in the layout rather than removed, so the
+   rows it sits in are the same height as the rows above them. */
+.archive-day-number.concealed {
+  visibility: hidden;
+}
+
+.archive-day.played .archive-day-number {
+  color: var(--jeopardy-gold);
+  font-weight: 700;
+}
+
+.archive-day.today { box-shadow: inset 0 0 0 2px var(--jeopardy-gold); }
+
+.archive-cell.empty { background: none; }
+
+/* ── The pitch ───────────────────────────────────────────── */
+
+.archive-pitch {
+  /* Tucked up under the fade rather than set below it. The grid now reaches
+     full ground at its own bottom edge, so a 32px gap under it was 32px of
+     nothing between the calendar disappearing and the reason it disappeared.
+     The pull is small and lands on the last row, which the gradient has
+     already taken to black. */
+  margin-top: -10px;
+  padding: 28px 24px;
+  /* No panel of its own. The grid above fades to the page's ground, and a
+     filled box starting where that fade lands would draw the edge the fade
+     exists to remove. */
+  background: transparent;
+  text-align: center;
+}
+
+.archive-pitch h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.archive-pitch p {
+  margin: 0 auto 20px;
+  max-width: 44ch;
+  color: rgba(242, 236, 224, 0.68);
+  line-height: 1.5;
+}
+
+.archive-pitch-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.archive-pitch-primary,
+.archive-pitch-secondary {
+  min-height: 44px;
+  padding: 12px 26px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.archive-pitch-primary {
+  background: var(--jeopardy-gold);
+  color: var(--jeopardy-black, #14100a);
+}
+
+.archive-pitch-primary:hover { background: var(--jeopardy-gold-light); }
+
+.archive-pitch-secondary {
+  background: none;
+  color: rgba(242, 236, 224, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(242, 236, 224, 0.3);
+}
+
+.archive-pitch-secondary:hover { color: var(--bone); }
+
+@media (max-width: 640px) {
+  .archive-page { padding: 20px 14px 32px; }
+
+  .archive-grid { border-spacing: 4px; }
+
+  .archive-day { padding: 7px 2px 6px; }
+
+  .archive-day-icon { width: 26px; height: 26px; }
+
+  .archive-day-number { font-size: 0.68rem; }
+
+  .archive-tab {
+    font-size: 0.9rem;
+    letter-spacing: 1.2px;
+    gap: 8px;
+  }
+}
