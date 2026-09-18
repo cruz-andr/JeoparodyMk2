@@ -39,8 +39,10 @@ export function orderCategoryMajor(clues, { categories = BOARD_CATEGORIES, rows 
   return out;
 }
 
-/** Build the 6x5 board from one round. Returns null unless it is complete. */
-export function buildBoard(roundClues) {
+/** Build the 6x5 board from one round. Returns null unless it is complete.
+    `values` are the row values to stamp on: the Jeopardy round's by default,
+    DOUBLE_ROW_VALUES when the round handed in is the Double Jeopardy one. */
+export function buildBoard(roundClues, { values = ROW_VALUES } = {}) {
   const needed = BOARD_CATEGORIES * BOARD_ROWS;
   if (!Array.isArray(roundClues) || roundClues.length < needed) return null;
 
@@ -62,7 +64,7 @@ export function buildBoard(roundClues) {
     // component convention: `answer` is shown, `question` is the response
     answer: clue.clue,
     question: clue.answer,
-    points: ROW_VALUES[i % BOARD_ROWS],
+    points: values[i % BOARD_ROWS],
     revealed: false,
   }));
 

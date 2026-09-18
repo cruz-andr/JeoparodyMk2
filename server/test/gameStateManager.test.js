@@ -1140,10 +1140,16 @@ test('a quickplay match identifies players the way every other event does', () =
 });
 
 /* A matchmaker on a clock we control. Real time would make these tests take
-   a minute each. */
-function mkMatchmaker({ pairAfterMs = 20000, giveUpAfterMs = 45000 } = {}) {
+   a minute each. The house players are off unless a test turns them on: the
+   pair-or-give-up rules below are what a server without them runs. */
+function mkMatchmaker({
+  pairAfterMs = 20000, giveUpAfterMs = 45000, botFillAfterMs = 20000,
+  botFillJitterMs = 0, fillWithBots = false, random = Math.random,
+} = {}) {
   let t = 1_000_000;
-  const gm = new GameStateManager({ now: () => t, pairAfterMs, giveUpAfterMs });
+  const gm = new GameStateManager({
+    now: () => t, pairAfterMs, giveUpAfterMs, botFillAfterMs, botFillJitterMs, fillWithBots, random,
+  });
   const advance = (ms) => { t += ms; };
   return { gm, advance };
 }
@@ -1275,9 +1281,142 @@ test('rejoining the queue restarts the wait', () => {
   assert.equal(gm.matchmakingQueue.length, 2);
 });
 
-test('the pairing thresholds are what the client is told', () => {
-  const { gm } = mkMatchmaker({ pairAfterMs: 1234, giveUpAfterMs: 5678 });
-  assert.deepEqual(gm.matchmakingTimings(), { pairAfterMs: 1234, giveUpAfterMs: 5678 });
+test('the thresholds are what the client is told', () => {
+  const { gm } = mkMatchmaker({ pairAfterMs: 1234, giveUpAfterMs: 5678, botFillAfterMs: 999, botFillJitterMs: 7, fillWithBots: true });
+  assert.deepEqual(gm.matchmakingTimings(), {
+    pairAfterMs: 1234, giveUpAfterMs: 5678, fillAfterMs: 999, fillJitterMs: 7, fillWithBots: true,
+  });
+});
+
+test('the moment the game fills is drawn from a window, not a constant', () => {
+  // A game that always starts at exactly twenty seconds tells everybody the
+  // other players were never real.
+  const rolls = [0, 0.5, 1];
+  const drawn = rolls.map((r) => {
+    const { gm } = mkMatchmaker({ fillWithBots: true, botFillJitterMs: 2000, random: () => r });
+    gm.joinMatchmakingQueue(mkSocket(), 'A');
+    return gm.matchmakingQueue[0].fillAt - gm.matchmakingQueue[0].queuedAt;
+  });
+  assert.deepEqual(drawn, [20000, 21000, 22000]);
+  assert.ok(drawn.every((ms) => ms >= 20000 && ms <= 22000), 'inside the window');
+});
+
+test('two people waiting together are not filled on the same tick', () => {
+  const seq = [0, 0.5, 0.2, 0.7, 0.4];
+  let i = 0;
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true, botFillJitterMs: 2000, random: () => seq[i++ % seq.length] });
+  gm.joinMatchmakingQueue(mkSocket(), 'A');   // draws 20000
+  gm.joinMatchmakingQueue(mkSocket(), 'B');   // draws 21000
+  assert.notEqual(gm.matchmakingQueue[0].fillAt, gm.matchmakingQueue[1].fillAt);
+  advance(19_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING);
+  advance(1);
+  assert.ok(gm.tryCreateMatch().match, 'the longest waiter\'s own moment is the one that counts');
+});
+
+// --- the house fills the table -------------------------------------------
+
+test('alone past the fill threshold, a player is seated with two house players', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  const lone = mkSocket();
+  gm.joinMatchmakingQueue(lone, 'Ada');
+
+  advance(19_999);
+  assert.deepEqual(gm.tryCreateMatch(), NOTHING, 'nothing before 20s');
+  advance(1);
+
+  const { match, noMatchFor } = gm.tryCreateMatch();
+  assert.ok(match, 'the table is seated');
+  assert.equal(noMatchFor, null, 'nobody is turned away');
+  assert.equal(match.players.length, 3);
+  assert.equal(match.players.filter((p) => p.isBot).length, 2, 'two of the three are house players');
+  assert.equal(match.players[0].id, lone.sessionId, 'the person is seated first');
+  assert.equal(gm.matchmakingQueue.length, 0);
+
+  const room = gm.rooms.get(match.roomCode);
+  assert.equal(room.players.size, 3);
+  assert.equal([...room.players.values()].filter((p) => p.isBot).length, 2, 'the room knows which seats are the house');
+  assert.equal(match.seats.filter((s) => s.isBot).every((s) => s.profile), true, 'the director gets their temperaments');
+});
+
+test('two waiting past the fill threshold get one house player, not a second wait', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  gm.joinMatchmakingQueue(mkSocket(), 'A');
+  advance(12_000);
+  gm.joinMatchmakingQueue(mkSocket(), 'B');
+  advance(8_000);
+
+  const { match } = gm.tryCreateMatch();
+  assert.ok(match, 'the first player has waited 20s');
+  assert.deepEqual(match.players.map((p) => p.isBot), [false, false, true]);
+});
+
+test('three people never see a house player', () => {
+  const { gm } = mkMatchmaker({ fillWithBots: true });
+  [mkSocket(), mkSocket(), mkSocket()].forEach((s, i) => gm.joinMatchmakingQueue(s, `P${i}`));
+  const { match } = gm.tryCreateMatch();
+  assert.equal(match.players.filter((p) => p.isBot).length, 0);
+});
+
+test('a house player never takes a name already at the table', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  gm.joinMatchmakingQueue(mkSocket(), 'Priya');
+  advance(20_000);
+  const { match } = gm.tryCreateMatch();
+  const names = match.players.map((p) => p.displayName.toLowerCase());
+  assert.equal(new Set(names).size, 3, `names must differ: ${names}`);
+});
+
+test('the table plays by the longest waiter\'s preset', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  gm.joinMatchmakingQueue(mkSocket(), 'A', null, 'speed');
+  advance(20_000);
+  const { match } = gm.tryCreateMatch();
+  assert.equal(match.settings.questionTimeLimit, 15000);
+  assert.equal(match.settings.enableFinalJeopardy, false);
+  assert.equal(gm.rooms.get(match.roomCode).settings.maxPlayers, 3);
+});
+
+test('an unknown preset is the standard table', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  gm.joinMatchmakingQueue(mkSocket(), 'A', null, 'nonsense');
+  advance(20_000);
+  const { match } = gm.tryCreateMatch();
+  assert.equal(match.settings.questionTimeLimit, 30000);
+  assert.equal(match.settings.enableFinalJeopardy, true);
+});
+
+test('with the house players on, nobody is ever told nobody else is looking', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  gm.joinMatchmakingQueue(mkSocket(), 'A');
+  advance(60_000);
+  const { match, noMatchFor } = gm.tryCreateMatch();
+  assert.ok(match);
+  assert.equal(noMatchFor, null);
+});
+
+test('a quickplay table is cleared when its last person leaves, bots or not', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  const person = mkSocket();
+  gm.joinMatchmakingQueue(person, 'A');
+  advance(20_000);
+  const { match } = gm.tryCreateMatch();
+  assert.ok(gm.rooms.has(match.roomCode));
+  gm.leaveRoom(person, match.roomCode);
+  assert.equal(gm.rooms.has(match.roomCode), false, 'two house players are not a room');
+});
+
+test('house players do not keep a stale room alive', () => {
+  const { gm, advance } = mkMatchmaker({ fillWithBots: true });
+  const person = mkSocket();
+  gm.joinMatchmakingQueue(person, 'A');
+  advance(20_000);
+  const { match } = gm.tryCreateMatch();
+  const room = gm.rooms.get(match.roomCode);
+  gm.handleDisconnect(person);
+  room.lastActiveAt = Date.now() - 31 * 60 * 1000;
+  gm.cleanupStaleRooms();
+  assert.equal(gm.rooms.has(match.roomCode), false, 'a table of bots alone for half an hour is gone');
 });
 
 // =========================================================================

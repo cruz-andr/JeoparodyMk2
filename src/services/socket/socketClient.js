@@ -232,8 +232,8 @@ class SocketClient {
   }
 
   // Quickplay methods
-  joinMatchmaking(displayName, signature = null) {
-    this.emit('quickplay:join-queue', { displayName, signature });
+  joinMatchmaking(displayName, signature = null, preset = 'standard') {
+    this.emit('quickplay:join-queue', { displayName, signature, preset });
   }
 
   leaveMatchmaking() {

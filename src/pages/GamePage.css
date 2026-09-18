@@ -1068,3 +1068,40 @@
     padding-bottom: 180px;
   }
 }
+
+
+
+/* ── The room before the game ────────────────────────────────────────────
+   Drawn on the studio surface, so the code cells and the name panels here
+   are the same ones every other screen uses. */
+.lobby {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.lobby-quickplay {
+  display: grid;
+  justify-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl) 0;
+}
+
+.lobby-headline {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--jeopardy-gold-light);
+}
+
+.lobby-room { align-items: start; }
+
+.lobby-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.lobby-out { display: flex; justify-content: center; }

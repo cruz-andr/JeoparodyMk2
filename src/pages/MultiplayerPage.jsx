@@ -1,252 +1,178 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
 import { socketClient } from '../services/socket/socketClient';
+import Studio, { Live, Btn, Tabs, CodeCells } from '../components/studio/Studio';
+import HouseRules from '../components/studio/HouseRules';
 import SignatureCanvas from '../components/common/SignatureCanvas';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import '../components/common/SignatureCanvas.css';
 import './MultiplayerPage.css';
+
+/* The pad is a fixed pixel canvas, so its size is a prop rather than CSS.
+   A name drawn with a mouse wants room; a thumb on a phone does not have it. */
+const DESK_PAD = { width: 460, height: 150 };
+const PHONE_PAD = { width: 300, height: 80 };
+
+// Room codes are six characters from an unambiguous alphabet (no O/0, I/1).
+const CODE_LENGTH = 6;
+const CODE_ALPHABET = /[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g;
 
 export default function MultiplayerPage() {
   usePageTitle('Multiplayer');
   const navigate = useNavigate();
-  const [phase, setPhase] = useState('menu'); // 'menu' | 'creating' | 'lobby'
+  const onDesk = useMediaQuery('(min-width: 821px)');
+  const [side, setSide] = useState('open'); // 'open' | 'join'
+  const [opening, setOpening] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [signature, setSignature] = useState(null);
+  const [drawing, setDrawing] = useState(false);
   const [error, setError] = useState(null);
+  const [code, setCode] = useState('');
+  const codeInputRef = useRef(null);
 
-  const { isConnected, isConnecting, error: socketError, joinRoom, leaveRoom, setReady, startGame } = useSocket();
-  const { roomCode, players, isHost, resetRoom } = useRoomStore();
+  const { isConnected, isConnecting, error: socketError, joinRoom } = useSocket();
+  const { resetRoom } = useRoomStore();
   const { user, isGuest } = useUserStore();
 
-  // Set default display name from user
+  /* The name that goes on the card: the one just drawn, else the one saved on
+     the account. Whether the pad is shown is a separate question, and it turns
+     on the SAVED name only. Asking it about `myName` hid the pad the instant
+     the first stroke landed, because a stroke is a signature. */
+  const savedName = user?.signature || null;
+  const myName = signature || savedName;
+  const showPad = !savedName || drawing;
+
   useEffect(() => {
-    if (user?.displayName) {
-      setDisplayName(user.displayName);
-    } else if (isGuest) {
-      setDisplayName(`Player${Math.floor(Math.random() * 1000)}`);
-    }
+    if (user?.displayName) setDisplayName(user.displayName);
+    else if (isGuest) setDisplayName(`Player${Math.floor(Math.random() * 1000)}`);
   }, [user, isGuest]);
 
-  const handleCreateRoom = async () => {
-    if (!signature) {
-      setError('Please draw your name');
+  const handleOpenRoom = async () => {
+    if (!myName) {
+      setError('Draw your name first.');
       return;
     }
 
     // Generate a display name for fallback/logging
     const name = displayName.trim() || `Player${Math.floor(Math.random() * 1000)}`;
 
-    setPhase('creating');
+    setOpening(true);
     setError(null);
 
     try {
       /* Send the room's rule settings up front. Creating with none left the
          server reading enableDailyDouble as undefined, so a private game never
          got a Daily Double while the lobby still showed it as enabled.
-         The rules come from the player's own settings, which this screen used
-         to ignore entirely: turning off Double Jeopardy in Settings changed
-         single player and host mode but silently did nothing here, because the
-         room was built from roomStore's hardcoded defaults instead. */
+         The rules come from the player's own settings, which are the line
+         under the pad on this screen. */
       const { roomCode: newRoomCode } = await socketClient.createRoom(
         'multiplayer',
         roomRulesFromSettings(useSettingsStore.getState(), useRoomStore.getState().settings)
       );
 
-      // Update local store
       useRoomStore.getState().setRoomCode(newRoomCode);
       useRoomStore.getState().setIsHost(true);
 
-      // Then join the room via socket (with signature)
-      const result = await joinRoom(newRoomCode, name, signature);
+      const result = await joinRoom(newRoomCode, name, myName);
 
-      // Set players from result (includes self as host)
-      if (result.players) {
-        useRoomStore.getState().setPlayers(result.players);
-      }
-      // Sync room settings from server
-      if (result.settings) {
-        useRoomStore.getState().updateSettings(result.settings);
-      }
+      if (result.players) useRoomStore.getState().setPlayers(result.players);
+      if (result.settings) useRoomStore.getState().updateSettings(result.settings);
 
       // Mark as fresh join to prevent reconnection race condition
       sessionStorage.setItem('jeopardy_fresh_join', 'true');
 
-      // Navigate to GamePage (shared lobby for all players)
       navigate(`/game/${newRoomCode}`);
     } catch (err) {
-      setError(err.message || 'Failed to create room');
-      setPhase('menu');
+      setError(err.message || 'Could not open the room.');
+      setOpening(false);
       resetRoom();
     }
   };
 
-  const handleLeaveRoom = () => {
-    if (roomCode) {
-      leaveRoom(roomCode);
-    }
-    resetRoom();
-    setPhase('menu');
-  };
+  const handleCodeChange = useCallback((e) => {
+    setCode(e.target.value.toUpperCase().replace(CODE_ALPHABET, '').slice(0, CODE_LENGTH));
+  }, []);
 
-  const handleToggleReady = () => {
-    const currentPlayer = players.find(p => p.isHost === false);
-    if (currentPlayer && roomCode) {
-      setReady(roomCode, !currentPlayer.isReady);
-    }
-  };
+  const handleJoin = useCallback((e) => {
+    e.preventDefault();
+    if (code.length === CODE_LENGTH) navigate(`/join/${code}`);
+  }, [code, navigate]);
 
-  const handleStartGame = () => {
-    if (roomCode && isHost) {
-      startGame(roomCode);
-      navigate(`/game/${roomCode}`);
-    }
-  };
-
-  const allPlayersReady = players.length >= 2 && players.every(p => p.isReady || p.isHost);
+  const problem = error || socketError;
+  const left = CODE_LENGTH - code.length;
 
   return (
-    <div className="multiplayer-page">
-      <header className="mp-header">
-        <h1>Multiplayer</h1>
-        {!isConnected && !isConnecting && (
-          <span className="connection-status offline">Not Connected</span>
-        )}
-        {isConnecting && (
-          <span className="connection-status connecting">Connecting...</span>
-        )}
-        {isConnected && (
-          <span className="connection-status online">Connected</span>
-        )}
-      </header>
+    <Studio title="Multiplayer" className="multiplayer-page" right={<Live isConnected={isConnected} isConnecting={isConnecting} />}>
+      <Tabs
+        ariaLabel="Open or join"
+        value={side}
+        onChange={setSide}
+        options={[
+          { value: 'open', label: 'Open a room', note: 'You host, up to six play' },
+          { value: 'join', label: 'Join with a code', note: 'Six letters from the host' },
+        ]}
+      />
 
-      <AnimatePresence mode="wait">
-        {/* Menu Phase */}
-        {phase === 'menu' && (
-          <motion.div
-            key="menu"
-            className="mp-content"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <div className="mp-form">
-              <SignatureCanvas
-                onSignatureChange={setSignature}
-                width={300}
-                height={80}
-              />
-
-              {error && <p className="error-message">{error}</p>}
-              {socketError && <p className="error-message">{socketError}</p>}
-
-              <div className="mp-actions">
-                <button
-                  className="btn-primary btn-large"
-                  onClick={handleCreateRoom}
-                  disabled={!isConnected || !signature}
-                >
-                  Create Room
-                </button>
+      {side === 'open' ? (
+        <div className="st-two mp-open">
+          <div className="st-stack">
+            <div className="st-field">
+              <span className="st-field-label is-big">Draw your name</span>
+              <span className="st-hint">It is what the room sees when you ring in.</span>
+            </div>
+            {showPad ? (
+              <div className="mp-pad">
+                <SignatureCanvas onSignatureChange={setSignature} {...(onDesk ? DESK_PAD : PHONE_PAD)} />
               </div>
-            </div>
+            ) : (
+              <p className="st-rules-line">
+                <span>Your name is on your card.</span>
+                <button type="button" className="st-rules-open" onClick={() => setDrawing(true)}>Draw a new one</button>
+              </p>
+            )}
+            {problem && <p className="st-error">{problem}</p>}
+          </div>
 
-            <button className="btn-ghost" onClick={() => navigate('/menu')}>
-              Back to Menu
-            </button>
-          </motion.div>
-        )}
-
-        {/* Creating Phase */}
-        {phase === 'creating' && (
-          <motion.div
-            key="creating"
-            className="mp-content mp-loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="spinner" />
-            <p>Creating room...</p>
-          </motion.div>
-        )}
-
-        {/* Lobby Phase */}
-        {phase === 'lobby' && (
-          <motion.div
-            key="lobby"
-            className="mp-content mp-lobby"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <div className="room-code-display">
-              <span className="room-code-label">Room Code</span>
-              <span className="room-code">{roomCode}</span>
-              <button
-                className="copy-btn"
-                onClick={() => navigator.clipboard.writeText(roomCode)}
-              >
-                Copy
-              </button>
-            </div>
-
-            <p className="share-hint">
-              Share this code with your friends to let them join!
+          <div className="st-stack">
+            <p className="st-note">
+              You open the room, read the code to the others, and pick the topic once
+              everyone is in. Up to six can play.
             </p>
-
-            <div className="players-list">
-              <h3>Players ({players.length}/6)</h3>
-              {players.length === 0 ? (
-                <p className="no-players">Waiting for players to join...</p>
-              ) : (
-                <ul>
-                  {players.map((player) => (
-                    <li key={player.id} className="player-item">
-                      <span className="player-name">
-                        {player.signature ? (
-                          <img src={player.signature} alt={player.displayName || player.name} className="player-signature" />
-                        ) : (
-                          player.displayName || player.name
-                        )}
-                        {player.isHost && <span className="host-badge">Host</span>}
-                      </span>
-                      <span className={`ready-status ${player.isReady ? 'ready' : 'not-ready'}`}>
-                        {player.isHost ? 'Host' : player.isReady ? 'Ready' : 'Not Ready'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <HouseRules alwaysOpen={onDesk} />
+            <Btn wide onClick={handleOpenRoom} disabled={!isConnected || !myName || opening} className="mp-open-btn">
+              {opening ? 'Opening' : isConnected ? 'Open the room' : 'Connecting'}
+            </Btn>
+          </div>
+        </div>
+      ) : (
+        <form className="st-two mp-join" onSubmit={handleJoin}>
+          <div className="st-stack">
+            <div className="st-field">
+              <span className="st-field-label is-big">Got a code from the host?</span>
+              <span className="st-hint">Six letters. No O, 0, I or 1, so it cannot be misheard.</span>
             </div>
-
-            <div className="lobby-actions">
-              {isHost ? (
-                <button
-                  className="btn-primary btn-large"
-                  onClick={handleStartGame}
-                  disabled={!allPlayersReady}
-                >
-                  {allPlayersReady ? 'Start Game' : 'Waiting for players...'}
-                </button>
-              ) : (
-                <button
-                  className="btn-primary btn-large"
-                  onClick={handleToggleReady}
-                >
-                  Toggle Ready
-                </button>
-              )}
-              <button className="btn-ghost" onClick={handleLeaveRoom}>
-                Leave Room
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            <CodeCells code={code} editable onChange={handleCodeChange} inputRef={codeInputRef} autoFocus />
+          </div>
+          <div className="st-stack">
+            <p className="st-note">
+              You draw your name on the next screen, then wait with everyone else
+              until the host starts the game.
+            </p>
+            <Btn type="submit" wide disabled={code.length !== CODE_LENGTH} className="mp-join-btn">
+              Join the game
+            </Btn>
+            {left > 0 && (
+              <p className="st-note is-centred">
+                {left === 1 ? 'One more letter' : `${left} more letters`}
+              </p>
+            )}
+          </div>
+        </form>
+      )}
+    </Studio>
   );
 }

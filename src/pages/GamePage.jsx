@@ -8,7 +8,6 @@ import { socketClient } from '../services/socket/socketClient';
 import * as aiService from '../services/api/aiService';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
-import GameSettingsPanel from '../components/setup/GameSettingsPanel';
 import GameBoard from '../components/game/GameBoard';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import Timer from '../components/common/Timer';
@@ -21,6 +20,8 @@ import PlayerBuzzer from '../components/player/PlayerBuzzer';
 import AnswerInput from '../components/player/AnswerInput';
 import MultipleChoiceSelector from '../components/player/MultipleChoiceSelector';
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
+import Lobby from '../components/game/Lobby';
+import '../components/studio/studio.css';
 import './GamePage.css';
 import '../components/common/SignatureCanvas.css';
 
@@ -766,6 +767,12 @@ export default function GamePage() {
   // Check if all questions revealed - handle round transition
   // Only check when no question is currently active (so last question can be played)
   useEffect(() => {
+    /* A quickplay table is run by the server, which moves the game on itself
+       when the board is cleared. Nobody at the table is host, so the guarded
+       branches below never fired, but the unguarded game:end did: every
+       player ended the game the moment the last clue closed, before Final
+       Jeopardy could start. */
+    if (roomType === 'quickplay') return;
     if (phase === 'playing' && questions.length > 0 && !currentQuestion) {
       const totalQuestions = questions.length * (questions[0]?.length || 0);
       if (revealedQuestions.size >= totalQuestions) {
@@ -789,7 +796,7 @@ export default function GamePage() {
         }
       }
     }
-  }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion]);
+  }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion, roomType]);
 
   /* The local record of a room game, written once when the standings appear.
 
@@ -1333,7 +1340,7 @@ export default function GamePage() {
             <div className="spinner" />
             <p>
               {isReconnecting
-                ? 'Reconnecting to game...'
+                ? (roomType === 'quickplay' ? 'Taking your seat' : 'Reconnecting to game...')
                 : phase === 'generating'
                   ? 'Generating questions...'
                   : 'The AI is thinking...'}
@@ -1347,87 +1354,44 @@ export default function GamePage() {
         <h1>
           {phase === 'playing' || phase === 'roundEnd'
             ? (currentRound === 2 ? 'Double Jeoparody!' : 'Jeoparody!')
-            : 'Game Lobby'}
+            : (roomType === 'quickplay' ? 'Quickplay' : 'Multiplayer')}
         </h1>
-        <div className="room-code-badge">
-          Room: <span>{roomCode}</span>
-        </div>
+        {/* The lobby draws the code itself, in the board's own cells, and a
+            quickplay game has nobody to read a code to. */}
+        {roomType !== 'quickplay' && phase !== 'lobby' && (
+          <div className="room-code-badge">
+            Room: <span>{roomCode}</span>
+          </div>
+        )}
       </header>
 
-      {/* LOBBY PHASE */}
+      {/* THE ROOM BEFORE THE GAME. A private room shows its code and waits on
+          the people the host invited; a quickplay game was filled by the
+          matchmaker and only has to say that the board is coming. */}
       {phase === 'lobby' && (
-        <div className="game-content">
-          <div className="players-section">
-            <h2>Players ({players.length})</h2>
-            <ul className="player-list">
-              {players.map((player) => (
-                <motion.li
-                  key={player.id}
-                  className="player-card lobby-player"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <div className="player-name-container">
-                    {renderPlayerName(player)}
-                    {player.isHost && <span className="host-tag">Host</span>}
-                  </div>
-                  <span className={`ready-badge ${player.isReady ? 'ready' : ''}`}>
-                    {player.isHost ? 'Host' : player.isReady ? 'Ready' : 'Not Ready'}
-                  </span>
-                  {isHost && !player.isHost && (
-                    <button
-                      className="btn-kick-lobby"
-                      onClick={() => handleKickPlayer(player.id)}
-                    >
-                      Kick
-                    </button>
-                  )}
-                </motion.li>
-              ))}
-            </ul>
-
-            {players.length === 0 && (
-              <p className="waiting-text">Waiting for players to join...</p>
-            )}
-          </div>
-
-          {/* Game Settings */}
-          <div className="settings-section">
-            <GameSettingsPanel
-              settings={settings}
-              onSettingsChange={handleSettingsChange}
-              readOnly={!isHost}
-              defaultExpanded={isHost}
-            />
-          </div>
-
-          <div className="actions-section">
-            {isHost ? (
-              <button
-                className="btn-primary btn-large"
-                onClick={isHostMode && questionsReady ? handleStartHostGame : handleStartSetup}
-                disabled={isHostMode ? !isHost : !allPlayersReady}
-              >
-                {isHostMode
-                  ? (questionsReady ? 'Start Game' : 'Start Game Setup')
-                  : (allPlayersReady
-                    ? 'Start Game Setup'
-                    : 'Waiting for players...')}
-              </button>
-            ) : (
-              <button
-                className={`btn-primary btn-large ${isReady ? 'ready' : ''}`}
-                onClick={handleToggleReady}
-              >
-                {isReady ? 'Ready!' : 'Click when Ready'}
-              </button>
-            )}
-
-            <button className="btn-ghost" onClick={handleLeave}>
-              Leave Room
-            </button>
-          </div>
-        </div>
+        <Lobby
+          roomType={roomType}
+          roomCode={roomCode}
+          players={players}
+          youId={currentPlayerId}
+          isHost={isHost}
+          isReady={isReady}
+          settings={settings}
+          canEditSettings={isHost}
+          onSettingsChange={handleSettingsChange}
+          onStart={isHostMode && questionsReady ? handleStartHostGame : handleStartSetup}
+          onToggleReady={handleToggleReady}
+          onKick={isHost ? handleKickPlayer : null}
+          onLeave={handleLeave}
+          isHostMode={isHostMode}
+          startLabel={isHostMode
+            ? (questionsReady ? 'Start the game' : 'Set up the game')
+            : 'Set up the game'}
+          canStart={isHostMode ? isHost : allPlayersReady}
+          waitingFor={players.length < 2
+            ? 'Needs one more player'
+            : 'Waiting for everyone to say they are ready'}
+        />
       )}
 
       {/* SETUP PHASE (everyone sees, only host can interact) */}
@@ -1513,7 +1477,9 @@ export default function GamePage() {
                 {loading ? 'Generating...' : 'Start Double Jeopardy!'}
               </motion.button>
             ) : (
-              <p className="waiting-text">Waiting for host to start Double Jeopardy...</p>
+              <p className="waiting-text">
+                {roomType === 'quickplay' ? 'Double Jeopardy is coming up.' : 'Waiting for host to start Double Jeopardy...'}
+              </p>
             )}
           </motion.div>
         </motion.div>
@@ -2063,6 +2029,9 @@ export default function GamePage() {
                 })}
               </div>
 
+              {roomType === 'quickplay' ? (
+                <p className="waiting-text">The final standings are coming up.</p>
+              ) : (
               <button
                 className="btn-primary btn-large"
                 onClick={() => {
@@ -2072,6 +2041,7 @@ export default function GamePage() {
               >
                 See Final Standings
               </button>
+              )}
             </motion.div>
           )}
         </div>

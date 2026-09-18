@@ -2,80 +2,119 @@ import { verifyToken } from '../middleware/auth.js';
 import { getDatabase } from '../config/database.js';
 import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager } from './GameStateManager.js';
+import { createGameActions, buzzWindowMs } from './actions.js';
+import { createBoardSource, createQuickplayDirector } from './quickplay.js';
 import { info as logInfo } from '../utils/log.js';
-
-const gameManager = new GameStateManager();
-
-/* Write the finished room to every signed-in player's archive. Never throws:
-   a game that was played but could not be filed is a log line, not a reason
-   to hold back the standings from the people who just played it. */
-function archiveRoom(roomCode) {
-  const room = gameManager.rooms.get(roomCode);
-  if (!room) return;
-  try {
-    const written = recordRoomGame(getDatabase(), room);
-    if (written.length) console.log(`Archived room ${roomCode} for ${written.length} player(s)`);
-  } catch (err) {
-    console.error(`Could not archive room ${roomCode}:`, err.message);
-  }
-}
 
 const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
 
-// One place for what the matchmaker decided, whether a join or the tick asked.
-// A match goes to everyone seated; a player released after waiting alone is
-// told so once, and only here: the manager never touches a socket itself.
-function settleMatchmaking(io) {
-  const { match, noMatchFor } = gameManager.tryCreateMatch();
-  if (match) {
-    match.players.forEach(player => {
-      io.to(player.socketId).emit('quickplay:match-found', {
-        roomCode: match.roomCode,
-        players: match.players,
-      });
-    });
-  }
-  if (noMatchFor) {
-    io.to(noMatchFor.id).emit('quickplay:no-match', { message: NO_MATCH_MESSAGE });
-  }
-}
-
-// Lifecycle events (setting the board, ending rounds, starting Final Jeopardy)
-// change the game for everyone, so only the room's host may fire them. In
-// quickplay rooms there is no host, so the first player in acts as one.
-function isRoomController(roomCode, sessionId) {
-  const room = gameManager.rooms.get(roomCode);
-  if (!room) return false;
-  if (room.hostId) return room.hostId === sessionId;
-  return room.players.has(sessionId);
-}
-
-// Push the current typed answers to the host alone. Answers must never be
-// broadcast to the room — the other players have not answered yet.
-function sendTypedAnswersToHost(io, roomCode) {
-  const room = gameManager.rooms.get(roomCode);
-  const hostSocketId = room?.players.get(room.hostId)?.socketId;
-  if (!hostSocketId) return;
-
-  io.to(hostSocketId).emit('host:typed-answers-update', {
-    answers: gameManager.getTypedAnswers(roomCode),
-  });
-}
-
-// On the show a contestant gets about five seconds to answer once they have
-// buzzed in. Reusing the full clue timer here gave them the whole 30 seconds
-// and drained the tension out of every buzz. Seven is the default here because
-// the buzz window opens as the clue appears, so players are still reading.
-const DEFAULT_ANSWER_MS = 7000;
-const DEFAULT_BUZZ_MS = 30000;
-
-const buzzWindowMs = (room) => room?.settings?.questionTimeLimit || DEFAULT_BUZZ_MS;
-const answerWindowMs = (room) => room?.settings?.answerTimeLimit || DEFAULT_ANSWER_MS;
-
-// Debug flag - set DEBUG_GAME=true in .env to enable game debugging
+// Debug flag - set DEBUG_GAME=true in .env to enable game debugging logs
 const DEBUG_GAME = process.env.DEBUG_GAME === 'true';
 
-export function initializeSocketHandlers(io) {
+/**
+ * Quickplay's knobs, from the environment.
+ *
+ * QUICKPLAY_BOTS=false turns the house players off and brings back the older
+ * pair-or-give-up wait. QUICKPLAY_FILL_AFTER_MS moves the fill threshold.
+ * QUICKPLAY_BOARDS=static deals the written board instead of scraping an
+ * episode, which is what the test runs want: nothing they do should reach
+ * another site.
+ */
+export function quickplayOptions(env = process.env) {
+  const fill = Number(env.QUICKPLAY_FILL_AFTER_MS);
+  return {
+    fillWithBots: env.QUICKPLAY_BOTS !== 'false',
+    botFillAfterMs: Number.isFinite(fill) && fill > 0 ? fill : undefined,
+    boardMode: env.QUICKPLAY_BOARDS === 'static' || env.NODE_ENV === 'test' ? 'static' : 'archive',
+  };
+}
+
+export function initializeSocketHandlers(io, { env = process.env } = {}) {
+  const knobs = quickplayOptions(env);
+  const gameManager = new GameStateManager({
+    fillWithBots: knobs.fillWithBots,
+    ...(knobs.botFillAfterMs ? { botFillAfterMs: knobs.botFillAfterMs } : {}),
+  });
+
+  /* Write the finished room to every signed-in player's archive. Never throws:
+     a game that was played but could not be filed is a log line, not a reason
+     to hold back the standings from the people who just played it. */
+  function archiveRoom(roomCode) {
+    const room = gameManager.rooms.get(roomCode);
+    if (!room) return;
+    try {
+      const written = recordRoomGame(getDatabase(), room);
+      if (written.length) console.log(`Archived room ${roomCode} for ${written.length} player(s)`);
+    } catch (err) {
+      console.error(`Could not archive room ${roomCode}:`, err.message);
+    }
+  }
+
+  /* The one door out to a room. Everything the room is told goes through
+     here, so the quickplay director hears it too and can play the house seats. */
+  let director = null;
+  function emitRoom(roomCode, event, payload) {
+    if (payload === undefined) io.to(roomCode).emit(event);
+    else io.to(roomCode).emit(event, payload);
+    director?.onRoomEvent(roomCode, event, payload);
+  }
+
+  const actions = createGameActions({ gameManager, emitRoom, archiveRoom });
+
+  const boardSource = createBoardSource({ mode: knobs.boardMode, log: (m) => logInfo({ msg: m }) });
+  director = createQuickplayDirector({
+    gameManager, actions, boardSource, log: (m) => logInfo({ msg: m }),
+  });
+
+  // One place for what the matchmaker decided, whether a join or the tick asked.
+  // A match goes to everyone seated; a player released after waiting alone is
+  // told so once, and only here: the manager never touches a socket itself.
+  function settleMatchmaking() {
+    const { match, noMatchFor } = gameManager.tryCreateMatch();
+    if (match) {
+      const seated = match.players.map(({ id, socketId, displayName, signature, isBot }) =>
+        ({ id, socketId, displayName, signature, isBot }));
+      match.players.forEach(player => {
+        if (player.isBot) return;
+        /* Into the socket.io room now, not when the game page loads: the
+           board is dealt a few seconds from here and a socket that is not in
+           the room does not hear it. */
+        io.sockets.sockets.get(player.socketId)?.join(match.roomCode);
+        io.to(player.socketId).emit('quickplay:match-found', {
+          roomCode: match.roomCode,
+          players: seated,
+          settings: match.settings,
+        });
+      });
+      director.onMatch(match);
+    }
+    if (noMatchFor) {
+      io.to(noMatchFor.id).emit('quickplay:no-match', { message: NO_MATCH_MESSAGE });
+    }
+  }
+
+  // Lifecycle events (setting the board, ending rounds, starting Final Jeopardy)
+  // change the game for everyone, so only the room's host may fire them. In
+  // quickplay rooms there is no host and the server runs the game itself.
+  function isRoomController(roomCode, sessionId) {
+    const room = gameManager.rooms.get(roomCode);
+    if (!room) return false;
+    if (room.hostId) return room.hostId === sessionId;
+    return room.type !== 'quickplay' && room.players.has(sessionId);
+  }
+
+  // Push the current typed answers to the host alone. Answers must never be
+  // broadcast to the room — the other players have not answered yet.
+  function sendTypedAnswersToHost(roomCode) {
+    const room = gameManager.rooms.get(roomCode);
+    const hostSocketId = room?.players.get(room.hostId)?.socketId;
+    if (!hostSocketId) return;
+
+    io.to(hostSocketId).emit('host:typed-answers-update', {
+      answers: gameManager.getTypedAnswers(roomCode),
+    });
+  }
+
   // Authentication middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
@@ -153,6 +192,7 @@ export function initializeSocketHandlers(io) {
       socket.to(roomCode).emit('room:player-left', {
         playerId: socket.sessionId,
       });
+      director.onPlayerGone(roomCode);
     });
 
     socket.on('room:ready', ({ roomCode, ready }) => {
@@ -234,152 +274,24 @@ export function initializeSocketHandlers(io) {
     socket.on('game:set-questions', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Questions set for room ${roomCode}, first picker: ${firstPickerId}`);
-      gameManager.setQuestions(roomCode, questions, categories, firstPickerId, dailyDoubles);
-      io.to(roomCode).emit('game:questions-ready', { questions, categories, firstPickerId });
+      actions.setQuestions(roomCode, { questions, categories, firstPickerId, dailyDoubles });
     });
-
-    // Player selects a question (handled in HOST MODE EVENTS section for host mode support)
 
     // Player buzzes in with reaction time
     socket.on('game:buzz-in', ({ roomCode, reactionTime }) => {
-      const playerId = socket.sessionId;
-      console.log(`Player ${playerId} buzzed with reaction time ${reactionTime}ms`);
-
-      const room = gameManager.rooms.get(roomCode);
-
-      // Prevent host from buzzing in host mode
-      if (room?.type === 'host' && room?.hostId === playerId) {
-        console.log(`Host ${playerId} tried to buzz - ignoring`);
-        return;
-      }
-
-      // A rejected buzz (window closed, or a player who already had their shot)
-      // must not touch the timers — cancelling the buzz timeout for one used to
-      // leave the room with no winner and no timer, frozen for good.
-      const accepted = gameManager.recordBuzz(roomCode, playerId, reactionTime);
-      if (!accepted) return;
-
-      // Clear the server-side buzz timeout since someone buzzed
-      gameManager.clearBuzzTimeout(roomCode);
-
-      // Check if this is the first buzz (announce winner immediately for responsiveness)
-      if (room && room.gameState.buzzes && Object.keys(room.gameState.buzzes).length === 1) {
-        // First buzzer - announce them as winner after a brief delay
-        setTimeout(() => {
-          // Half a second is long enough for the clue to be skipped, answered,
-          // or the room to be torn down. Re-read the live state rather than
-          // trusting the room captured when the buzz arrived.
-          const currentRoom = gameManager.rooms.get(roomCode);
-          if (!currentRoom?.gameState?.currentQuestion) return;
-
-          const winner = gameManager.determineBuzzerWinner(roomCode);
-          if (winner) {
-            const player = currentRoom.players.get(winner.playerId);
-            io.to(roomCode).emit('game:buzzer-winner', {
-              playerId: winner.playerId,
-              playerName: player?.displayName || 'Unknown',
-              reactionTime: winner.reactionTime,
-            });
-
-            gameManager.startAnswerWindow(roomCode);
-
-            // In a host-run room the host judges every answer. Arming an
-            // auto-incorrect timer here docked the player and cleared the clue
-            // out from under the host's judge buttons.
-            if (currentRoom.type === 'host') return;
-
-            // Start server-side answer timeout
-            const answerDuration = answerWindowMs(currentRoom);
-
-            gameManager.clearAnswerTimeout(roomCode);
-            currentRoom.answerTimeout = setTimeout(() => {
-              // Answer timeout - mark as incorrect automatically
-              const timeoutResult = gameManager.handleAnswer(roomCode, winner.playerId, false);
-              if (timeoutResult) {
-                io.to(roomCode).emit('game:answer-result', {
-                  ...timeoutResult,
-                  timeout: true,
-                });
-
-                // If others can still buzz, restart buzz window with fresh timeout
-                if (timeoutResult.canBuzzAgain) {
-                  gameManager.startBuzzWindow(roomCode);
-                  const buzzDuration = buzzWindowMs(currentRoom);
-                  gameManager.clearBuzzTimeout(roomCode);
-                  currentRoom.buzzTimeout = setTimeout(() => {
-                    const currentRoom = gameManager.rooms.get(roomCode);
-                    if (currentRoom?.gameState?.buzzReceived) return;
-                    const btResult = gameManager.handleBuzzTimeout(roomCode);
-                    if (btResult) {
-                      io.to(roomCode).emit('game:buzz-timeout-result', btResult);
-                    }
-                  }, buzzDuration);
-                } else {
-                  const activated = gameManager.activateWaitingPlayers(roomCode);
-                  if (activated.length > 0) {
-                    io.to(roomCode).emit('game:late-joiners-ready', { playerIds: activated });
-                  }
-                }
-              }
-            }, answerDuration);
-          }
-        }, 500); // Small delay to collect other buzzes
-      }
+      console.log(`Player ${socket.sessionId} buzzed with reaction time ${reactionTime}ms`);
+      actions.buzz(socket.sessionId, roomCode, reactionTime);
     });
 
     // Player submits answer
     socket.on('game:submit-answer', ({ roomCode, correct }) => {
-      const playerId = socket.sessionId;
-
-      // Clear the server-side answer timeout since they answered
-      gameManager.clearAnswerTimeout(roomCode);
-
       // `points` deliberately ignored if sent — the board is the only source.
-      const result = gameManager.handleAnswer(roomCode, playerId, correct);
-      if (result) {
-        io.to(roomCode).emit('game:answer-result', result);
-
-        // Activate late joiners when question fully resolves
-        if (!result.canBuzzAgain) {
-          const activated = gameManager.activateWaitingPlayers(roomCode);
-          if (activated.length > 0) {
-            io.to(roomCode).emit('game:late-joiners-ready', { playerIds: activated });
-          }
-        }
-
-        // If others can still buzz, restart buzz window with fresh timeout
-        if (result.canBuzzAgain) {
-          const room = gameManager.rooms.get(roomCode);
-          if (room) {
-            gameManager.startBuzzWindow(roomCode);
-            const buzzDuration = buzzWindowMs(room);
-            gameManager.clearBuzzTimeout(roomCode);
-            room.buzzTimeout = setTimeout(() => {
-              const currentRoom = gameManager.rooms.get(roomCode);
-              if (currentRoom?.gameState?.buzzReceived) return;
-              const btResult = gameManager.handleBuzzTimeout(roomCode);
-              if (btResult) {
-                io.to(roomCode).emit('game:buzz-timeout-result', btResult);
-              }
-            }, buzzDuration);
-          }
-        }
-      }
+      actions.submitAnswer(socket.sessionId, roomCode, correct);
     });
 
     // Player reveals the answer (broadcast to all)
     socket.on('game:reveal-answer', ({ roomCode }) => {
-      const playerId = socket.sessionId;
-      const room = gameManager.rooms.get(roomCode);
-
-      // Verify this player is the buzzer winner (the one who should reveal)
-      if (room?.gameState?.buzzedPlayerId === playerId) {
-        // Broadcast to ALL players that answer was revealed
-        io.to(roomCode).emit('game:answer-revealed', {
-          playerId,
-          answer: room.gameState.currentQuestion?.question,
-        });
-      }
+      actions.revealAnswer(socket.sessionId, roomCode);
     });
 
     // Buzz timer expired - no one buzzed in time (legacy client event - server now handles this)
@@ -394,121 +306,65 @@ export function initializeSocketHandlers(io) {
 
     // Player clicks Continue after timeout - wait for all players
     socket.on('game:timeout-continue', ({ roomCode }) => {
-      const playerId = socket.sessionId;
       if (DEBUG_GAME) {
-        console.log(`[GAME] Player ${playerId} clicked Continue in room ${roomCode}`);
+        console.log(`[GAME] Player ${socket.sessionId} clicked Continue in room ${roomCode}`);
       }
-
-      const allContinued = gameManager.playerContinued(roomCode, playerId);
-
-      if (allContinued) {
-        // All players have clicked Continue - clear question and return to board
-        gameManager.clearCurrentQuestion(roomCode);
-        const nextPickerId = gameManager.getCurrentPicker(roomCode);
-
-        if (DEBUG_GAME) {
-          console.log(`[GAME] All players continued in room ${roomCode}, next picker: ${nextPickerId}`);
-        }
-
-        io.to(roomCode).emit('game:all-continued', { nextPickerId });
-
-        // Activate late joiners
-        const activated = gameManager.activateWaitingPlayers(roomCode);
-        if (activated.length > 0) {
-          io.to(roomCode).emit('game:late-joiners-ready', { playerIds: activated });
-        }
-      }
+      actions.timeoutContinue(socket.sessionId, roomCode);
     });
 
     // Daily Double wager submitted
     socket.on('game:daily-double-wager', ({ roomCode, wager }) => {
-      const playerId = socket.sessionId;
-      console.log(`Daily Double wager ${wager} from ${playerId} in room ${roomCode}`);
-      const result = gameManager.handleDailyDoubleWager(roomCode, playerId, wager);
-      if (result) {
-        io.to(roomCode).emit('game:daily-double-wager-confirmed', result);
-      }
+      console.log(`Daily Double wager ${wager} from ${socket.sessionId} in room ${roomCode}`);
+      actions.dailyDoubleWager(socket.sessionId, roomCode, wager);
     });
 
     // Daily Double answer submitted
     socket.on('game:daily-double-answer', ({ roomCode, correct }) => {
-      const playerId = socket.sessionId;
-      console.log(`Daily Double answer (correct: ${correct}) from ${playerId} in room ${roomCode}`);
-      const result = gameManager.handleDailyDoubleAnswer(roomCode, playerId, correct);
-      if (result) {
-        io.to(roomCode).emit('game:daily-double-result', result);
-      }
+      console.log(`Daily Double answer (correct: ${correct}) from ${socket.sessionId} in room ${roomCode}`);
+      actions.dailyDoubleAnswer(socket.sessionId, roomCode, correct);
     });
 
     // Round 1 ended - transition to Double Jeopardy
     socket.on('game:round-end', ({ roomCode, round }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Round ${round} ended for room ${roomCode}`);
-      io.to(roomCode).emit('game:round-ended', { round });
+      actions.roundEnd(roomCode, round);
     });
 
     // Start Round 2 (Double Jeopardy)
     socket.on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Round 2 for room ${roomCode}`);
-      gameManager.startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles);
-      io.to(roomCode).emit('game:round-2-started', { questions, categories, firstPickerId });
+      actions.startRound2(roomCode, { questions, categories, firstPickerId, dailyDoubles });
     });
 
     // Start Final Jeopardy
-    socket.on('game:start-final-jeopardy', async ({ roomCode, finalJeopardy }) => {
+    socket.on('game:start-final-jeopardy', ({ roomCode, finalJeopardy }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Final Jeopardy for room ${roomCode}`);
-      const fjData = gameManager.startFinalJeopardy(roomCode, finalJeopardy);
-      if (!fjData) return;
-
-      // Jeopardy needs a positive score to play. If that leaves nobody, go
-      // straight to the results instead of a wager screen nobody can satisfy.
-      if (fjData.eligibleCount === 0) {
+      const fjData = actions.startFinalJeopardy(roomCode, finalJeopardy);
+      if (fjData?.eligibleCount === 0) {
         console.log(`No eligible players for Final Jeopardy in ${roomCode}, ending game`);
-        archiveRoom(roomCode);
-        io.to(roomCode).emit('game:ended');
-        return;
       }
-
-      io.to(roomCode).emit('game:final-jeopardy-started', fjData);
     });
 
     // Final Jeopardy wager submitted
     socket.on('game:fj-wager', ({ roomCode, wager }) => {
-      const playerId = socket.sessionId;
-      console.log(`FJ wager ${wager} from ${playerId} in room ${roomCode}`);
-      const allIn = gameManager.submitFJWager(roomCode, playerId, wager);
-      if (allIn) {
-        // All wagers are in, show clue
-        io.to(roomCode).emit('game:fj-show-clue');
-      }
+      console.log(`FJ wager ${wager} from ${socket.sessionId} in room ${roomCode}`);
+      actions.fjWager(socket.sessionId, roomCode, wager);
     });
 
     // Final Jeopardy answer submitted
     socket.on('game:fj-answer', ({ roomCode, answer }) => {
-      const playerId = socket.sessionId;
-      console.log(`FJ answer from ${playerId} in room ${roomCode}`);
-      const allIn = gameManager.submitFJAnswer(roomCode, playerId, answer);
-      if (allIn) {
-        // All answers are in, reveal results
-        const results = gameManager.getFJResults(roomCode);
-        /* The scores are final here, so file the game now rather than at
-           game:end, which only arrives if the host goes on to press "See
-           Final Standings". A host who closed the tab on the reveal used to
-           cost every other player their row. game:end still archives a game
-           that ended without a Final, and a second call is a no-op. */
-        archiveRoom(roomCode);
-        io.to(roomCode).emit('game:fj-reveal', { results });
-      }
+      console.log(`FJ answer from ${socket.sessionId} in room ${roomCode}`);
+      actions.fjAnswer(socket.sessionId, roomCode, answer);
     });
 
     // Game ends
     socket.on('game:end', ({ roomCode }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game ended for room ${roomCode}`);
-      archiveRoom(roomCode);
-      io.to(roomCode).emit('game:ended');
+      actions.endGame(roomCode);
     });
 
     // Legacy game events (keep for backward compatibility)
@@ -536,14 +392,17 @@ export function initializeSocketHandlers(io) {
     });
 
     // Quickplay matchmaking
-    socket.on('quickplay:join-queue', ({ displayName, signature }) => {
-      gameManager.joinMatchmakingQueue(socket, displayName, signature);
+    socket.on('quickplay:join-queue', ({ displayName, signature, preset }) => {
+      gameManager.joinMatchmakingQueue(socket, displayName, signature, preset);
       // The thresholds travel with the ack so the waiting screen and the
-      // matchmaker never disagree about when "two will do".
+      // matchmaker never disagree about when the table fills.
       socket.emit('quickplay:queue-joined', gameManager.matchmakingTimings());
+      // Somebody is about to need a board. Start fetching one now so the table
+      // is not kept waiting on another site when it is seated.
+      boardSource.prepare().catch(() => {});
 
       // Check if we can make a match
-      settleMatchmaking(io);
+      settleMatchmaking();
     });
 
     socket.on('quickplay:leave-queue', () => {
@@ -567,74 +426,9 @@ export function initializeSocketHandlers(io) {
       }
     });
 
-    // Host-only question selection (for host mode rooms)
+    // Question selection, for host-run rooms and player-run ones alike
     socket.on('game:select-question', ({ roomCode, categoryIndex, pointIndex }) => {
-      const room = gameManager.rooms.get(roomCode);
-
-      // Use host mode selection if applicable
-      let result;
-      if (room?.type === 'host') {
-        result = gameManager.selectQuestionHostMode(socket, roomCode, categoryIndex, pointIndex);
-      } else {
-        result = gameManager.selectQuestion(socket, roomCode, categoryIndex, pointIndex);
-      }
-
-      if (result) {
-        // Clear any suggestions when a question is selected
-        gameManager.clearSuggestions(roomCode);
-        io.to(roomCode).emit('game:question-selected', result);
-
-        // Skip buzz window for Daily Double (only picker answers)
-        if (result.isDailyDouble) {
-          return;
-        }
-
-        // Host mode: auto-open buzzer/answer window after a brief clue-reading delay
-        if (room?.type === 'host') {
-          const answerMode = room.settings?.answerMode || 'verbal';
-          const autoOpenDelay = 3000; // 3 seconds for clue reading
-
-          // Clear any existing auto-open timer
-          if (room.autoOpenTimer) clearTimeout(room.autoOpenTimer);
-
-          room.autoOpenTimer = setTimeout(() => {
-            const currentRoom = gameManager.rooms.get(roomCode);
-            if (!currentRoom?.gameState?.currentQuestion) return; // Question already resolved
-
-            if (answerMode === 'verbal') {
-              gameManager.startBuzzWindow(roomCode);
-              io.to(roomCode).emit('host:buzzer-opened');
-            } else {
-              gameManager.openHostAnswerWindow(roomCode);
-              io.to(roomCode).emit('host:answer-window-opened', {
-                duration: buzzWindowMs(currentRoom),
-              });
-            }
-          }, autoOpenDelay);
-
-          return; // Don't start buzz window immediately for host mode
-        }
-
-        // Start buzz collection window
-        gameManager.startBuzzWindow(roomCode);
-
-        // Start server-side buzz timeout
-        const duration = buzzWindowMs(room);
-
-        // Clear any existing timeout
-        gameManager.clearBuzzTimeout(roomCode);
-
-        room.buzzTimeout = setTimeout(() => {
-          // Guard: if a buzz was already received, don't emit timeout
-          const currentRoom = gameManager.rooms.get(roomCode);
-          if (currentRoom?.gameState?.buzzReceived) return;
-
-          const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
-          if (timeoutResult) {
-            io.to(roomCode).emit('game:buzz-timeout-result', timeoutResult);
-          }
-        }, duration);
-      }
+      actions.selectQuestion(socket.sessionId, roomCode, categoryIndex, pointIndex);
     });
 
     // Non-picker suggests a question
@@ -648,24 +442,7 @@ export function initializeSocketHandlers(io) {
 
     // Player skips question (I don't know)
     socket.on('game:skip-question', ({ roomCode }) => {
-      const playerId = socket.sessionId;
-      const result = gameManager.playerSkipped(roomCode, playerId);
-      if (result) {
-        io.to(roomCode).emit('game:player-skipped', {
-          playerId,
-          skippedCount: result.skippedCount,
-          totalEligible: result.totalEligible,
-        });
-
-        // If all players either buzzed or skipped, end the question
-        if (result.allSkipped) {
-          gameManager.clearBuzzTimeout(roomCode);
-          const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
-          if (timeoutResult) {
-            io.to(roomCode).emit('game:buzz-timeout-result', timeoutResult);
-          }
-        }
-      }
+      actions.skipQuestion(socket.sessionId, roomCode);
     });
 
     // Player submits typed answer (host mode)
@@ -684,7 +461,7 @@ export function initializeSocketHandlers(io) {
         });
 
         // Feed the answer through to the host's control panel as it lands.
-        sendTypedAnswersToHost(io, roomCode);
+        sendTypedAnswersToHost(roomCode);
 
         // If all answered, notify host
         if (result.allAnswered) {
@@ -695,7 +472,7 @@ export function initializeSocketHandlers(io) {
             const gradeResults = gameManager.autoGradeAnswers(roomCode);
             io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
             // Refresh so the panel shows each answer with its grade attached.
-            sendTypedAnswersToHost(io, roomCode);
+            sendTypedAnswersToHost(roomCode);
           }
         }
       }
@@ -788,7 +565,7 @@ export function initializeSocketHandlers(io) {
       const answers = gameManager.getTypedAnswers(roomCode);
       // Revealing is deliberate, so this one does go to the whole room.
       io.to(roomCode).emit('host:answers-revealed', { answers });
-      sendTypedAnswersToHost(io, roomCode);
+      sendTypedAnswersToHost(roomCode);
     });
 
     // Host kicks player
@@ -863,16 +640,23 @@ export function initializeSocketHandlers(io) {
     // Disconnect handling
     socket.on('disconnect', (reason) => {
       logInfo({ msg: 'Socket disconnected', socketId: socket.id, reason });
+      const roomCode = gameManager.sessionRooms.get(socket.sessionId);
       gameManager.handleDisconnect(socket);
+      if (roomCode) director.onPlayerGone(roomCode);
     });
   });
 
   // Periodic tasks
-  setInterval(() => {
+  const tick = setInterval(() => {
     // Clean up stale rooms
     gameManager.cleanupStaleRooms();
 
     // Update matchmaking queue
-    settleMatchmaking(io);
+    settleMatchmaking();
   }, 5000);
+  /* A timer that keeps the process alive is a timer a test run cannot exit
+     past. The server does not care; the suites do. */
+  tick.unref?.();
+
+  return { gameManager, actions, director };
 }

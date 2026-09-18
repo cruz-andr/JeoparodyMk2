@@ -84,11 +84,13 @@ try {
      from the lobby and players join there. */
   await b.until("!document.querySelector('.host-start').disabled", { timeout: 10000 });
   await b.click('.host-start');
-  await b.until("!!document.querySelector('.room-code-badge span')", { timeout: 15000 });
-  const roomCode = (await b.evaluate("document.querySelector('.room-code-badge span').textContent")).trim();
+  /* The lobby shows the code in the board's own cells, one character each,
+     because reading it out to a room is the only thing it is for. */
+  await b.until("document.querySelectorAll('.st-code .st-money').length === 6", { timeout: 15000 });
+  const roomCode = (await b.evaluate("[...document.querySelectorAll('.st-code .st-money')].map(e => e.textContent).join('')")).trim();
   await joinPlayers(roomCode);
-  await b.until("[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Start Game')", { timeout: 15000 });
-  await b.evaluate(`[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Start Game').click()`);
+  await b.until("[...document.querySelectorAll('button')].some(e=>e.textContent.trim()==='Start the game')", { timeout: 15000 });
+  await b.evaluate(`[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Start the game').click()`);
   await b.until("!!document.querySelector('.hl')", { timeout: 15000 });
 
   // ---------- the host sends ----------

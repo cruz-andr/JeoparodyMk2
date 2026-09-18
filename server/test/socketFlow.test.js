@@ -17,7 +17,9 @@ const failures = [];
 
 const httpServer = createServer();
 const ioServer = new Server(httpServer, { cors: { origin: '*' } });
-initializeSocketHandlers(ioServer);
+/* NODE_ENV=test deals quickplay the written board: a unit run must not scrape
+   another site for an episode. */
+initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' } });
 
 const PORT = 34117;
 const URL = `http://localhost:${PORT}`;

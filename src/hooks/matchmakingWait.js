@@ -8,11 +8,13 @@
    (`isInQueue`), and whenever the two disagree while connected, the hook
    asks the server again. */
 
-export const DEFAULT_TIMINGS = { pairAfterMs: 20000, giveUpAfterMs: 45000 };
+/* fillAfterMs is when the house fills the empty seats; the other two only
+   apply on a server that has the house players turned off. */
+export const DEFAULT_TIMINGS = { pairAfterMs: 20000, giveUpAfterMs: 45000, fillAfterMs: 20000, fillWithBots: true };
 export const NO_MATCH_FALLBACK = 'Nobody else is looking right now.';
 
 export const initialWait = {
-  wants: null,          // { displayName, signature } while the player wants a match
+  wants: null,          // { displayName, signature, preset } while the player wants a match
   isInQueue: false,     // what the server last confirmed
   queueTime: 0,         // seconds since the server's last queue-joined ack
   timings: DEFAULT_TIMINGS,
@@ -23,8 +25,14 @@ export const initialWait = {
 function timingsFrom(ack, current) {
   const pair = Number(ack?.pairAfterMs);
   const giveUp = Number(ack?.giveUpAfterMs);
-  if (pair > 0 && giveUp > 0) return { pairAfterMs: pair, giveUpAfterMs: giveUp };
-  return current;
+  if (!(pair > 0 && giveUp > 0)) return current;
+  const fill = Number(ack?.fillAfterMs);
+  return {
+    pairAfterMs: pair,
+    giveUpAfterMs: giveUp,
+    fillAfterMs: fill > 0 ? fill : current.fillAfterMs,
+    fillWithBots: ack.fillWithBots !== false,
+  };
 }
 
 export function waitReducer(state, action) {
@@ -32,7 +40,7 @@ export function waitReducer(state, action) {
     case 'request':
       return {
         ...state,
-        wants: { displayName: action.displayName, signature: action.signature },
+        wants: { displayName: action.displayName, signature: action.signature, preset: action.preset || 'standard' },
         noMatch: null,
         matchFound: null,
       };

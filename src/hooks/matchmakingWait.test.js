@@ -15,8 +15,8 @@ function test(name, fn) {
 
 /** Runs a list of actions through the reducer, returning the final state. */
 const play = (...actions) => actions.reduce(waitReducer, initialWait);
-const request = { type: 'request', displayName: 'Ada', signature: 'sig' };
-const joined = { type: 'joined', timings: { pairAfterMs: 20000, giveUpAfterMs: 45000 } };
+const request = { type: 'request', displayName: 'Ada', signature: 'sig', preset: 'speed' };
+const joined = { type: 'joined', timings: { pairAfterMs: 20000, giveUpAfterMs: 45000, fillAfterMs: 20000, fillWithBots: true } };
 
 // ------------------------------------------------------------ joining
 
@@ -27,8 +27,13 @@ test('nothing is wanted and nothing is asked for at rest', () => {
 test('asking for a match means the server must be asked', () => {
   const s = play(request);
   assert.equal(needsJoin(s), true);
-  assert.deepEqual(s.wants, { displayName: 'Ada', signature: 'sig' });
+  assert.deepEqual(s.wants, { displayName: 'Ada', signature: 'sig', preset: 'speed' });
   assert.equal(s.isInQueue, false, 'not in until the server says so');
+});
+
+test('a request with no preset asks for the standard table', () => {
+  const s = play({ type: 'request', displayName: 'Ada', signature: 'sig' });
+  assert.equal(s.wants.preset, 'standard');
 });
 
 test('the ack puts us in the queue on a fresh clock and stops the asking', () => {
@@ -47,12 +52,23 @@ test('the clock counts only while the server has us', () => {
 });
 
 test('the server thresholds replace the defaults; a bad ack keeps them', () => {
-  const s = play(request, { type: 'joined', timings: { pairAfterMs: 1000, giveUpAfterMs: 2000 } });
-  assert.deepEqual(s.timings, { pairAfterMs: 1000, giveUpAfterMs: 2000 });
+  const s = play(request, { type: 'joined', timings: { pairAfterMs: 1000, giveUpAfterMs: 2000, fillAfterMs: 1500, fillWithBots: true } });
+  assert.deepEqual(s.timings, { pairAfterMs: 1000, giveUpAfterMs: 2000, fillAfterMs: 1500, fillWithBots: true });
   const bad = play(request, { type: 'joined', timings: { pairAfterMs: 0 } });
   assert.deepEqual(bad.timings, DEFAULT_TIMINGS);
   const none = play(request, { type: 'joined' });
   assert.deepEqual(none.timings, DEFAULT_TIMINGS);
+});
+
+test('an older server that names no fill threshold keeps the default one', () => {
+  const s = play(request, { type: 'joined', timings: { pairAfterMs: 1000, giveUpAfterMs: 2000 } });
+  assert.equal(s.timings.fillAfterMs, 20000);
+  assert.equal(s.timings.fillWithBots, true);
+});
+
+test('a server with the house players off says so', () => {
+  const s = play(request, { type: 'joined', timings: { pairAfterMs: 1000, giveUpAfterMs: 2000, fillWithBots: false } });
+  assert.equal(s.timings.fillWithBots, false);
 });
 
 // ------------------------------------------------------------ the reconnect hole
@@ -61,7 +77,7 @@ test('a dropped connection leaves the queue but keeps the wish', () => {
   const s = play(request, joined, { type: 'tick' }, { type: 'dropped' });
   assert.equal(s.isInQueue, false, 'the server has already forgotten us');
   assert.equal(s.queueTime, 0, 'no frozen clock');
-  assert.deepEqual(s.wants, { displayName: 'Ada', signature: 'sig' });
+  assert.deepEqual(s.wants, { displayName: 'Ada', signature: 'sig', preset: 'speed' });
   assert.equal(needsJoin(s), true, 'so the reconnect asks again');
 });
 

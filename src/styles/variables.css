@@ -33,6 +33,11 @@
      boards pages draw the same rectangle and two hard-coded blues drift. */
   --tile: #1a2080;
 
+  /* A name written by hand. The signature pad bakes a drawn name into a PNG;
+     this is for the ones that were typed, and for the players who never drew
+     anything, so every name on a podium panel reads as handwriting. */
+  --font-hand: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
+
   --font-board: 'Big Shoulders Display', Impact, 'Haettenschweiler', 'Arial Narrow', sans-serif;
   --font-clue: 'Petrona', Georgia, 'Times New Roman', serif;
   --font-display: Impact, "Arial Narrow", sans-serif;

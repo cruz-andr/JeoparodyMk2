@@ -232,7 +232,7 @@ export function useMatchmaking() {
   // clock, which is honest, because the server's clock restarted too.
   useEffect(() => {
     if (isConnected && needsJoin({ wants, isInQueue })) {
-      socketApi.joinMatchmaking(wants.displayName, wants.signature);
+      socketApi.joinMatchmaking(wants.displayName, wants.signature, wants.preset);
     }
   }, [isConnected, wants, isInQueue]);
 
@@ -243,8 +243,8 @@ export function useMatchmaking() {
     return () => clearInterval(timer);
   }, [isInQueue]);
 
-  const joinQueue = useCallback((displayName, signature) => {
-    dispatch({ type: 'request', displayName, signature });
+  const joinQueue = useCallback((displayName, signature, preset = 'standard') => {
+    dispatch({ type: 'request', displayName, signature, preset });
   }, []);
 
   const leaveQueue = useCallback(() => {

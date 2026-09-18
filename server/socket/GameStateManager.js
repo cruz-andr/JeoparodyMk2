@@ -1,25 +1,76 @@
 import { v4 as uuidv4 } from 'uuid';
+import { seatBots } from './bots.js';
 
-/* How long the matchmaker holds out for a full table before it settles.
+/* How long the matchmaker holds out for a full table before the house fills
+   the empty seats.
 
    Three players is the game as designed. A queue that insisted on three at the
    same instant, with no clock, left a lone player on the spinner forever: the
-   second person to arrive had usually given up before the third existed. So
-   after PAIR_AFTER_MS with two waiting the match starts with two, and after
-   GIVE_UP_AFTER_MS alone the player is told so and released. */
+   second person to arrive had usually given up before the third existed.
+
+   About twenty seconds is the wait. Nielsen's limit for holding someone's
+   attention on one thing is around ten seconds, so this is two of those, with
+   a clock counting up and a cancel the whole way. Any longer and the people
+   who arrived alone leave; any shorter and two people who arrived a few
+   seconds apart never meet.
+
+   It is a window rather than a number, drawn fresh for each person who
+   starts waiting. A game that always begins at exactly twenty seconds tells
+   everybody the other players were never real, and the client shows a clock
+   counting up precisely so there is no mark to notice it landing on.
+
+   The two older thresholds remain for a server that turns the house players
+   off: two waiting players start after PAIR_AFTER_MS, and a player alone
+   past GIVE_UP_AFTER_MS is told so and released. */
+export const BOT_FILL_AFTER_MS = 20000;
+export const BOT_FILL_JITTER_MS = 2000;
 export const PAIR_AFTER_MS = 20000;
 export const GIVE_UP_AFTER_MS = 45000;
 
+/* The two tables quickplay offers. Chosen on the quickplay screen and carried
+   into the queue; the table plays by the rules of whoever has waited longest,
+   which is the person the others were seated with. */
+export const QUICKPLAY_PRESETS = {
+  standard: {
+    questionTimeLimit: 30000,
+    answerTimeLimit: 7000,
+    finalJeopardyTimeLimit: 30000,
+    enableDoubleJeopardy: true,
+    enableDailyDouble: true,
+    enableFinalJeopardy: true,
+  },
+  speed: {
+    questionTimeLimit: 15000,
+    answerTimeLimit: 5000,
+    finalJeopardyTimeLimit: 20000,
+    enableDoubleJeopardy: false,
+    enableDailyDouble: true,
+    enableFinalJeopardy: false,
+  },
+};
+
 export class GameStateManager {
-  constructor({ now = () => Date.now(), pairAfterMs = PAIR_AFTER_MS, giveUpAfterMs = GIVE_UP_AFTER_MS } = {}) {
+  constructor({
+    now = () => Date.now(),
+    pairAfterMs = PAIR_AFTER_MS,
+    giveUpAfterMs = GIVE_UP_AFTER_MS,
+    botFillAfterMs = BOT_FILL_AFTER_MS,
+    botFillJitterMs = BOT_FILL_JITTER_MS,
+    fillWithBots = true,
+    random = Math.random,
+  } = {}) {
     this.rooms = new Map(); // roomCode -> GameRoom
     this.playerRooms = new Map(); // socketId -> roomCode (legacy, kept for cleanup)
     this.sessionRooms = new Map(); // sessionId -> roomCode (for reconnection)
-    this.matchmakingQueue = []; // Array of { socket, displayName, signature, queuedAt }
+    this.matchmakingQueue = []; // Array of { socket, displayName, signature, preset, queuedAt }
     /* Injectable so a test can move the clock instead of waiting on it. */
     this.now = now;
     this.pairAfterMs = pairAfterMs;
     this.giveUpAfterMs = giveUpAfterMs;
+    this.botFillAfterMs = botFillAfterMs;
+    this.botFillJitterMs = botFillJitterMs;
+    this.fillWithBots = fillWithBots;
+    this.random = random;
   }
 
   // Room Management
@@ -124,10 +175,16 @@ export class GameStateManager {
     // board does not sit waiting on a player who has gone.
     this.reassignPickerIfNeeded(room, playerId);
 
-    // If room is empty, delete it
-    if (room.players.size === 0) {
+    // If room is empty, delete it. A quickplay table whose last person has
+    // left is empty too, however many house players are still sitting at it.
+    if (room.players.size === 0 || !this.hasHuman(room)) {
       this.destroyRoom(roomCode);
     }
+  }
+
+  /** Whether anybody at the table is a person, connected or not. */
+  hasHuman(room) {
+    return [...room.players.values()].some((p) => !p.isBot);
   }
 
   // If the player who left/was removed was the current picker, pass control on.
@@ -309,7 +366,11 @@ export class GameStateManager {
       // players can't buzz again. Only initialize if not already set.
       room.gameState.playersWhoBuzzed = room.gameState.playersWhoBuzzed || new Set();
       room.gameState.skippedPlayers = new Set();
-      room.gameState.buzzWindowStartTime = Date.now();
+      /* The manager's own clock, not the wall clock. Reaction times are the
+         one place game logic read Date.now() directly, which made who won a
+         buzz depend on real milliseconds even when every timer around it was
+         under test control. */
+      room.gameState.buzzWindowStartTime = this.now();
     }
   }
 
@@ -332,7 +393,7 @@ export class GameStateManager {
   startAnswerWindow(roomCode) {
     const room = this.rooms.get(roomCode);
     if (room && room.gameState) {
-      room.gameState.answerWindowStartTime = Date.now();
+      room.gameState.answerWindowStartTime = this.now();
     }
   }
 
@@ -368,9 +429,9 @@ export class GameStateManager {
     if (room.gameState.buzzedPlayerId) return false;
     if (room.gameState.playersWhoBuzzed?.has(playerId)) return false;
 
-    // Calculate reaction time server-side (more accurate, cheat-proof)
+    // Timed server-side, so a client cannot claim a faster thumb than it had.
     const serverReactionTime = room.gameState.buzzWindowStartTime
-      ? Date.now() - room.gameState.buzzWindowStartTime
+      ? this.now() - room.gameState.buzzWindowStartTime
       : reactionTime;
 
     room.gameState.buzzes[playerId] = serverReactionTime;
@@ -955,15 +1016,21 @@ export class GameStateManager {
   }
 
   // Matchmaking
-  joinMatchmakingQueue(socket, displayName, signature = null) {
+  joinMatchmakingQueue(socket, displayName, signature = null, preset = 'standard') {
     // Remove if already in queue
     this.leaveMatchmakingQueue(socket);
 
+    const queuedAt = this.now();
     this.matchmakingQueue.push({
       socket,
       displayName,
       signature,
-      queuedAt: this.now(),
+      preset: QUICKPLAY_PRESETS[preset] ? preset : 'standard',
+      queuedAt,
+      /* This player's own moment, somewhere in the window. Drawn on the way
+         in rather than checked against a constant, so two people waiting
+         together are not both filled on the same tick. */
+      fillAt: queuedAt + this.botFillAfterMs + Math.round(this.random() * this.botFillJitterMs),
     });
   }
 
@@ -975,14 +1042,23 @@ export class GameStateManager {
 
   /** The thresholds a waiting client shows, so its copy and the server agree. */
   matchmakingTimings() {
-    return { pairAfterMs: this.pairAfterMs, giveUpAfterMs: this.giveUpAfterMs };
+    return {
+      pairAfterMs: this.pairAfterMs,
+      giveUpAfterMs: this.giveUpAfterMs,
+      fillAfterMs: this.botFillAfterMs,
+      fillJitterMs: this.botFillJitterMs,
+      fillWithBots: this.fillWithBots,
+    };
   }
 
-  /* Three if three are here. Two once the longest wait has passed the pairing
-     threshold. Nobody once the one person left has waited alone past the
-     give-up threshold: they leave the queue, so the next tick does not name
-     them again. Returns what happened rather than telling anyone; the socket
-     layer does the talking, the way it does for every other event here. */
+  /* Three if three are here. Otherwise, once the longest wait has passed the
+     fill threshold, whoever is waiting is seated with house players making up
+     the three. With the house players turned off the older rules apply: two
+     once the longest wait has passed the pairing threshold, and nobody once
+     the one person left has waited alone past the give-up threshold: they
+     leave the queue, so the next tick does not name them again. Returns what
+     happened rather than telling anyone; the socket layer does the talking,
+     the way it does for every other event here. */
   tryCreateMatch() {
     const queue = this.matchmakingQueue;
     const result = { match: null, noMatchFor: null };
@@ -994,6 +1070,19 @@ export class GameStateManager {
     }
 
     const waited = this.now() - queue[0].queuedAt;
+
+    if (this.fillWithBots) {
+      /* The longest waiter's own moment, not a shared threshold. */
+      if (this.now() >= queue[0].fillAt) {
+        const people = queue.splice(0, queue.length);
+        const bots = seatBots(3 - people.length, {
+          taken: people.map((p) => p.displayName),
+          random: this.random,
+        });
+        result.match = this.buildMatch([...people, ...bots]);
+      }
+      return result;
+    }
 
     if (queue.length === 2) {
       if (waited >= this.pairAfterMs) result.match = this.buildMatch(queue.splice(0, 2));
@@ -1007,7 +1096,9 @@ export class GameStateManager {
   }
 
   buildMatch(matchedPlayers) {
-    // Create room
+    // Create room. The rules are the longest waiter's preset: they are the
+    // person everyone else was seated with. House players carry no preset.
+    const preset = matchedPlayers.find((p) => !p.isBot)?.preset;
     const roomCode = this.generateRoomCode();
     const room = {
       id: uuidv4(),
@@ -1018,14 +1109,15 @@ export class GameStateManager {
       players: new Map(),
       settings: {
         maxPlayers: 3,
-        questionTimeLimit: 30000,
+        ...(QUICKPLAY_PRESETS[preset] || QUICKPLAY_PRESETS.standard),
       },
       gameState: null,
       createdAt: Date.now(),
+      lastActiveAt: Date.now(),
     };
 
     // Add players to room
-    matchedPlayers.forEach(({ socket, displayName, signature }) => {
+    matchedPlayers.forEach(({ socket, displayName, signature, isBot }) => {
       const playerId = socket.sessionId;
       room.players.set(playerId, {
         id: playerId,
@@ -1036,6 +1128,7 @@ export class GameStateManager {
         isReady: false,
         isConnected: true,
         isHost: false,
+        isBot: Boolean(isBot),
         userId: socket.userId || null,
         correct: 0,
         answered: 0,
@@ -1048,6 +1141,7 @@ export class GameStateManager {
 
     return {
       roomCode,
+      settings: room.settings,
       players: matchedPlayers.map(p => ({
         // The session id is how the server keys players everywhere else, so it
         // has to travel with the match. Clients that keyed off socketId never
@@ -1056,7 +1150,11 @@ export class GameStateManager {
         socketId: p.socket.id,
         displayName: p.displayName,
         signature: p.signature,
+        isBot: Boolean(p.isBot),
       })),
+      /* The seats as the matchmaker held them, house players' temperaments
+         included. For the quickplay director; never sent to a client. */
+      seats: matchedPlayers,
     };
   }
 
@@ -1143,7 +1241,8 @@ export class GameStateManager {
     const emptyRoomGrace = 30 * 60 * 1000; // 30 minutes with nobody connected
 
     for (const [code, room] of this.rooms) {
-      const anyoneConnected = Array.from(room.players.values()).some(p => p.isConnected);
+      // House players are always "connected"; only a person keeps a room alive.
+      const anyoneConnected = Array.from(room.players.values()).some(p => p.isConnected && !p.isBot);
 
       if (anyoneConnected) {
         room.lastActiveAt = now;

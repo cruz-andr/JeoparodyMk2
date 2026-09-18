@@ -7,9 +7,8 @@ import * as aiService from '../services/api/aiService';
 import GameBoard from '../components/game/GameBoard';
 import BoardWheel from '../components/game/BoardWheel';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import GenreSelector from '../components/setup/GenreSelector';
-import CategoryEditor from '../components/setup/CategoryEditor';
-import GameSettingsPanel from '../components/setup/GameSettingsPanel';
+import SoloWriter from '../components/setup/SoloWriter';
+import Studio from '../components/studio/Studio';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import FinalJeopardyModal from '../components/game/FinalJeopardyModal';
@@ -29,6 +28,7 @@ export default function SinglePlayerPage() {
      to be legible and a phone gives about 360, which is why the board turns
      instead. See BoardWheel. */
   const isPhone = useMediaQuery('(max-width: 768px)');
+  const isDesk = useMediaQuery('(min-width: 821px)');
   const {
     phase,
     genre,
@@ -72,9 +72,6 @@ export default function SinglePlayerPage() {
      ever read later. */
   const boardFinal = useRef(null);
 
-  // Category re-roll state
-  const [remainingRolls, setRemainingRolls] = useState(5);
-  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
 
   /* One effect, not two.
 
@@ -122,7 +119,6 @@ export default function SinglePlayerPage() {
       const generatedCategories = await aiService.generateCategories(selectedGenre);
       setGenre(selectedGenre);
       setCategories(generatedCategories);
-      setRemainingRolls(5);
       setPhase('categoryEdit');
     } catch (err) {
       console.error('Error generating categories:', err);
@@ -165,22 +161,6 @@ export default function SinglePlayerPage() {
     const updatedCategories = [...categories];
     updatedCategories[index] = newValue;
     setCategories(updatedCategories);
-  };
-
-  const handleRegenerateCategory = async (index) => {
-    if (remainingRolls <= 0 || regeneratingIndex !== null) return;
-    setRegeneratingIndex(index);
-    try {
-      const newCategory = await aiService.regenerateCategory(genre, categories, index);
-      const updated = [...categories];
-      updated[index] = newCategory;
-      setCategories(updated);
-      setRemainingRolls(prev => prev - 1);
-    } catch (err) {
-      setError('Failed to regenerate category. Please try again.');
-    } finally {
-      setRegeneratingIndex(null);
-    }
   };
 
   const handleQuestionSelect = (categoryIndex, pointIndex) => {
@@ -365,22 +345,49 @@ export default function SinglePlayerPage() {
     setPhase('playing');
   };
 
+  const loadingOverlay = (
+    <AnimatePresence>
+      {loading && (
+        <motion.div
+          className="loading-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <div className="spinner" />
+          <p>The AI is thinking...</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  /* Naming the topic and watching the board get written are one screen. The
+     game itself keeps its own header below: a scoreboard has no business on a
+     screen that has no score yet. */
+  if (phase === 'setup' || phase === 'categoryEdit') {
+    /* Deliberately not .single-player-page: that class belongs to the game
+       below it and paints a black ground over the studio's navy. */
+    return (
+      <Studio title="Single Player" className="solo-setup">
+        <SoloWriter
+          onDesk={isDesk}
+          topic={genre}
+          categories={phase === 'categoryEdit' ? categories : []}
+          phase={phase}
+          loading={loading}
+          error={error}
+          onWrite={handleGenerateCategories}
+          onRename={handleCategoryEdit}
+          onPlay={handleGenerateQuestions}
+          onTestBoard={isTestModeEnabled() ? handleUseTestBoard : null}
+        />
+      </Studio>
+    );
+  }
+
   return (
     <div className="single-player-page">
-      {/* Loading Overlay */}
-      <AnimatePresence>
-        {loading && (
-          <motion.div
-            className="loading-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="spinner" />
-            <p>The AI is thinking...</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {loadingOverlay}
 
       {/* Header */}
       <header className="game-header">
@@ -391,36 +398,6 @@ export default function SinglePlayerPage() {
           </div>
         )}
       </header>
-
-      {/* Genre Selection */}
-      {phase === 'setup' && (
-        <div className="setup-container">
-          <GenreSelector
-            onSubmit={handleGenerateCategories}
-            error={error}
-          />
-          <GameSettingsPanel />
-          {isTestModeEnabled() && (
-            <button className="btn-ghost test-board-btn" onClick={handleUseTestBoard}>
-              Use Test Board (No AI)
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Category Editor */}
-      {phase === 'categoryEdit' && (
-        <CategoryEditor
-          categories={categories}
-          onEdit={handleCategoryEdit}
-          onBack={() => setPhase('setup')}
-          onNext={handleGenerateQuestions}
-          error={error}
-          onRegenerate={handleRegenerateCategory}
-          remainingRolls={remainingRolls}
-          regeneratingIndex={regeneratingIndex}
-        />
-      )}
 
       {/* Game Board */}
       {phase === 'playing' && (isPhone ? (

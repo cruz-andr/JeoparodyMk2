@@ -178,10 +178,23 @@ function parseGamePage(html, gameId) {
     }
   });
 
+  /* Final Jeopardy, when the page has one. The clue and its response live in
+     the same pair of elements the rounds use, under the final round's id.
+     Optional: a game without a readable final still makes a usable pair of
+     rounds, and quickplay falls back to a written one. */
+  let final = null;
+  const fjCategory = $('#final_jeopardy_round .category_name').first().text().trim();
+  const fjClue = $('#clue_FJ').text().trim();
+  const fjAnswer = cleanAnswer($('#clue_FJ_r .correct_response').text().trim());
+  if (fjCategory && fjClue && fjAnswer) {
+    final = { category: fjCategory, clue: fjClue, answer: fjAnswer };
+  }
+
   return {
     gameId,
     categories: [...categories, ...djCategories],
     clues,
+    final,
   };
 }
 
