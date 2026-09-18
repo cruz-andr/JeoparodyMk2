@@ -129,10 +129,16 @@ export default function MultiplayerPage() {
                 <SignatureCanvas onSignatureChange={setSignature} {...(onDesk ? DESK_PAD : PHONE_PAD)} />
               </div>
             ) : (
-              <p className="st-rules-line">
-                <span>Your name is on your card.</span>
+              <div className="st-saved-name">
+                {/* The name itself, not a sentence about it. Someone with an
+                    account has already drawn this; telling them "your name is
+                    on your card" asks them to take on trust the one thing that
+                    is right here and was the whole point of drawing it. */}
+                <div className="st-plate is-you">
+                  <img src={savedName} alt="The name you drew" />
+                </div>
                 <button type="button" className="st-rules-open" onClick={() => setDrawing(true)}>Draw a new one</button>
-              </p>
+              </div>
             )}
             {problem && <p className="st-error">{problem}</p>}
           </div>

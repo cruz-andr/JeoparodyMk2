@@ -154,12 +154,19 @@ button.st-back {
   color: var(--text-muted);
 }
 
-/* The one question a screen is really asking is a sentence, not a label. */
+/* The one question a screen is really asking is a sentence, not a label — so
+   it keeps its sentence case and drops the tracking, but not the face.
+
+   It was set in --font-clue, which is the clue serif and falls back to Georgia
+   and then Times. That put the only serif on the screen at the top of it, next
+   to a screen title, a field label and two mode buttons all set in the board's
+   own face, and it read as text from another site. */
 .st-field-label.is-big {
-  font-family: var(--font-clue);
+  font-family: var(--font-board);
+  font-weight: 700;
   text-transform: none;
   letter-spacing: 0;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   color: var(--text-primary);
   margin-bottom: 10px;
 }
@@ -512,6 +519,21 @@ button.st-rules-open {
 }
 
 .st-plate.is-you { border-color: var(--jeopardy-gold); }
+
+/* The saved name, shown back to the person who drew it, with the way to
+   replace it underneath. The plate does not stretch: a drawn name is a fixed
+   height image and a full width plate around it is mostly empty blue. */
+.st-saved-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.st-saved-name .st-plate {
+  align-self: flex-start;
+  min-width: 180px;
+}
 
 .st-plate.is-open { background: var(--shut); border-style: dashed; }
 

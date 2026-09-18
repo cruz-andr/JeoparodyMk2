@@ -5,6 +5,26 @@ import './SignatureCanvas.css';
     Mirrored in CSS as --signature-ground. */
 export const SIGNATURE_GROUND = '#1a1a6e';
 
+/**
+ * The face a typed name is written in.
+ *
+ * Read off the document rather than spelled out here. A canvas cannot use a
+ * CSS variable, and this used to answer Palatino, which is not a face this app
+ * owns anywhere else: a name typed on the pad came out in a serif, and was
+ * then shown on a plate that sets a name in something else entirely.
+ *
+ * --font-hand is what that plate uses, so the two now agree.
+ */
+const SIGNATURE_TYPE_SIZE = 32;
+
+function signatureFont() {
+  const stack =
+    typeof window === 'undefined'
+      ? ''
+      : getComputedStyle(document.documentElement).getPropertyValue('--font-hand').trim();
+  return `700 ${SIGNATURE_TYPE_SIZE}px ${stack || 'cursive'}`;
+}
+
 export default function SignatureCanvas({
   onSignatureChange,
   initialSignature = null,
@@ -28,6 +48,14 @@ export default function SignatureCanvas({
       ? '\u2318'
       : 'Ctrl+';
   const [strokeCount, setStrokeCount] = useState(0);
+  /* The hand face is a webfont, and a canvas paints whatever has loaded by
+     the moment fillText runs. Typing a name before Caveat arrives bakes the
+     fallback into the PNG, permanently — this is an export, not a live
+     rendering that would correct itself later. */
+  const [fontsReady, setFontsReady] = useState(
+    () => typeof document !== 'undefined' && document.fonts?.status === 'loaded'
+  );
+  const repaintedForFont = useRef(false);
 
   // Initialize canvas with blue background
   const initCanvas = useCallback(() => {
@@ -69,8 +97,29 @@ export default function SignatureCanvas({
         setHasContent(true);
       };
       img.src = initialSignature;
+
+      /* And hand it back, because drawing it on the pad is not the same as
+         owning it. Without this a screen that shows someone their saved name
+         still holds null behind the button that needs it, so the signature is
+         on screen and Create Room stays dead. Passed through as it arrived
+         rather than re-exported off the canvas, which would re-encode a PNG to
+         arrive at the bytes already in hand. */
+      onSignatureChange?.(initialSignature);
     }
-  }, [width, height, initialSignature, initCanvas]);
+  }, [width, height, initialSignature, initCanvas, onSignatureChange]);
+
+  /* Repaint a typed name once the board face lands, and only then: after this
+     the font is in hand and every later keystroke paints in it already. */
+  useEffect(() => {
+    if (fontsReady || typeof document === 'undefined' || !document.fonts) return undefined;
+    let cancelled = false;
+    document.fonts.ready.then(() => {
+      if (!cancelled) setFontsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fontsReady]);
 
   // Render typed name on canvas
   const renderTypedName = useCallback((name) => {
@@ -86,7 +135,7 @@ export default function SignatureCanvas({
     if (name.trim()) {
       // Draw text centered with Jeopardy-style font
       ctx.fillStyle = '#e0f0ff';
-      ctx.font = `bold ${32}px "Palatino Linotype", "Book Antiqua", Palatino, serif`;
+      ctx.font = signatureFont();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(name, width / 2, height / 2);
@@ -104,6 +153,15 @@ export default function SignatureCanvas({
       }
     }
   }, [width, height, onSignatureChange]);
+
+  /* Below renderTypedName, not above it: the dependency array is built while
+     this line is being evaluated, and naming a const declared further down
+     reads it before it exists. */
+  useEffect(() => {
+    if (!fontsReady || repaintedForFont.current) return;
+    repaintedForFont.current = true;
+    if (mode === 'type' && typedName) renderTypedName(typedName);
+  }, [fontsReady, mode, typedName, renderTypedName]);
 
   // Handle mode change
   const handleModeChange = (newMode) => {
