@@ -93,8 +93,12 @@ export default function JoinPage() {
         <p className="join-subtitle">Enter a 6-character room code to join a game</p>
 
         <form onSubmit={handleSubmit} className="join-form">
+          {/* Someone with an account has already drawn their name once. Showing
+              them a blank pad asks them to do it again, every time, and quietly
+              invites a different name into every room. */}
           <SignatureCanvas
             onSignatureChange={setSignature}
+            initialSignature={user?.signature ?? null}
             width={300}
             height={80}
           />
