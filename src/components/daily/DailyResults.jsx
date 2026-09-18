@@ -31,15 +31,27 @@ const nextRollover = () => {
 };
 const MARK_WORD = { correct: 'Correct', wrong: 'Wrong', passed: 'Passed', unplayed: 'Unplayed' };
 
-export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer' }) {
+/**
+ * `slot` is where the run lives and `format` is which daily it is. They are
+ * the same thing for today's board; an archive day is played in its own slot
+ * while still being a Sixer or a Board, which decides the clue shape, the grid
+ * and the label.
+ */
+export default function DailyResults({
+  onBackToMenu,
+  verifyCode,
+  format = 'sixer',
+  slot = format,
+}) {
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [showTheirAnswers, setShowTheirAnswers] = useState(false);
   const [theirAnswers, setTheirAnswers] = useState(null);
 
   const { stats, shareResults, getShareText, ...store } = useDailyStore();
-  const { date: todayDate, questions, answers } = store[format];
+  const { date: todayDate, questions, answers } = store[slot];
   const formatStats = stats[format];
+  const isArchive = slot === 'archiveRun';
 
   // Decode verification answers when user clicks to reveal
   const handleRevealTheirAnswers = () => {
@@ -67,20 +79,20 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
   const correctCount = answers.filter((a) => a.correct).length;
   const passedCount = answers.filter((a) => a.passed).length;
   // Only the Board is timed.
-  const run = store[format] ?? {};
+  const run = store[slot] ?? {};
   const took = format === 'board' ? formatDuration(elapsedMs(run.timing)) : null;
   const totalQuestions = questions.length;
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   const handleShare = async () => {
-    const success = await shareResults(format);
+    const success = await shareResults(slot);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } else {
       // Fallback: try to copy manually
       try {
-        await navigator.clipboard.writeText(getShareText(format));
+        await navigator.clipboard.writeText(getShareText(slot));
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
@@ -191,9 +203,10 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
         </div>
       )}
 
-      {/* Stats Section */}
+      {/* Stats Section. An archive day is recorded but never counted, so the
+          streak beside it would be answering a question nobody asked. */}
       <div className="stats-section">
-        <h3>Your Stats</h3>
+        <h3>{isArchive ? 'Your Stats (unchanged)' : 'Your Stats'}</h3>
         <div className="stats-grid">
           <div className="stat-item">
             <span className="stat-value">{formatStats.gamesPlayed}</span>
@@ -254,7 +267,9 @@ export default function DailyResults({ onBackToMenu, verifyCode, format = 'sixer
           Back to Menu
         </button>
         <p className="comeback-text">
-          {format === 'board' ? 'Next board' : 'Next six'} at {nextRollover()}
+          {isArchive
+            ? 'An archive day does not touch your streak.'
+            : `${format === 'board' ? 'Next board' : 'Next six'} at ${nextRollover()}`}
         </p>
       </div>
     </motion.div>

@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
-import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
+import { useUserStore } from '../stores';
+import { canPlayDate, toDateString } from '@shared/archiveWindow.js';
+import { getChallengeForDate, getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
 import { useAudio } from '../hooks';
 import QuestionModal from '../components/game/QuestionModal';
@@ -15,6 +17,17 @@ const FORMAT = 'sixer';
 export default function DailyPage() {
   usePageTitle('The Sixer');
   const navigate = useNavigate();
+
+  /* `?date=` opens a day from the archive. Today's own date is not archive, so
+     a link carrying it plays the ordinary run rather than a second copy of it
+     in the archive slot. */
+  const [params] = useSearchParams();
+  const requestedDate = params.get('date');
+  const archiveDate =
+    requestedDate && requestedDate !== toDateString() ? requestedDate : null;
+  /* Where the run lives. An archive day gets its own slot so a Sixer in
+     progress today is still there when the player comes back to it. */
+  const SLOT = archiveDate ? 'archiveRun' : FORMAT;
   const { playCorrect, playWrong } = useAudio();
   // Null while the player is still typing; set once the answer has been graded.
   const [result, setResult] = useState(null);
@@ -32,8 +45,12 @@ export default function DailyPage() {
     if (code) setVerifyCode(code);
   }, []);
 
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
+
   const {
     sixer,
+    archiveRun,
+    startArchiveRun,
     isLoading,
     error,
     stats,
@@ -50,9 +67,13 @@ export default function DailyPage() {
     completeGame,
   } = useDailyStore();
 
-  const { date: todayDate, questions, answers, isComplete } = sixer;
+  const run = archiveDate ? archiveRun : sixer;
+  const { date: todayDate, questions, answers, isComplete } = run;
   const formatStats = stats[FORMAT];
-  const alreadyPlayed = hasPlayedToday(FORMAT);
+  /* An archive day is always replayable: nothing is at stake on it, and the
+     "come back tomorrow" that guards today's run would be a lie about a day
+     that has already been and gone. */
+  const alreadyPlayed = archiveDate ? false : hasPlayedToday(FORMAT);
 
   /* Formatted for whoever is reading it. A hardcoded 'en-US' prints an
      American date to someone whose browser asked for anything else; passing no
@@ -74,6 +95,33 @@ export default function DailyPage() {
       // `error` is shared by both daily pages and outlives a route change, so
       // a failure on The Board would otherwise strand this screen on "Oops!".
       setError(null);
+
+      if (archiveDate) {
+        /* The gate is checked here as well as on the way in, because this is
+           the URL: a locked day is one typed address away otherwise. The API
+           enforces the window itself, but not who is asking. */
+        if (!canPlayDate({ date: archiveDate, format: FORMAT, isAuthenticated })) {
+          setLoading(false);
+          setError('That day is locked. Sign in to play the whole archive.');
+          return;
+        }
+
+        // Already open on this very day, part way through: leave it alone.
+        if (archiveRun.date === archiveDate && archiveRun.questions.length > 0) {
+          setLoading(false);
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const challenge = await getChallengeForDate(archiveDate);
+          startArchiveRun(FORMAT, { date: archiveDate, ...challenge.sixer });
+        } catch (err) {
+          console.error('Failed to load that day:', err);
+          setError(err.message || 'Failed to load that day. Please try again.');
+        }
+        return;
+      }
 
       // If already played today, show results
       if (hasPlayedToday(FORMAT)) {
@@ -124,8 +172,8 @@ export default function DailyPage() {
   useEffect(() => {
     if (!playable || openIndex !== null) return;
     if (!answers.length || activeIndex !== -1) return;
-    completeGame(FORMAT);
-  }, [playable, openIndex, answers, activeIndex, completeGame]);
+    completeGame(SLOT);
+  }, [playable, openIndex, answers, activeIndex, completeGame, SLOT]);
 
   const openQuestion = useMemo(() => {
     if (openIndex === null) return null;
@@ -142,23 +190,23 @@ export default function DailyPage() {
       if (openIndex === null) return;
       const q = questions[openIndex];
       if (!q) return;
-      setUserAnswer(FORMAT, openIndex, given);
+      setUserAnswer(SLOT, openIndex, given);
       const { isCorrect } = checkAnswer(given, q.answer);
-      revealAnswer(FORMAT, openIndex, isCorrect, given);
+      revealAnswer(SLOT, openIndex, isCorrect, given);
       setResult({ correct: isCorrect, playerAnswer: given });
       if (isCorrect) playCorrect();
       else playWrong();
     },
-    [openIndex, questions, setUserAnswer, revealAnswer, playCorrect, playWrong]
+    [openIndex, questions, setUserAnswer, revealAnswer, playCorrect, playWrong, SLOT]
   );
 
   // Fuzzy matching gets things wrong, so the player has the last word.
   const override = useCallback(() => {
     if (openIndex === null) return;
-    overrideAnswer(FORMAT, openIndex);
+    overrideAnswer(SLOT, openIndex);
     setResult((r) => (r ? { ...r, correct: true } : r));
     playCorrect();
-  }, [openIndex, overrideAnswer, playCorrect]);
+  }, [openIndex, overrideAnswer, playCorrect, SLOT]);
 
   /* A pass uses the clue up and scores nothing, as on The Board. Giving up
      still shows the response, because the point of passing is that you did not
@@ -166,9 +214,9 @@ export default function DailyPage() {
      run before you have read the answer. */
   const passClue = useCallback(() => {
     if (openIndex === null) return;
-    passQuestion(FORMAT, openIndex);
+    passQuestion(SLOT, openIndex);
     setResult({ correct: false, passed: true, playerAnswer: '' });
-  }, [openIndex, passQuestion]);
+  }, [openIndex, passQuestion, SLOT]);
 
   /* Closing the clue is what moves the run on, not grading it: advancing at
      submit would swap the clue for the next one while the player is still
@@ -177,19 +225,19 @@ export default function DailyPage() {
   const continueOn = useCallback(() => {
     setResult(null);
     // Keep the stored cursor walking alongside the clues it counts.
-    nextQuestion(FORMAT);
-    const settled = useDailyStore.getState()[FORMAT].answers;
+    nextQuestion(SLOT);
+    const settled = useDailyStore.getState()[SLOT].answers;
     const next = settled.findIndex((a) => !a?.revealed);
     if (next === -1) {
       setOpenIndex(null);
-      completeGame(FORMAT);
+      completeGame(SLOT);
       return;
     }
     /* Straight to the next clue rather than back through null: releasing the
        index unmounts the clue screen and mounts it again, so every Continue
        played a fade out, a fade in and a spring before the next clue arrived. */
     setOpenIndex(next);
-  }, [nextQuestion, completeGame]);
+  }, [nextQuestion, completeGame, SLOT]);
 
   const handleBackToMenu = () => {
     navigate('/menu');
@@ -229,7 +277,12 @@ export default function DailyPage() {
   if (alreadyPlayed || isComplete) {
     return (
       <div className="daily-page">
-        <DailyResults onBackToMenu={handleBackToMenu} verifyCode={verifyCode} format={FORMAT} />
+        <DailyResults
+          onBackToMenu={handleBackToMenu}
+          verifyCode={verifyCode}
+          format={FORMAT}
+          slot={SLOT}
+        />
       </div>
     );
   }

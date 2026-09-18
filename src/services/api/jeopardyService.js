@@ -88,3 +88,44 @@ export async function getOrFetchDailyChallenge() {
 
   return challenge;
 }
+
+/* The archive.
+
+   Held in memory for the session rather than in localStorage: the cached
+   today's challenge is one board and turns over daily, but ninety days of
+   boards would fill the quota and evict the thing the player actually came
+   back for. A reload paying for one more fetch is the cheaper mistake. */
+const archiveCache = new Map();
+
+/**
+ * The challenge for a past day.
+ *
+ * The server enforces the window; a date outside it comes back 404 and the
+ * message it gives is worth showing, because "the archive stops at ninety
+ * days" is a different problem from "the scrape failed".
+ */
+export async function getChallengeForDate(date) {
+  if (!SOCKET_URL) {
+    throw new Error('Backend server URL not configured. Set VITE_SOCKET_URL in .env');
+  }
+
+  if (archiveCache.has(date)) return archiveCache.get(date);
+
+  const response = await fetch(
+    `${SOCKET_URL}/api/daily/challenge?date=${encodeURIComponent(date)}`
+  );
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? 'Failed to fetch that day from the archive');
+  }
+
+  const challenge = await response.json();
+
+  if (!isCompleteChallenge(challenge)) {
+    throw new Error('That day came back incomplete. Try again shortly.');
+  }
+
+  archiveCache.set(date, challenge);
+  return challenge;
+}
