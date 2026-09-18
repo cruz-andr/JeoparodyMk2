@@ -530,9 +530,19 @@ button.st-rules-open {
   gap: 4px;
 }
 
+/* Sized inline from the pad's own constants, so nothing here sets a width.
+   border-box is global, so those numbers are the outside of the plate and it
+   occupies exactly the space the canvas did. */
 .st-saved-name .st-plate {
   align-self: flex-start;
-  min-width: 180px;
+}
+
+/* The roster draws a name at a fixed 36px; here the plate is the pad's size
+   and the name should fill it, whatever size it was drawn at. */
+.st-saved-name .st-plate img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
 }
 
 .st-plate.is-open { background: var(--shut); border-style: dashed; }
