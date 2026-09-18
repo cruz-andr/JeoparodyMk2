@@ -134,7 +134,10 @@ export default function MultiplayerPage() {
                     account has already drawn this; telling them "your name is
                     on your card" asks them to take on trust the one thing that
                     is right here and was the whole point of drawing it. */}
-                <div className="st-plate is-you">
+                {/* The same box the pad would be, from the same constant, so
+                    the name does not shrink into a chip the moment it is saved
+                    and the two states do not shift the page between them. */}
+                <div className="st-plate is-you" style={onDesk ? DESK_PAD : PHONE_PAD}>
                   <img src={savedName} alt="The name you drew" />
                 </div>
                 <button type="button" className="st-rules-open" onClick={() => setDrawing(true)}>Draw a new one</button>
