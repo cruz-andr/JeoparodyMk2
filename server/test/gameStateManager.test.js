@@ -1736,6 +1736,22 @@ test('a clue nobody answered is counted against nobody', () => {
   for (const p of room.players.values()) assert.equal(p.answered || 0, 0);
 });
 
+/* Every room records its creator as hostId, so checking hostId alone gave the
+   creator of an ordinary game the host's powers over the people they were
+   playing against: set any score, judge anyone, skip any clue. */
+test('host-only moves are refused in a room that is not hosted', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  const creator = sockets[0].sessionId;
+
+  assert.equal(gm.overridePlayerScore(code, creator, creator, 99999, 'mine'), null);
+  assert.equal(room.players.get(creator).score, 0);
+  assert.equal(gm.hostJudgeAnswer(code, creator, sockets[1].sessionId, false), null);
+  assert.equal(gm.skipQuestion(code, creator), null);
+  assert.ok(room.gameState.currentQuestion, 'the clue is still up');
+  assert.equal(gm.setHostQuestions(code, mkBoard(), ['A', 'B', 'C', 'D', 'E', 'F'], creator), null);
+});
+
 /* A suggestion used to read gameState.questions and gameState.suggestions
    blind. A hosted board never set suggestions, and a room between
    set-categories and its questions has no questions yet; either threw, and a

@@ -653,7 +653,7 @@ export class GameStateManager {
    */
   hostDailyDoubleWager(roomCode, hostId, playerId, wager) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!room.gameState?.isDailyDouble) return null;
 
     const player = room.players.get(playerId);
@@ -675,7 +675,7 @@ export class GameStateManager {
   /** The verdict on a Daily Double, which pays the wager rather than the clue. */
   hostDailyDoubleAnswer(roomCode, hostId, correct) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!room.gameState?.isDailyDouble) return null;
 
     const playerId = room.gameState.dailyDoubleOwnerId;
@@ -1234,6 +1234,16 @@ export class GameStateManager {
   }
 
   /**
+   * Whether this session runs a hosted room. Every room records its creator as
+   * hostId, so hostId alone also matched the creator of an ordinary game, who
+   * then got the host's judging and scoring powers over the people they were
+   * playing against. Kicking is the one host power an ordinary room keeps.
+   */
+  isHostOf(room, sessionId) {
+    return room?.type === 'host' && room.hostId === sessionId;
+  }
+
+  /**
    * The game state as one viewer may see it. room.gameState also holds what
    * the room has not been shown yet: where the Daily Doubles are, and the Final
    * Jeopardy clue and response. Handing it over whole on a reconnect or a late
@@ -1320,7 +1330,7 @@ export class GameStateManager {
   // Set custom questions from host
   setHostQuestions(roomCode, questions, categories, hostId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
 
     room.gameState = room.gameState || {};
     room.gameState.questions = questions;
@@ -1622,7 +1632,7 @@ export class GameStateManager {
   // Host judges an answer
   hostJudgeAnswer(roomCode, hostId, playerId, correct) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!this.ensureAnswerState(room)) return null;
 
     const player = room.players.get(playerId);
@@ -1702,7 +1712,7 @@ export class GameStateManager {
   // Host overrides player score
   overridePlayerScore(roomCode, hostId, playerId, newScore, reason) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
 
     const player = room.players.get(playerId);
     if (!player) return null;
@@ -1727,7 +1737,7 @@ export class GameStateManager {
   // Host skips current question
   skipQuestion(roomCode, hostId) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!this.ensureAnswerState(room)) return null;
 
     // Clear current question state

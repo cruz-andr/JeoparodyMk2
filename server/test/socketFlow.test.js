@@ -255,7 +255,10 @@ async function run() {
     await once(guest, 'game:question-selected');
 
     guest.emit('game:buzz-in', { roomCode, reactionTime: 40 });
-    host.emit('host:skip-question', { roomCode });
+    await wait(100);
+    // The clue goes away inside the collection window. Straight onto the room:
+    // in an ordinary game nobody may skip a clue for everyone.
+    gameManager.clearCurrentQuestion(roomCode);
 
     assert.ok(
       await notEmitted(guest, 'game:buzzer-winner', 900),
@@ -382,8 +385,10 @@ async function run() {
       host.emit('game:select-question', { roomCode, categoryIndex: c, pointIndex: r });
       const payload = await selected;
       if (payload.isDailyDouble) sawDailyDouble = true;
-      host.emit('host:skip-question', { roomCode });
-      await wait(60);
+      // Clear the clue to move on; nobody may skip one in an ordinary game.
+      gameManager.clearAnswerTimeout(roomCode);
+      gameManager.clearBuzzTimeout(roomCode);
+      gameManager.clearCurrentQuestion(roomCode);
     }
     assert.ok(sawDailyDouble, 'the setting was sent at creation, so it must apply');
   });
@@ -428,10 +433,11 @@ async function run() {
     const { host, guest, roomCode, hostId, guestId } = await startGame();
     open.push(host, guest);
 
-    // Give both players a positive score so both are eligible.
-    host.emit('host:override-score', { roomCode, playerId: hostId, newScore: 500 });
-    host.emit('host:override-score', { roomCode, playerId: guestId, newScore: 500 });
-    await wait(150);
+    // Give both players a positive score so both are eligible. Straight onto
+    // the room: in an ordinary game nobody may override scores.
+    const room = gameManager.rooms.get(roomCode);
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
 
     host.emit('game:start-final-jeopardy', { roomCode });
     await once(guest, 'game:final-jeopardy-started');
@@ -472,6 +478,31 @@ async function run() {
     const codes = new Set(payloads.map((m) => m.roomCode));
     assert.equal(codes.size, 1, 'everyone lands in the same room');
     assert.equal(payloads[0].players.length, 3);
+  });
+
+  /* host:skip-question cleared the buzz and answer timers before anything
+     checked who sent it, so any player could leave a clue with no timer to
+     end it, and the room hung. */
+  await test('a player cannot cancel the clue timers with host:skip-question', async (open) => {
+    const { host, guest, roomCode } = await startGame({ buzzMs: 700 });
+    open.push(host, guest);
+
+    const selected = once(guest, 'game:question-selected');
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await selected;
+
+    const timedOut = once(host, 'game:buzz-timeout-result', 2500);
+    guest.emit('host:skip-question', { roomCode });
+    host.emit('host:skip-question', { roomCode });
+    assert.ok(await timedOut, 'the clue still times out');
+  });
+
+  await test('the creator of an ordinary room cannot set scores', async (open) => {
+    const { host, guest, roomCode, hostId } = await startGame();
+    open.push(host, guest);
+    host.emit('host:override-score', { roomCode, playerId: hostId, newScore: 99999 });
+    assert.ok(await notEmitted(guest, 'host:score-overridden'));
+    assert.equal(gameManager.rooms.get(roomCode).players.get(hostId).score, 0);
   });
 
   /* The clue went out with the category, before anyone had wagered, and the

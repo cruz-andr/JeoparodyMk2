@@ -557,15 +557,17 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     on('host:skip-question', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
 
-      // Abandoning a clue must also abandon its timers, or a stale one fires
-      // against whatever clue happens to be open when it lands.
-      gameManager.clearBuzzTimeout(roomCode);
-      gameManager.clearAnswerTimeout(roomCode);
-      if (room?.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
-
       const result = gameManager.skipQuestion(roomCode, socket.sessionId);
 
       if (result) {
+        // Abandoning a clue must also abandon its timers, or a stale one fires
+        // against whatever clue happens to be open when it lands. Only once the
+        // host has skipped: clearing them first let any player strand a clue
+        // with no timer left to end it.
+        gameManager.clearBuzzTimeout(roomCode);
+        gameManager.clearAnswerTimeout(roomCode);
+        if (room?.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
+
         // Host always picks next in host mode
         io.to(roomCode).emit('host:question-skipped', {
           nextPickerId: room?.hostId,
@@ -576,7 +578,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host reveals typed answers
     on('host:reveal-answers', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       const answers = gameManager.getTypedAnswers(roomCode);
       // Revealing is deliberate, so this one does go to the whole room.
@@ -601,7 +603,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host opens buzzer (verbal mode) — manual override
     on('host:open-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       // Clear auto-open timer since host is manually controlling
       if (room.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
@@ -613,7 +615,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host closes buzzer
     on('host:close-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       gameManager.clearBuzzTimeout(roomCode);
       if (room.gameState) {
@@ -625,7 +627,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host opens answer window (typed/MC mode) — manual override
     on('host:open-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       // Clear auto-open timer since host is manually controlling
       if (room.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
@@ -647,7 +649,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host closes answer window
     on('host:close-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       gameManager.closeHostAnswerWindow(roomCode);
       io.to(roomCode).emit('host:answer-window-closed');
