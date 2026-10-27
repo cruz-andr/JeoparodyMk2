@@ -324,6 +324,11 @@ export class GameStateManager {
       return null; // Not their turn
     }
 
+    // One clue at a time. The picker keeps currentPickerId for the whole clue,
+    // so without this they could open another on top of a live one, wiping
+    // the buzz of whoever was answering, or walk away from a Daily Double.
+    if (room.gameState.currentQuestion) return null;
+
     const question = room.gameState.questions[categoryIndex]?.[pointIndex];
     if (!question || question.revealed) return null;
 
@@ -622,9 +627,10 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    // Verify this is the picker and we're in Daily Double phase
+    // Verify this is the picker and the wager is still open. The confirmed
+    // wager carries the clue, so a second one would be made after reading it.
     if (room.gameState.currentPickerId !== playerId) return null;
-    if (!room.gameState.isDailyDouble) return null;
+    if (!room.gameState.isDailyDouble || room.gameState.phase !== 'dailyDouble') return null;
 
     const clamped = this.clampDailyDoubleWager(room, playerId, wager);
     room.gameState.dailyDoubleWager = clamped;
@@ -713,8 +719,11 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    // Verify this is the picker
+    // Verify this is the picker, on a Daily Double they have wagered on.
+    // Without the second check the answer was taken at $0 with no wager, and
+    // sent during an ordinary clue it ended that clue for everyone.
     if (room.gameState.currentPickerId !== playerId) return null;
+    if (!room.gameState.isDailyDouble || room.gameState.phase !== 'dailyDoubleQuestion') return null;
 
     const player = room.players.get(playerId);
     if (!player) return null;
