@@ -480,6 +480,50 @@ async function run() {
     assert.equal(payloads[0].players.length, 3);
   });
 
+  /* A hosted room's players are judged by the host, so they never need the
+     responses. They were sent the whole board anyway, responses and the
+     multiple-choice options in written order (the correct one first), and
+     every clue again with its response as it was opened. */
+  await test('the players in a hosted room are not sent the responses', async (open) => {
+    const host = await connect(`hh-${Math.random()}`);
+    const guest = await connect(`hg-${Math.random()}`);
+    open.push(host, guest);
+
+    const { roomCode } = await emitAck(host, 'room:create', {
+      type: 'host', settings: { enableDailyDouble: false, answerMode: 'verbal' },
+    });
+    const hostJoin = await emitAck(host, 'room:join', { roomCode, displayName: 'Host' });
+    await emitAck(guest, 'room:join', { roomCode, displayName: 'Guest' });
+
+    const written = board();
+    written[0][0].options = [written[0][0].question, 'decoy 1', 'decoy 2', 'decoy 3'];
+
+    const guestBoard = once(guest, 'game:questions-ready');
+    const hostBoard = once(host, 'game:questions-ready');
+    host.emit('game:set-questions', {
+      roomCode, questions: written, categories: ['A', 'B'], firstPickerId: hostJoin.players[0].id,
+    });
+    const seen = await guestBoard;
+    for (const clue of seen.questions.flat()) {
+      assert.equal(clue.question, undefined, 'no response on the board');
+      assert.equal(clue.options, undefined, 'no options in written order');
+      assert.ok(clue.answer, 'the clue itself is still there');
+    }
+    assert.equal((await hostBoard).questions[0][0].question, written[0][0].question, 'the host keeps them');
+
+    const guestClue = once(guest, 'game:question-selected');
+    const hostClue = once(host, 'game:question-selected');
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    const opened = await guestClue;
+    assert.equal(opened.question.question, undefined, 'no response with the clue');
+    assert.equal(opened.question.options.length, 4, 'the options still come, shuffled');
+    assert.equal((await hostClue).question.question, written[0][0].question);
+
+    const back = gameManager.reconnectPlayer({ id: 'later', sessionId: [...gameManager.rooms.get(roomCode).players.keys()][1] }, roomCode);
+    assert.equal(back.gameState.currentQuestion.question, undefined, 'nor on a reconnect');
+    assert.equal(back.gameState.questions[1][1].question, undefined);
+  });
+
   /* host:skip-question cleared the buzz and answer timers before anything
      checked who sent it, so any player could leave a clue with no timer to
      end it, and the room hung. */

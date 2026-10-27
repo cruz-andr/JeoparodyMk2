@@ -1247,14 +1247,19 @@ export class GameStateManager {
    * The game state as one viewer may see it. room.gameState also holds what
    * the room has not been shown yet: where the Daily Doubles are, and the Final
    * Jeopardy clue and response. Handing it over whole on a reconnect or a late
-   * join let anyone read those. The host of a hosted room wrote the board, so
-   * they get it all.
+   * join let anyone read those. In a hosted room the players also get the board
+   * without its responses. The host of a hosted room wrote the board, so they
+   * get it all.
    */
   publicGameState(room, viewerId) {
     const gs = room.gameState;
     if (!gs || (room.type === 'host' && viewerId === room.hostId)) return gs;
 
     const { dailyDoubles: _dailyDoubles, finalJeopardy: fj, ...shown } = gs;
+    if (room.type === 'host') {
+      shown.questions = playerBoard(gs.questions);
+      shown.currentQuestion = playerClue(gs.currentQuestion);
+    }
     if (fj) {
       shown.finalJeopardy = {
         category: fj.category,
@@ -1896,6 +1901,24 @@ const MIN_COVERAGE = 0.6;
 // Strips everything that should not decide whether an answer is right: the
 // "What is ...?" wrapper, punctuation, casing, a leading article, and any
 // irregular spacing.
+/* What the players of a hosted room may see of a clue and of the board. The
+   host judges them, so they never need the response (`question`), and the
+   board's multiple-choice options are in written order, correct one first. A
+   clue's options are sent, shuffled, only when it is opened. */
+export const playerClue = (clue) => {
+  if (!clue) return clue;
+  const { question: _response, ...shown } = clue;
+  return shown;
+};
+export const playerBoard = (questions) => (Array.isArray(questions)
+  ? questions.map((column) => (Array.isArray(column)
+    ? column.map((clue) => {
+      const { options: _options, ...shown } = playerClue(clue) || {};
+      return shown;
+    })
+    : column))
+  : questions);
+
 export function normalizeAnswer(value) {
   return String(value ?? '')
     .toLowerCase()

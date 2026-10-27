@@ -14,6 +14,8 @@
  * everything the room hears.
  */
 
+import { playerBoard, playerClue } from './GameStateManager.js';
+
 // On the show a contestant gets about five seconds to answer once they have
 // buzzed in. Reusing the full clue timer here gave them the whole 30 seconds
 // and drained the tension out of every buzz. Seven is the default here because
@@ -28,8 +30,23 @@ export const answerWindowMs = (room) => room?.settings?.answerTimeLimit || DEFAU
    room to be torn down, so everything after a buzz re-reads the live room. */
 const BUZZ_COLLECT_MS = 500;
 
-export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeout: schedule = setTimeout }) {
+export function createGameActions({
+  gameManager, emitRoom, archiveRoom, setTimeout: schedule = setTimeout,
+  /* One event in two versions: the host's, and everyone else's. Without a
+     socket layer to tell them apart, everyone gets the players' version. */
+  emitSplit = (roomCode, event, _forHost, forPlayers) => emitRoom(roomCode, event, forPlayers),
+}) {
   const rooms = gameManager.rooms;
+
+  /* A hosted room's players are judged by the host and never need the
+     responses, so they get the board and the clue without them; the host gets
+     them as written. Self-judged rooms reveal the response to whoever buzzed,
+     so everyone there is sent it as it is. */
+  function emitToTable(roomCode, event, payload, forPlayers) {
+    if (rooms.get(roomCode)?.type === 'host') emitSplit(roomCode, event, payload, forPlayers(payload));
+    else emitRoom(roomCode, event, payload);
+  }
+  const boardForPlayers = (payload) => ({ ...payload, questions: playerBoard(payload.questions) });
 
   /* Late joiners are dealt in when a clue fully resolves. */
   function activateLateJoiners(roomCode) {
@@ -75,7 +92,8 @@ export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeo
       if (!result) return null;
 
       gameManager.clearSuggestions(roomCode);
-      emitRoom(roomCode, 'game:question-selected', result);
+      emitToTable(roomCode, 'game:question-selected', result,
+        (full) => ({ ...full, question: playerClue(full.question) }));
 
       // A Daily Double has no buzz window: only the picker answers.
       if (result.isDailyDouble) return result;
@@ -206,7 +224,7 @@ export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeo
     /** The board for round one. Everyone moves from the lobby to the game. */
     setQuestions(roomCode, { questions, categories, firstPickerId, dailyDoubles }) {
       gameManager.setQuestions(roomCode, questions, categories, firstPickerId, dailyDoubles);
-      emitRoom(roomCode, 'game:questions-ready', { questions, categories, firstPickerId });
+      emitToTable(roomCode, 'game:questions-ready', { questions, categories, firstPickerId }, boardForPlayers);
     },
 
     roundEnd(roomCode, round) {
@@ -215,7 +233,7 @@ export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeo
 
     startRound2(roomCode, { questions, categories, firstPickerId, dailyDoubles }) {
       gameManager.startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles);
-      emitRoom(roomCode, 'game:round-2-started', { questions, categories, firstPickerId });
+      emitToTable(roomCode, 'game:round-2-started', { questions, categories, firstPickerId }, boardForPlayers);
     },
 
     /** Final Jeopardy, or straight to the standings if nobody can play it.

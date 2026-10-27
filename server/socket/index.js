@@ -1,7 +1,7 @@
 import { verifyToken } from '../middleware/auth.js';
 import { getDatabase } from '../config/database.js';
 import { recordRoomGame } from '../services/gameHistory.js';
-import { GameStateManager } from './GameStateManager.js';
+import { GameStateManager, playerBoard } from './GameStateManager.js';
 import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
@@ -59,7 +59,22 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     director?.onRoomEvent(roomCode, event, payload);
   }
 
-  const actions = createGameActions({ gameManager, emitRoom, archiveRoom });
+  /* The same event in two versions: the host's socket gets one, the rest of
+     the room the other. A hosted room's players must not be sent the
+     responses the host judges them against. */
+  function emitSplit(roomCode, event, forHost, forPlayers) {
+    const room = gameManager.rooms.get(roomCode);
+    const hostSocketId = room?.players.get(room.hostId)?.socketId;
+    if (hostSocketId) {
+      io.to(roomCode).except(hostSocketId).emit(event, forPlayers);
+      io.to(hostSocketId).emit(event, forHost);
+    } else {
+      io.to(roomCode).emit(event, forPlayers);
+    }
+    director?.onRoomEvent(roomCode, event, forHost);
+  }
+
+  const actions = createGameActions({ gameManager, emitRoom, emitSplit, archiveRoom });
 
   const boardSource = createBoardSource({ mode: knobs.boardMode, log: (m) => logInfo({ msg: m }) });
   director = createQuickplayDirector({
@@ -435,7 +450,8 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId, dailyDoubles);
 
       if (result?.success) {
-        io.to(roomCode).emit('host:questions-set', { questions, categories });
+        // The host already has the board; the players are told it is set, not what it says.
+        io.to(roomCode).emit('host:questions-set', { questions: playerBoard(questions), categories });
         if (callback) callback({ success: true });
       } else {
         if (callback) callback({ success: false, error: 'Failed to set questions' });
