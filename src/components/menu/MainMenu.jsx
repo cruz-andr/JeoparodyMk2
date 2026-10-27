@@ -220,7 +220,7 @@ export default function MainMenu() {
             <span className="menu-category-name">{cat.label}</span>
             {cat.id === 'sixer' && (
               <>
-                <span className="menu-category-meta">6 Clues &middot; 90 Sec</span>
+                <span className="menu-category-meta">6 Clues &middot; Easy to Hard</span>
                 {sixerStreak > 0 && (
                   <span className="menu-category-streak">{sixerStreak}-Day Streak</span>
                 )}

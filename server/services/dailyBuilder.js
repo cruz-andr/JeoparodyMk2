@@ -72,12 +72,15 @@ export function buildBoard(roundClues, { values = ROW_VALUES } = {}) {
 }
 
 /*
- * The Sixer gets harder across the week, the way a crossword does.
+ * The Sixer climbs, within each day and across the week.
  *
  * Its clues come from the Double Jeopardy round, and how far down the board a
- * clue sits is the show's own measure of how hard it is. Seven days against
- * five rows leaves two to place: they double up mid week, so the two ends of
- * the week stay distinct and the climb in between is gradual.
+ * clue sits is the show's own measure of how hard it is. Each day is six rows
+ * in rising order, so it opens on a clue most players get and ends on one
+ * few do. Six clues from a single row made the first clue as hard as the last,
+ * and a player who missed the opener had no reason to think the rest would go
+ * better. The whole climb moves up through the week, the way a crossword's
+ * does: Monday never reaches the top row, Sunday ends on it twice.
  *
  * Monday first, matching startOfWeek and therefore the weekly best reset.
  */
@@ -93,7 +96,15 @@ export function buildBoard(roundClues, { values = ROW_VALUES } = {}) {
  * A row number means the same thing in every era: 5 is the hardest row on the
  * board, whatever it was worth at the time.
  */
-export const SIXER_WEEK_ROWS = [1, 2, 2, 3, 3, 4, 5];
+export const SIXER_WEEK_CURVES = [
+  [1, 1, 2, 2, 3, 3], // Monday
+  [1, 1, 2, 3, 3, 4],
+  [1, 2, 2, 3, 4, 4],
+  [1, 2, 3, 3, 4, 5],
+  [1, 2, 3, 4, 4, 5],
+  [2, 2, 3, 4, 5, 5],
+  [2, 3, 4, 4, 5, 5], // Sunday
+];
 
 /*
  * What a Double Jeopardy row is worth in today's money.
@@ -110,13 +121,13 @@ export const SIXER_WEEK_ROWS = [1, 2, 2, 3, 3, 4, 5];
  */
 export const DOUBLE_ROW_VALUES = [400, 800, 1200, 1600, 2000];
 
-/** Which row of the board a given date should be pitched at, 1 easiest. */
-export function sixerTargetRow(date) {
-  if (!date) return SIXER_WEEK_ROWS[0];
+/** The rows a given date's six clues are drawn from, in order, 1 easiest. */
+export function sixerRows(date) {
+  if (!date) return SIXER_WEEK_CURVES[0];
   const d = new Date(`${date}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return SIXER_WEEK_ROWS[0];
+  if (Number.isNaN(d.getTime())) return SIXER_WEEK_CURVES[0];
   // getUTCDay is 0 for Sunday, so shift it to make Monday the first day.
-  return SIXER_WEEK_ROWS[(d.getUTCDay() + 6) % 7];
+  return SIXER_WEEK_CURVES[(d.getUTCDay() + 6) % 7];
 }
 
 /**
@@ -146,9 +157,9 @@ function pickByRow(clues, row, seed, offset) {
 
 /**
  * One clue from each category of the other round, chosen deterministically so
- * every player worldwide gets the same six, at the difficulty the day calls for.
+ * every player worldwide gets the same six, climbing the day's rows in order.
  */
-export function buildSixer(roundClues, seed = 0, targetRow = null) {
+export function buildSixer(roundClues, seed = 0, rows = null) {
   if (!Array.isArray(roundClues)) return null;
 
   const byCategory = new Map();
@@ -163,9 +174,9 @@ export function buildSixer(roundClues, seed = 0, targetRow = null) {
   for (const [, clues] of byCategory) {
     if (picked.length >= SIXER_CLUES) break;
     picked.push(
-      targetRow === null
+      rows === null
         ? { clue: clues[(seed + picked.length) % clues.length], row: null }
-        : pickByRow(clues, targetRow, seed, picked.length)
+        : pickByRow(clues, rows[picked.length], seed, picked.length)
     );
   }
 
@@ -180,8 +191,14 @@ export function buildSixer(roundClues, seed = 0, targetRow = null) {
 
   if (picked.length < SIXER_CLUES) return null;
 
+  /* Cheapest first. A category short of its row gives up a lower one, which
+     could otherwise land out of order. Stable, so ties keep their order. */
+  const climb = rows === null
+    ? picked.slice(0, SIXER_CLUES)
+    : picked.slice(0, SIXER_CLUES).sort((a, b) => (a.row ?? 0) - (b.row ?? 0));
+
   return {
-    questions: picked.slice(0, SIXER_CLUES).map(({ clue, row }) => ({
+    questions: climb.map(({ clue, row }) => ({
       category: String(clue.category).toUpperCase(),
       // scraper convention, which DailyPage already reads
       clue: clue.clue,
@@ -209,7 +226,7 @@ export function buildDailyChallenge(gameClues, { seed = 0, date, gameId } = {}) 
   if (!board) return null;
 
   // The Sixer comes from the round the Board did not use.
-  const sixer = buildSixer(doubleJeopardy, seed, sixerTargetRow(date));
+  const sixer = buildSixer(doubleJeopardy, seed, sixerRows(date));
   if (!sixer) return null;
 
   return { date, seed, gameId, board, sixer };

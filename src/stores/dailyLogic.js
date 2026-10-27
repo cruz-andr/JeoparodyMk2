@@ -6,6 +6,9 @@
  * here takes what it needs as arguments and returns a new value.
  */
 
+// The grader's own reading of a response, so a hint shows the form it accepts.
+import { acceptedForms } from '../../server/shared/answerMatch.js';
+
 /** The two daily formats. The Board is the full 6x5; The Sixer is one clue per category. */
 export const DAILY_FORMATS = ['board', 'sixer'];
 
@@ -173,16 +176,71 @@ export function boardScore(answers, values) {
 export function answerMark(answer) {
   if (!answer?.revealed) return 'unplayed';
   if (answer.passed) return 'passed';
-  return answer.correct ? 'correct' : 'wrong';
+  if (answer.correct) return answer.hinted ? 'hinted' : 'correct';
+  return 'wrong';
+}
+
+/* ------------------------------------------------------------ the Sixer
+
+   Each clue is worth its row in dollars, as on the show. A miss is not the
+   end of it: the hint comes up and there is one more try, for half. Nothing
+   is ever taken away. A Sixer that started a new player at -$400 was a
+   Sixer they did not come back to. */
+
+/** What one clue paid. */
+export function sixerEarned(answer, value) {
+  if (!answer?.revealed || answer.passed || !answer.correct) return 0;
+  const worth = Number(value) || 0;
+  return answer.hinted ? Math.round(worth / 2) : worth;
+}
+
+/** What a run won, out of `sixerTop`. */
+export function sixerScore(answers, questions) {
+  if (!Array.isArray(answers) || !Array.isArray(questions)) return 0;
+  return answers.reduce((sum, answer, i) => sum + sixerEarned(answer, questions[i]?.value), 0);
+}
+
+/** What the day's six were worth together. */
+export function sixerTop(questions) {
+  return (questions ?? []).reduce((sum, q) => sum + (Number(q?.value) || 0), 0);
+}
+
+const SHOWN_WHOLE = new Set(['a', 'an', 'the', 'of', 'and', '&', 'or', 'in', 'on', 'to']);
+
+/**
+ * The shape of the answer: each word's first letter, then a blank per letter.
+ * Articles and small joining words are shown whole, and punctuation as it is.
+ * A one-word answer of four letters or fewer is blanks only, since its first
+ * letter would be most of it. Taken from the main form of the response, not
+ * its optional or alternate parts.
+ */
+export function answerHint(response) {
+  let main = acceptedForms(response)[0] ?? '';
+  if (main.includes('/')) main = main.split('/')[0];
+  main = main.replace(/["“”]/g, '').trim();
+  const words = main.split(/\s+/).filter(Boolean);
+  const shortOne = words.length === 1 && words[0].replace(/[^\p{L}\p{N}]/gu, '').length <= 4;
+
+  return words.map((word) => {
+    if (SHOWN_WHOLE.has(word.toLowerCase())) return word;
+    let shown = shortOne;
+    return [...word].map((ch) => {
+      if (!/[\p{L}\p{N}]/u.test(ch)) return ch;
+      if (!shown) { shown = true; return ch.toUpperCase(); }
+      return '_';
+    }).join(' ');
+  }).join('   ');
 }
 
 /* Red and green is the one pairing red green colourblindness cannot separate,
    and it affects roughly one man in twelve. It is also the only part of the
    game people share, so the grid has to work for them. Orange and blue is the
    substitution Wordle settled on for the same problem. */
+/* Got with the hint is yellow, as a near miss is in every word game. The
+   high-contrast set has orange for right already, so it takes purple. */
 const MARK_EMOJI = {
-  normal: { correct: '\u{1F7E9}', wrong: '\u{1F7E5}', passed: '\u{2B1C}' },
-  highContrast: { correct: '\u{1F7E7}', wrong: '\u{1F7E6}', passed: '\u{2B1C}' },
+  normal: { correct: '\u{1F7E9}', hinted: '\u{1F7E8}', wrong: '\u{1F7E5}', passed: '\u{2B1C}' },
+  highContrast: { correct: '\u{1F7E7}', hinted: '\u{1F7EA}', wrong: '\u{1F7E6}', passed: '\u{2B1C}' },
 };
 
 /** The square a played clue shows, in the palette the player can read. */

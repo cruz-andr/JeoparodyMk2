@@ -59,6 +59,12 @@
   box-shadow: none;
 }
 
+/* Got with the hint: yellow, as the share text posts it. */
+.result-mark.hinted {
+  background: #E2C044;
+  box-shadow: none;
+}
+
 /* A pass is neither, so it wears neither colour. Grey rather than the share
    text's white square: white is the brightest thing available on this ground,
    so it out-shouted both the hits and the misses for the state that matters
@@ -78,6 +84,10 @@
 
 .emoji-grid.high-contrast .result-mark.wrong {
   background: #3B82C4;
+}
+
+.emoji-grid.high-contrast .result-mark.hinted {
+  background: #8E6CC9;
 }
 
 .board .result-mark {
@@ -307,6 +317,7 @@
 
 .review-item.correct { border-left-color: var(--color-success); }
 .review-item.wrong { border-left-color: var(--color-error); }
+.review-item.hinted { border-left-color: #E2C044; }
 .review-item.passed { border-left-color: rgba(255, 255, 255, 0.3); }
 
 /* The same square as the grid at the top of the page, so that grid reads as
@@ -330,6 +341,13 @@
 .review-mark.correct { background: var(--color-success); }
 .review-mark.wrong { background: var(--color-error); }
 .review-mark.passed { background: rgba(255, 255, 255, 0.28); color: #fff; }
+.review-mark.hinted { background: #E2C044; }
+
+.review-earned {
+  margin: 6px 0 0;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
 
 .review-body {
   min-width: 0;

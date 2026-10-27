@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { boardGridRows, decodeAnswers,
+  sixerEarned,
+  sixerScore,
+  sixerTop,
   answerMark,
   liveStreak,
   toDateString,
@@ -21,7 +24,7 @@ const CLUES_PER_RUN = { board: 30, sixer: 6 };
 const clueText = (q, format) => (format === 'board' ? q?.answer : q?.clue) || '';
 const responseText = (q, format) => (format === 'board' ? q?.question : q?.answer) || '';
 
-const MARK_SIGN = { correct: '\u2713', wrong: '\u2717', passed: '\u2014', unplayed: '' };
+const MARK_SIGN = { correct: '\u2713', hinted: '\u2713', wrong: '\u2717', passed: '\u2014', unplayed: '' };
 
 /* Both dailies turn over at midnight UTC, because that is the boundary the
    board itself is chosen on. Said in the reader's own clock, it is something
@@ -31,7 +34,7 @@ const nextRollover = () => {
   next.setUTCHours(24, 0, 0, 0);
   return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(next);
 };
-const MARK_WORD = { correct: 'Correct', wrong: 'Wrong', passed: 'Passed', unplayed: 'Unplayed' };
+const MARK_WORD = { correct: 'Correct', hinted: 'Correct with the hint', wrong: 'Wrong', passed: 'Passed', unplayed: 'Unplayed' };
 
 /**
  * `slot` is where the run lives and `format` is which daily it is. They are
@@ -80,6 +83,7 @@ export default function DailyResults({
   const highContrast = useSettingsStore((s) => s.highContrast);
   const correctCount = answers.filter((a) => a.correct).length;
   const passedCount = answers.filter((a) => a.passed).length;
+  const hintedCount = answers.filter((a) => a.correct && a.hinted).length;
   // Only the Board is timed.
   const run = store[slot] ?? {};
   const took = format === 'board' ? formatDuration(elapsedMs(run.timing)) : null;
@@ -152,15 +156,25 @@ export default function DailyResults({
         ))}
       </div>
 
-      {/* Score */}
-      <div className="results-score">
-        <span className="score-number">{correctCount}</span>
-        <span className="score-divider">/</span>
-        <span className="score-total">{totalQuestions}</span>
-      </div>
+      {/* Score. The Sixer is played for dollars; the Board keeps its count. */}
+      {format === 'sixer' ? (
+        <div className="results-score">
+          {/* Spaced in the text, not only by the layout, so it is read as words. */}
+          <span className="score-number">${sixerScore(answers, questions).toLocaleString()}</span>
+          {' '}<span className="score-divider">of</span>{' '}
+          <span className="score-total">${sixerTop(questions).toLocaleString()}</span>
+        </div>
+      ) : (
+        <div className="results-score">
+          <span className="score-number">{correctCount}</span>
+          <span className="score-divider">/</span>
+          <span className="score-total">{totalQuestions}</span>
+        </div>
+      )}
 
       <p className="score-percentage">
-        {percentage}% correct
+        {format === 'sixer' ? `${correctCount} of ${totalQuestions} right` : `${percentage}% correct`}
+        {hintedCount > 0 && `, ${hintedCount} with the hint`}
         {passedCount > 0 && `, ${passedCount} passed`}
         {took && ` in ${took}`}
       </p>
@@ -251,6 +265,12 @@ export default function DailyResults({
                   <span className="review-category">{question.category || 'Category'}</span>
                   <p className="review-clue">{clueText(question, format)}</p>
                   <p className="review-answer">{responseText(question, format)}</p>
+                  {format === 'sixer' && answers[index]?.revealed && (
+                    <p className="review-earned">
+                      {mark === 'passed' ? 'Passed' : `+$${sixerEarned(answers[index], question.value).toLocaleString()}`}
+                      {mark === 'hinted' && ' with the hint'}
+                    </p>
+                  )}
                   {answers[index]?.playerAnswer && mark === 'wrong' && (
                     <p className="review-your-answer">
                       <span>You said</span> {answers[index].playerAnswer}
