@@ -108,10 +108,19 @@ export const useRoomStore = create((set, get) => ({
   },
 
   // Player Actions
+  /* A player already here is updated, not added again: a second copy of
+     somebody coming back put two of them on screen. What they have earned is
+     kept, since an arrival is announced with a score of zero. */
   addPlayer: (player) => {
-    set(state => ({
-      players: [...state.players, player]
-    }));
+    set(state => {
+      const existing = state.players.find(p => p.id === player.id);
+      if (!existing) return { players: [...state.players, player] };
+      return {
+        players: state.players.map(p =>
+          p.id === player.id ? { ...p, ...player, score: p.score ?? player.score } : p
+        ),
+      };
+    });
   },
 
   removePlayer: (playerId) => {

@@ -20,6 +20,7 @@ import PlayerBuzzer from '../components/player/PlayerBuzzer';
 import AnswerInput from '../components/player/AnswerInput';
 import MultipleChoiceSelector from '../components/player/MultipleChoiceSelector';
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
+import { resumeView } from '../utils/resumeGame';
 import Lobby from '../components/game/Lobby';
 import '../components/studio/studio.css';
 import './GamePage.css';
@@ -132,6 +133,85 @@ export default function GamePage() {
   const [submittedPlayerIds, setSubmittedPlayerIds] = useState([]); // who has answered this clue
   const [answerFeedbackResult, setAnswerFeedbackResult] = useState(null); // true=correct, false=incorrect, null=hidden
 
+  /* The few seconds a response stays up once a clue is settled, and the
+     Final Jeopardy category's moment on screen. Held so a new clue, a new
+     round or leaving the page can cancel them: left running, a reveal's
+     timer cleared whatever clue had come up in the meantime. */
+  const revealTimer = useRef(null);
+  const fjIntroTimer = useRef(null);
+  const cancelReveal = useCallback(() => {
+    clearTimeout(revealTimer.current);
+    revealTimer.current = null;
+  }, []);
+  const afterReveal = useCallback((fn) => {
+    clearTimeout(revealTimer.current);
+    revealTimer.current = setTimeout(() => {
+      revealTimer.current = null;
+      fn();
+    }, 3000);
+  }, []);
+  useEffect(() => () => {
+    clearTimeout(revealTimer.current);
+    clearTimeout(fjIntroTimer.current);
+  }, []);
+
+  /* Put the screen back the way the room has it, after a reload, a dropped
+     connection, a late join or a rejoin by the code. What that means is
+     worked out in resumeGame.js; this only applies it. */
+  const applyResume = useCallback((result) => {
+    const view = resumeView(result);
+    if (result.hostPlan) {
+      hostRound2.current = result.hostPlan.round2 ?? null;
+      hostFinal.current = result.hostPlan.finalJeopardy ?? null;
+      hostDailyDoubles.current = result.hostPlan.dailyDoubles ?? null;
+    }
+    if (view.categories) setLocalCategories(view.categories);
+    if (view.questions) {
+      setLocalQuestions(view.questions);
+      setRevealedQuestions(new Set(view.revealed));
+      // A host whose board was handed over can still start the game.
+      if (view.phase === 'lobby' && result.isHost) setQuestionsReady(true);
+    }
+    /* The lobby is also where a page starts, and the steps of setting a game
+       up are not kept by the server, so a reconnect that says "not started"
+       leaves the screen where it is. */
+    if (view.phase === 'lobby') return;
+
+    cancelReveal();
+    setCorrectAnswerReveal(null);
+    if (view.currentPickerId) setCurrentPickerId(view.currentPickerId);
+    setCurrentRound(view.currentRound);
+    setCurrentQuestion(view.currentQuestion);
+    setShowAnswer(false);
+    setBuzzerWinnerId(view.buzzerWinnerId);
+    setHostBuzzerOpen(view.hostBuzzerOpen);
+    setHostAnswerWindowOpen(view.hostAnswerWindowOpen);
+    setPlayerHasSubmitted(view.hasSubmitted);
+    setHasAlreadyBuzzed(view.hasAlreadyBuzzed);
+    hasAlreadyBuzzedRef.current = view.hasAlreadyBuzzed;
+    setHasSkipped(view.hasSkipped);
+    setBuzzTimedOut(view.buzzTimedOut);
+    setHasContinued(view.hasContinued);
+    setCanBuzz(view.canBuzz);
+    if (view.canBuzz) {
+      setSignalArrivedTime(Date.now());
+      setBuzzTimerKey((k) => k + 1);
+    }
+    setIsDailyDouble(view.dailyDouble.phase !== null);
+    setDailyDoublePhase(view.dailyDouble.phase);
+    setDailyDoubleWager(view.dailyDouble.wager);
+    setDailyDoubleOwnerId(view.dailyDouble.ownerId);
+    if (view.finalJeopardy) {
+      setFinalJeopardyData(view.finalJeopardy.data);
+      setFjPhase(view.finalJeopardy.phase);
+      setFjWager(view.finalJeopardy.wager);
+      setFjWagerSubmitted(view.finalJeopardy.wagerSubmitted);
+      setFjAnswerSubmitted(view.finalJeopardy.answerSubmitted);
+      setFjResults(view.finalJeopardy.results);
+    }
+    setPhase(view.phase);
+  }, [cancelReveal]);
+
   const isHostMode = roomType === 'host';
   // Read inside the socket effect, which deliberately does not re-subscribe on
   // every render.
@@ -175,144 +255,53 @@ export default function GamePage() {
     }
   }, [location.state]);
 
-  // Handle late join — restore game state from navigation state
+  // Handle a late join or a rejoin — restore game state from navigation state
   useEffect(() => {
     if (location.state?.lateJoin && location.state?.gameState) {
-      const gs = location.state.gameState;
-
-      if (gs.categories) setLocalCategories(gs.categories);
-      if (gs.questions) {
-        setLocalQuestions(gs.questions);
-        const revealed = new Set();
-        gs.questions.forEach((category, catIdx) => {
-          category.forEach((q, ptIdx) => {
-            if (q.revealed) revealed.add(`${catIdx}-${ptIdx}`);
-          });
-        });
-        setRevealedQuestions(revealed);
-      }
-      if (gs.currentPickerId) setCurrentPickerId(gs.currentPickerId);
-      if (gs.currentRound) setCurrentRound(gs.currentRound);
-
-      // If a question is active, the late joiner waits
-      if (gs.currentQuestion) {
-        setCurrentQuestion(gs.currentQuestion);
-      }
-
-      // Set phase
-      if (gs.phase === 'playing' || gs.phase === 'questionActive' || gs.phase === 'dailyDouble') {
-        setPhase('playing');
-      } else {
-        setPhase('playing');
-      }
-
+      const { gameState, status } = location.state;
+      applyResume({ gameState, status: status ?? 'in_progress' });
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, applyResume]);
 
-  // Auto-reconnect on page load if we have a stored room
+  /* Rejoin the room on every connect while this page is up: after a reload,
+     and after a dropped connection too. A connection that comes back is a new
+     socket the room has never heard of, and the page used to rejoin only when
+     it had no players yet, i.e. after a reload. Anyone whose connection
+     blipped mid-game carried on looking at a game that had stopped talking
+     to them. */
   useEffect(() => {
     if (!isConnected || !roomCode) return;
 
-    // Skip reconnection if this is a fresh join (not a page reload)
-    // The join/create flow already set the players in the store
+    // Skip the first one after a fresh join: the join flow has already
+    // seated the socket and set the players in the store.
     const freshJoin = sessionStorage.getItem('jeopardy_fresh_join');
     if (freshJoin) {
       sessionStorage.removeItem('jeopardy_fresh_join');
       return;
     }
+    if (localStorage.getItem('jeopardy_current_room') !== roomCode) return;
 
-    // Check if we need to attempt reconnection (players array is empty = actual page reload)
-    const storedRoom = localStorage.getItem('jeopardy_current_room');
-    if (storedRoom === roomCode && players.length === 0) {
-      setIsReconnecting(true);
-
-      socketClient.reconnectToRoom(roomCode)
-        .then((result) => {
-          console.log('Reconnected to room:', result);
-
-          // Restore room state
-          if (result.players) {
-            useRoomStore.getState().setPlayers(result.players);
-          }
-          if (result.settings) {
-            useRoomStore.getState().updateSettings(result.settings);
-          }
-          if (result.isHost !== undefined) {
-            useRoomStore.getState().setIsHost(result.isHost);
-          }
-          if (result.type) {
-            useRoomStore.getState().setRoomType(result.type);
-          }
-
-          // Restore game state if game is in progress
-          if (result.gameState) {
-            const gs = result.gameState;
-
-            // Restore categories and questions
-            if (gs.categories) setLocalCategories(gs.categories);
-            if (gs.questions) {
-              setLocalQuestions(gs.questions);
-
-              // Rebuild revealedQuestions Set from questions with revealed=true
-              const revealed = new Set();
-              gs.questions.forEach((category, catIdx) => {
-                category.forEach((q, ptIdx) => {
-                  if (q.revealed) {
-                    revealed.add(`${catIdx}-${ptIdx}`);
-                  }
-                });
-              });
-              setRevealedQuestions(revealed);
-            }
-            if (gs.currentPickerId) setCurrentPickerId(gs.currentPickerId);
-            if (gs.currentRound) setCurrentRound(gs.currentRound);
-
-            // Restore current question state
-            if (gs.currentQuestion) {
-              setCurrentQuestion(gs.currentQuestion);
-            }
-
-            // Restore buzzer state (server uses buzzedPlayerId)
-            if (gs.buzzedPlayerId) {
-              setBuzzerWinnerId(gs.buzzedPlayerId);
-            }
-
-            // Restore host mode states
-            if (gs.buzzWindowOpen !== undefined) {
-              setHostBuzzerOpen(gs.buzzWindowOpen);
-            }
-
-            // Determine phase from game state
-            // Use questions presence as fallback - if questions exist, game has started
-            const hasQuestions = gs.questions && gs.questions.length > 0;
-
-            if (gs.phase === 'playing' || (hasQuestions && !gs.phase)) {
-              setPhase('playing');
-            } else if (gs.phase === 'finalJeopardy') {
-              setPhase('finalJeopardy');
-            } else if (gs.phase === 'dailyDouble') {
-              setIsDailyDouble(true);
-              setDailyDoublePhase('wager');
-              setPhase('playing');
-            } else if (hasQuestions) {
-              // Fallback: if we have questions but unknown phase, assume playing
-              setPhase('playing');
-            } else {
-              setPhase('lobby');
-            }
-          }
-
-          setIsReconnecting(false);
-        })
-        .catch((err) => {
-          console.log('Reconnection failed:', err.message);
-          // Clear stored room if reconnection failed
-          localStorage.removeItem('jeopardy_current_room');
-          setIsReconnecting(false);
-        });
-    }
-  }, [isConnected, roomCode, players.length]);
+    let current = true;
+    setIsReconnecting(true);
+    socketClient.reconnectToRoom(roomCode)
+      .then((result) => {
+        if (!current) return;
+        const room = useRoomStore.getState();
+        if (result.players) room.setPlayers(result.players);
+        if (result.settings) room.updateSettings(result.settings);
+        if (result.isHost !== undefined) room.setIsHost(result.isHost);
+        if (result.type) room.setRoomType(result.type);
+        applyResume(result);
+      })
+      .catch((err) => {
+        console.log('Reconnection failed:', err.message);
+        // Clear stored room if reconnection failed
+        if (current) localStorage.removeItem('jeopardy_current_room');
+      })
+      .finally(() => setIsReconnecting(false));
+    return () => { current = false; };
+  }, [isConnected, roomCode, applyResume]);
 
   // Subscribe to game events
   useEffect(() => {
@@ -367,6 +356,9 @@ export default function GamePage() {
     const unsubQuestionSelected = subscribe('game:question-selected', ({ categoryIndex, pointIndex, question, isDailyDouble: isDD }) => {
       // Merge with local question data to preserve media fields if server didn't send them
       const localQuestion = questionsRef.current[categoryIndex]?.[pointIndex];
+      // The last clue's response is done with: its timer must not clear this one.
+      cancelReveal();
+      setCorrectAnswerReveal(null);
       setCurrentQuestion({ ...localQuestion, ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
       setShowAnswer(false);
@@ -403,6 +395,8 @@ export default function GamePage() {
         if (!isHostModeRef.current) {
           setSignalArrivedTime(Date.now());
           setCanBuzz(true);
+        } else {
+          setCanBuzz(false);
         }
       }
     });
@@ -437,11 +431,11 @@ export default function GamePage() {
         // Show correct answer to all for 3 seconds before returning to board
         if (correctAnswer) {
           setCorrectAnswerReveal(correctAnswer);
-          setTimeout(() => {
+          afterReveal(() => {
             setCorrectAnswerReveal(null);
             setCurrentPickerId(nextPickerId);
             setCurrentQuestion(null);
-          }, 3000);
+          });
         } else {
           setCurrentPickerId(nextPickerId);
           setCurrentQuestion(null);
@@ -459,16 +453,22 @@ export default function GamePage() {
         setBuzzerWinnerId(null);
         if (correctAnswer) {
           setCorrectAnswerReveal(correctAnswer);
-          setTimeout(() => {
+          afterReveal(() => {
             setCorrectAnswerReveal(null);
             setCurrentPickerId(nextPickerId);
             setCurrentQuestion(null);
-          }, 3000);
+          });
         } else {
           setCurrentPickerId(nextPickerId);
           setCurrentQuestion(null);
         }
       }
+    });
+
+    /* The pick moved because whoever held it left, or dropped and did not
+       come back in time. */
+    const unsubPickerChanged = subscribe('game:picker-changed', ({ nextPickerId }) => {
+      setCurrentPickerId(nextPickerId);
     });
 
     // Question suggestions from non-pickers
@@ -535,6 +535,8 @@ export default function GamePage() {
 
     // Round 2 starting - new questions
     const unsubRound2Start = subscribe('game:round-2-started', ({ questions: newQuestions, categories: newCategories, firstPickerId }) => {
+      cancelReveal();
+      setCorrectAnswerReveal(null);
       setLocalCategories(newCategories);
       setLocalQuestions(newQuestions);
       setCurrentPickerId(firstPickerId);
@@ -556,9 +558,11 @@ export default function GamePage() {
       setFjResults(null);
       setPhase('finalJeopardy');
 
-      // Auto-transition to wager phase after 3 seconds
-      setTimeout(() => {
-        setFjPhase('wager');
+      // Auto-transition to wager phase after 3 seconds, unless the round has
+      // already moved past it by then.
+      clearTimeout(fjIntroTimer.current);
+      fjIntroTimer.current = setTimeout(() => {
+        setFjPhase((current) => (current === 'category' ? 'wager' : current));
       }, 3000);
     });
 
@@ -587,15 +591,26 @@ export default function GamePage() {
     // HOST MODE EVENTS
 
     // Host opened buzzer (verbal mode)
-    const unsubHostBuzzerOpened = subscribe('host:buzzer-opened', () => {
+    const unsubHostBuzzerOpened = subscribe('host:buzzer-opened', (payload) => {
       setHostBuzzerOpen(true);
       setPlayerHasSubmitted(false);
       setSignalArrivedTime(Date.now());
+      /* handleBuzz, which the projector controller rings through, will not
+         send without canBuzz, and nothing set it in a hosted room: on a
+         projector with spoken answers nobody could ever buzz. Not for a
+         player who has already had their go at this clue. */
+      setCanBuzz(!hasAlreadyBuzzedRef.current);
+      // The player holding the buzz left; nobody holds it now.
+      if (payload?.buzzReleased) {
+        setBuzzerWinnerId(null);
+        setBuzzerWinnerReactionTime(null);
+      }
     });
 
     // Host closed buzzer
     const unsubHostBuzzerClosed = subscribe('host:buzzer-closed', () => {
       setHostBuzzerOpen(false);
+      setCanBuzz(false);
     });
 
     // Host opened answer window (typed/MC modes)
@@ -691,13 +706,13 @@ export default function GamePage() {
         }
       });
       // After a delay, clear and move on
-      setTimeout(() => {
+      afterReveal(() => {
         setMcCorrectIndex(null);
         setCurrentQuestion(null);
         setCurrentPickerId(nextPickerId);
         setHostAnswerWindowOpen(false);
         clearHostModeAnswers();
-      }, 3000);
+      });
     });
 
     // Auto-grade results
@@ -737,6 +752,7 @@ export default function GamePage() {
       unsubQuestionSelected();
       unsubBuzzerWinner();
       unsubAnswerResult();
+      unsubPickerChanged();
       unsubQuestionSuggested();
       unsubBuzzTimeout();
       unsubAllContinued();
@@ -765,7 +781,7 @@ export default function GamePage() {
       unsubPlayerKicked();
       unsubMediaControl();
     };
-  }, [isConnected, roomCode, subscribe, updateSettings, currentPlayerId, navigate, clearHostModeAnswers]);
+  }, [isConnected, roomCode, subscribe, updateSettings, currentPlayerId, navigate, clearHostModeAnswers, afterReveal, cancelReveal]);
 
   // Check if all questions revealed - handle round transition
   // Only check when no question is currently active (so last question can be played)
@@ -839,6 +855,14 @@ export default function GamePage() {
     leaveRoom(roomCode);
     resetRoom();
     navigate('/menu');
+  };
+
+  /* "End the game" on the host's screen ends it for everyone: the room is
+     told and the game archived, then the host leaves. It used to only leave,
+     and the players were left looking at a clue nobody would ever judge. */
+  const handleEndHostedGame = () => {
+    socketClient.emit('game:end', { roomCode });
+    handleLeave();
   };
 
   const handleKickPlayer = (playerId) => {
@@ -1318,7 +1342,7 @@ export default function GamePage() {
         dailyDoubleOwnerId={dailyDoubleOwnerId}
         showAnswer={showAnswer}
         onQuestionSelect={handleQuestionSelect}
-        onLeave={handleLeave}
+        onLeave={handleEndHostedGame}
       />
     );
   }
@@ -1343,7 +1367,7 @@ export default function GamePage() {
             <div className="spinner" />
             <p>
               {isReconnecting
-                ? (roomType === 'quickplay' ? 'Taking your seat' : 'Reconnecting to game...')
+                ? (roomType === 'quickplay' ? 'Joining the game' : 'Reconnecting to game...')
                 : phase === 'generating'
                   ? 'Generating questions...'
                   : 'The AI is thinking...'}

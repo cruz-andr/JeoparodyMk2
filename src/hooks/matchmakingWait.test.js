@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_TIMINGS, NO_MATCH_FALLBACK, initialWait, needsJoin, waitReducer,
+  DEFAULT_TIMINGS, NO_MATCH_FALLBACK, initialWait, leavesOnExit, needsJoin, waitReducer,
 } from './matchmakingWait.js';
 
 let passed = 0;
@@ -136,6 +136,22 @@ test('trying again clears the no-match and the old match', () => {
 test('an unknown action changes nothing', () => {
   const s = play(request, joined);
   assert.equal(waitReducer(s, { type: 'weather' }), s);
+});
+
+// ------------------------------------------------------------ leaving the page
+
+/* Navigating away from the search used to leave the player in the queue, so
+   a ghost got seated at the next table and never played. */
+test('a player who walks away from the search is taken out of the queue', () => {
+  assert.equal(leavesOnExit(initialWait), false, 'never asked: nothing to leave');
+  assert.equal(leavesOnExit(play(request)), true, 'asked, not yet confirmed');
+  assert.equal(leavesOnExit(play(request, joined)), true, 'queued');
+  assert.equal(leavesOnExit(play(request, joined, { type: 'left' })), false, 'already out');
+});
+
+test('a player who walks away because their match was found stays seated', () => {
+  const found = play(request, joined, { type: 'match', match: { roomCode: 'ABC' } });
+  assert.equal(leavesOnExit(found), false);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

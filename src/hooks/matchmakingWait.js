@@ -80,3 +80,11 @@ export function waitReducer(state, action) {
 export function needsJoin(state) {
   return !state.isInQueue && state.wants !== null;
 }
+
+/* True when a player walking away from the search page has to be taken out
+   of the queue: they asked for a match, or the server has them, and no match
+   has come. Leaving the page used to leave them queued, and the next table
+   was seated with a player who was never going to play. */
+export function leavesOnExit(state) {
+  return state.matchFound === null && (state.wants !== null || state.isInQueue);
+}
