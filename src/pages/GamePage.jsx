@@ -10,6 +10,7 @@ import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameBoard from '../components/game/GameBoard';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
+import TypedResponse from '../components/game/TypedResponse';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
 import HostLiveScreen from '../components/host/HostLiveScreen';
@@ -99,6 +100,10 @@ export default function GamePage() {
   const [correctAnswerReveal, setCorrectAnswerReveal] = useState(null); // Show correct answer to all after scoring
   const [hasSkipped, setHasSkipped] = useState(false); // Player clicked "I Don't Know"
   const [hasAlreadyBuzzed, setHasAlreadyBuzzed] = useState(false); // Player already buzzed (wrong answer) this question
+  /* A typed response the server called close: one more go. And the last
+     response typed, which the room is shown with its verdict. */
+  const [answerClose, setAnswerClose] = useState(false);
+  const [saidNote, setSaidNote] = useState(null); // { playerId, said }
   const hasAlreadyBuzzedRef = useRef(false);
 
   // Category re-roll state
@@ -213,6 +218,9 @@ export default function GamePage() {
   }, [cancelReveal]);
 
   const isHostMode = roomType === 'host';
+  /* Quickplay seats strangers, so their responses are typed and graded by the
+     server rather than self-judged against a response on their own screen. */
+  const typedAnswers = roomType === 'quickplay';
   // Read inside the socket effect, which deliberately does not re-subscribe on
   // every render.
   const isHostModeRef = useRef(isHostMode);
@@ -359,6 +367,8 @@ export default function GamePage() {
       // The last clue's response is done with: its timer must not clear this one.
       cancelReveal();
       setCorrectAnswerReveal(null);
+      setAnswerClose(false);
+      setSaidNote(null);
       setCurrentQuestion({ ...localQuestion, ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
       setShowAnswer(false);
@@ -403,6 +413,8 @@ export default function GamePage() {
 
     // Someone buzzed first
     const unsubBuzzerWinner = subscribe('game:buzzer-winner', ({ playerId, reactionTime }) => {
+      setAnswerClose(false);
+      setSaidNote(null);
       setBuzzerWinnerId(playerId);
       setBuzzerWinnerReactionTime(reactionTime);  // Store reaction time to display
       setCanBuzz(false);
@@ -412,7 +424,9 @@ export default function GamePage() {
     });
 
     // Answer result
-    const unsubAnswerResult = subscribe('game:answer-result', ({ playerId, correct, newScore, nextPickerId, canBuzzAgain, correctAnswer }) => {
+    const unsubAnswerResult = subscribe('game:answer-result', ({ playerId, correct, newScore, nextPickerId, canBuzzAgain, correctAnswer, said }) => {
+      // What a typed response said, shown with its verdict.
+      if (said !== undefined) setSaidNote({ playerId, said });
       // Update player score in room store
       if (playerId) {
         useRoomStore.getState().updatePlayerScore(playerId, newScore);
@@ -465,6 +479,11 @@ export default function GamePage() {
       }
     });
 
+    // The typed response was nearly right: one more go.
+    const unsubAnswerClose = subscribe('game:answer-close', () => {
+      setAnswerClose(true);
+    });
+
     /* The pick moved because whoever held it left, or dropped and did not
        come back in time. */
     const unsubPickerChanged = subscribe('game:picker-changed', ({ nextPickerId }) => {
@@ -477,7 +496,10 @@ export default function GamePage() {
     });
 
     // Buzz timeout - no one buzzed in time (server-driven)
-    const unsubBuzzTimeout = subscribe('game:buzz-timeout-result', ({ nextPickerId }) => {
+    const unsubBuzzTimeout = subscribe('game:buzz-timeout-result', ({ nextPickerId, question }) => {
+      /* The clue is over, so the response comes with it. A room whose players
+         were never sent it has nothing else to show. */
+      if (question?.question) setCurrentQuestion((q) => q && { ...q, question: question.question });
       // Don't clear currentQuestion yet - show timeout view with answer first
       setBuzzerWinnerId(null);
       setCanBuzz(false);
@@ -511,7 +533,7 @@ export default function GamePage() {
     });
 
     // Daily Double result - update scores and reset
-    const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, newScore, nextPickerId }) => {
+    const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, newScore, nextPickerId, correctAnswer, said }) => {
       if (correct) {
         audioRef.current.playCorrect();
       } else {
@@ -519,6 +541,24 @@ export default function GamePage() {
       }
       // Update player score
       useRoomStore.getState().updatePlayerScore(playerId, newScore);
+
+      /* The response, for the three seconds a clue's is shown: only the
+         player with the Daily Double saw it otherwise, and in quickplay not
+         even they did. A hosted room's host judges aloud and moves on. */
+      if (correctAnswer && !isHostModeRef.current) {
+        if (said !== undefined) setSaidNote({ playerId, said });
+        setIsDailyDouble(false);
+        setDailyDoublePhase(null);
+        setDailyDoubleWager(0);
+        setDailyDoubleOwnerId(null);
+        setCorrectAnswerReveal(correctAnswer);
+        afterReveal(() => {
+          setCorrectAnswerReveal(null);
+          setCurrentQuestion(null);
+          setCurrentPickerId(nextPickerId);
+        });
+        return;
+      }
       // Reset Daily Double state
       setIsDailyDouble(false);
       setDailyDoublePhase(null);
@@ -753,6 +793,7 @@ export default function GamePage() {
       unsubBuzzerWinner();
       unsubAnswerResult();
       unsubPickerChanged();
+      unsubAnswerClose();
       unsubQuestionSuggested();
       unsubBuzzTimeout();
       unsubAllContinued();
@@ -1255,6 +1296,12 @@ export default function GamePage() {
     }
   }, [roomCode, fjAnswerSubmitted]);
 
+  // A typed response, for the server to grade
+  const handleSubmitResponse = (answer) => {
+    setAnswerClose(false);
+    socketClient.emit('game:submit-response', { roomCode, answer });
+  };
+
   // Buzzer winner submits answer
   const handleAnswerResult = (correct) => {
     socketClient.emit('game:submit-answer', {
@@ -1596,13 +1643,17 @@ export default function GamePage() {
                 {currentQuestion.mediaType && <MediaClueDisplay question={currentQuestion} />}
                 <p className="clue-text">{currentQuestion.answer}</p>
 
-                {isMyTurn && !showAnswer && (
+                {isMyTurn && typedAnswers && (
+                  <TypedResponse onSubmit={handleSubmitResponse} close={answerClose} />
+                )}
+
+                {isMyTurn && !typedAnswers && !showAnswer && (
                   <button className="btn-primary reveal-button" onClick={() => setShowAnswer(true)}>
                     Reveal Answer
                   </button>
                 )}
 
-                {isMyTurn && showAnswer && (
+                {isMyTurn && !typedAnswers && showAnswer && (
                   <div className="answer-section">
                     <p className="answer-label">Correct Response:</p>
                     <p className="answer-text">{currentQuestion.question}</p>
@@ -1712,7 +1763,11 @@ export default function GamePage() {
                         {iAmBuzzerWinner ? 'You buzzed first!' : <>{renderPlayerName(buzzerWinner)} buzzed first!</>}
                       </p>
 
-                      {iAmBuzzerWinner && !showAnswer && (
+                      {iAmBuzzerWinner && typedAnswers && (
+                        <TypedResponse onSubmit={handleSubmitResponse} close={answerClose} />
+                      )}
+
+                      {iAmBuzzerWinner && !typedAnswers && !showAnswer && (
                         <motion.button
                           className="reveal-button"
                           onClick={handleRevealAnswer}
@@ -1723,7 +1778,7 @@ export default function GamePage() {
                         </motion.button>
                       )}
 
-                      {iAmBuzzerWinner && showAnswer && (
+                      {iAmBuzzerWinner && !typedAnswers && showAnswer && (
                         <motion.div
                           className="answer-section"
                           initial={{ opacity: 0, y: 20 }}
@@ -1746,6 +1801,14 @@ export default function GamePage() {
                         <p className="waiting-for-answer">Waiting for their answer...</p>
                       )}
                     </div>
+                  )}
+
+                  {/* What the last typed response said */}
+                  {saidNote && !buzzerWinnerId && (
+                    <p className="said-note">
+                      {saidNote.playerId === currentPlayerId ? 'You' : renderPlayerName(players.find((p) => p.id === saidNote.playerId))}
+                      {' said '}<q>{saidNote.said || '(nothing)'}</q>
+                    </p>
                   )}
 
                   {/* Correct Answer Reveal */}
