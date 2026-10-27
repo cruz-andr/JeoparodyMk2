@@ -1,9 +1,10 @@
 import { verifyToken } from '../middleware/auth.js';
 import { getDatabase } from '../config/database.js';
 import { recordRoomGame } from '../services/gameHistory.js';
-import { GameStateManager } from './GameStateManager.js';
+import { GameStateManager, playerBoard } from './GameStateManager.js';
 import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
+import { createSessionClaims } from './sessionClaims.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
 
 const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
@@ -59,7 +60,22 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     director?.onRoomEvent(roomCode, event, payload);
   }
 
-  const actions = createGameActions({ gameManager, emitRoom, archiveRoom });
+  /* The same event in two versions: the host's socket gets one, the rest of
+     the room the other. A hosted room's players must not be sent the
+     responses the host judges them against. */
+  function emitSplit(roomCode, event, forHost, forPlayers) {
+    const room = gameManager.rooms.get(roomCode);
+    const hostSocketId = room?.players.get(room.hostId)?.socketId;
+    if (hostSocketId) {
+      io.to(roomCode).except(hostSocketId).emit(event, forPlayers);
+      io.to(hostSocketId).emit(event, forHost);
+    } else {
+      io.to(roomCode).emit(event, forPlayers);
+    }
+    director?.onRoomEvent(roomCode, event, forHost);
+  }
+
+  const actions = createGameActions({ gameManager, emitRoom, emitSplit, archiveRoom });
 
   const boardSource = createBoardSource({ mode: knobs.boardMode, log: (m) => logInfo({ msg: m }) });
   director = createQuickplayDirector({
@@ -115,13 +131,27 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
   }
 
+  const sessionClaims = createSessionClaims();
+
   // Authentication middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     const sessionId = socket.handshake.auth.sessionId;
 
-    // Session ID is the primary identifier for reconnection
-    socket.sessionId = sessionId || socket.id;
+    // Session ID is the primary identifier for reconnection. It is also the
+    // player's public id, so it only counts with the key that claimed it.
+    if (sessionId) {
+      const id = String(sessionId).slice(0, 128);
+      const verdict = sessionClaims.admit(id, socket.handshake.auth.sessionKey, {
+        seated: gameManager.sessionRooms.has(id),
+      });
+      if (verdict !== 'ok') {
+        return next(new Error(verdict === 'taken' ? 'session-taken' : 'session-key-required'));
+      }
+      socket.sessionId = id;
+    } else {
+      socket.sessionId = socket.id;
+    }
 
     if (token) {
       try {
@@ -435,7 +465,8 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId, dailyDoubles);
 
       if (result?.success) {
-        io.to(roomCode).emit('host:questions-set', { questions, categories });
+        // The host already has the board; the players are told it is set, not what it says.
+        io.to(roomCode).emit('host:questions-set', { questions: playerBoard(questions), categories });
         if (callback) callback({ success: true });
       } else {
         if (callback) callback({ success: false, error: 'Failed to set questions' });
@@ -557,15 +588,17 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     on('host:skip-question', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
 
-      // Abandoning a clue must also abandon its timers, or a stale one fires
-      // against whatever clue happens to be open when it lands.
-      gameManager.clearBuzzTimeout(roomCode);
-      gameManager.clearAnswerTimeout(roomCode);
-      if (room?.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
-
       const result = gameManager.skipQuestion(roomCode, socket.sessionId);
 
       if (result) {
+        // Abandoning a clue must also abandon its timers, or a stale one fires
+        // against whatever clue happens to be open when it lands. Only once the
+        // host has skipped: clearing them first let any player strand a clue
+        // with no timer left to end it.
+        gameManager.clearBuzzTimeout(roomCode);
+        gameManager.clearAnswerTimeout(roomCode);
+        if (room?.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
+
         // Host always picks next in host mode
         io.to(roomCode).emit('host:question-skipped', {
           nextPickerId: room?.hostId,
@@ -576,7 +609,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host reveals typed answers
     on('host:reveal-answers', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       const answers = gameManager.getTypedAnswers(roomCode);
       // Revealing is deliberate, so this one does go to the whole room.
@@ -601,7 +634,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host opens buzzer (verbal mode) — manual override
     on('host:open-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       // Clear auto-open timer since host is manually controlling
       if (room.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
@@ -613,7 +646,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host closes buzzer
     on('host:close-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       gameManager.clearBuzzTimeout(roomCode);
       if (room.gameState) {
@@ -625,7 +658,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host opens answer window (typed/MC mode) — manual override
     on('host:open-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       // Clear auto-open timer since host is manually controlling
       if (room.autoOpenTimer) { clearTimeout(room.autoOpenTimer); room.autoOpenTimer = null; }
@@ -647,7 +680,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Host closes answer window
     on('host:close-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
-      if (room?.hostId !== socket.sessionId) return;
+      if (!gameManager.isHostOf(room, socket.sessionId)) return;
 
       gameManager.closeHostAnswerWindow(roomCode);
       io.to(roomCode).emit('host:answer-window-closed');
@@ -656,6 +689,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Disconnect handling
     socket.on('disconnect', (reason) => {
       logInfo({ msg: 'Socket disconnected', socketId: socket.id, reason });
+      sessionClaims.touch(socket.sessionId);
       const roomCode = gameManager.sessionRooms.get(socket.sessionId);
       gameManager.handleDisconnect(socket);
       if (roomCode) director.onPlayerGone(roomCode);
@@ -664,8 +698,9 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
 
   // Periodic tasks
   const tick = setInterval(() => {
-    // Clean up stale rooms
+    // Clean up stale rooms, then the claims of anyone long gone
     gameManager.cleanupStaleRooms();
+    sessionClaims.sweep((id) => gameManager.sessionRooms.has(id));
 
     // Update matchmaking queue
     settleMatchmaking();

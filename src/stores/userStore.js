@@ -3,25 +3,36 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import * as authApi from '../services/api/authService';
 
-// Generate or retrieve session ID from cookie
-const getSessionId = () => {
-  let sessionId = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('jeopardy_session='))
-    ?.split('=')[1];
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
+const readCookie = (name) => document.cookie
+  .split('; ')
+  .find(row => row.startsWith(`${name}=`))
+  ?.split('=')[1];
+const writeCookie = (name, value) => {
+  document.cookie = `${name}=${value}; path=/; max-age=${SESSION_MAX_AGE}; SameSite=Lax`;
+};
 
-  if (!sessionId) {
-    sessionId = uuidv4();
-    // Set cookie with 7-day expiration
-    document.cookie = `jeopardy_session=${sessionId}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-  }
+/* A brand-new session: an id, which every other player sees, and a key, which
+   only this browser has. The server lets a connection be this player only with
+   both, so a player cannot be impersonated by someone who has seen their id. */
+const newSession = () => {
+  const session = { sessionId: uuidv4(), sessionKey: uuidv4() };
+  writeCookie('jeopardy_session', session.sessionId);
+  writeCookie('jeopardy_session_key', session.sessionKey);
+  return session;
+};
 
-  return sessionId;
+/* The session from the cookies, or a new one. An id without its key (from
+   before keys existed) cannot be proven to be ours, so it is replaced. */
+const getSession = () => {
+  const sessionId = readCookie('jeopardy_session');
+  const sessionKey = readCookie('jeopardy_session_key');
+  return sessionId && sessionKey ? { sessionId, sessionKey } : newSession();
 };
 
 const initialState = {
-  // Session ID (persisted in cookie for reconnection)
-  sessionId: getSessionId(),
+  // Session id and key (persisted in cookies for reconnection)
+  ...getSession(),
   // Auth State
   isGuest: true,
   isAuthenticated: false,
@@ -129,6 +140,12 @@ export const useUserStore = create(
           isAuthenticated: false,
           isGuest: true,
         });
+      },
+
+      /* The server refused this session: its id is claimed by another key, or
+         it has none. Start a fresh one; useSocket reconnects when it changes. */
+      resetSession: () => {
+        set(newSession());
       },
 
       continueAsGuest: (displayName = 'Player') => {

@@ -78,6 +78,11 @@ function mkTable({ random = always(0.5), people = 1, preset = 'standard', game =
   const { match } = gm.tryCreateMatch();
   director.onMatch(match);
   const room = gm.rooms.get(match.roomCode);
+  /* Daily Doubles are placed with Math.random, not this table's scripted dice,
+     so a test that opened a given clue sometimes found a Daily Double there
+     instead, its buzz went nowhere, and a different test failed each time.
+     The one test about them places its own. */
+  room.settings.enableDailyDouble = false;
   const bots = [...room.players.values()].filter((p) => p.isBot).map((p) => p.id);
   const events = (name) => heard.filter((h) => h.event === name);
   return { clock, gm, actions, director, heard, events, room, code: match.roomCode, humans, bots, match };

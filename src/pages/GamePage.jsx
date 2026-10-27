@@ -544,9 +544,10 @@ export default function GamePage() {
       setPhase('playing');
     });
 
-    // Final Jeopardy - Category reveal
-    const unsubFJStart = subscribe('game:final-jeopardy-started', ({ category, clue, answer }) => {
-      setFinalJeopardyData({ category, clue, answer });
+    // Final Jeopardy - Category reveal. The clue and the response arrive
+    // later, with the events that show them.
+    const unsubFJStart = subscribe('game:final-jeopardy-started', ({ category }) => {
+      setFinalJeopardyData({ category, clue: null, answer: null });
       setFjPhase('category');
       setFjWager(0);
       setFjAnswer('');
@@ -562,12 +563,14 @@ export default function GamePage() {
     });
 
     // Final Jeopardy - Show clue (all wagers in)
-    const unsubFJShowClue = subscribe('game:fj-show-clue', () => {
+    const unsubFJShowClue = subscribe('game:fj-show-clue', ({ clue } = {}) => {
+      setFinalJeopardyData((fj) => fj && { ...fj, clue });
       setFjPhase('clue');
     });
 
     // Final Jeopardy - Reveal results
-    const unsubFJReveal = subscribe('game:fj-reveal', ({ results }) => {
+    const unsubFJReveal = subscribe('game:fj-reveal', ({ results, answer }) => {
+      setFinalJeopardyData((fj) => fj && { ...fj, answer });
       setFjResults(results);
       setFjPhase('reveal');
       // Update all player scores

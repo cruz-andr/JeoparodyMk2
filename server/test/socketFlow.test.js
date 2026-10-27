@@ -8,6 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { Server } from 'socket.io';
 import { io as createClient } from 'socket.io-client';
 import { initializeSocketHandlers } from '../socket/index.js';
@@ -19,18 +20,26 @@ const httpServer = createServer();
 const ioServer = new Server(httpServer, { cors: { origin: '*' } });
 /* NODE_ENV=test deals quickplay the written board: a unit run must not scrape
    another site for an episode. */
-initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' } });
+const { gameManager } = initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' } });
 
 const PORT = 34117;
 const URL = `http://localhost:${PORT}`;
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Each session's key, so a test that reconnects as the same player brings the
+   same one, the way the browser keeps it in a cookie. */
+const sessionKeys = new Map();
+const keyFor = (sessionId) => {
+  if (!sessionKeys.has(sessionId)) sessionKeys.set(sessionId, randomUUID());
+  return sessionKeys.get(sessionId);
+};
+
 /** Connect a client with a stable session id (the reconnection identity). */
 function connect(sessionId) {
   return new Promise((resolve, reject) => {
     const socket = createClient(URL, {
-      auth: { sessionId },
+      auth: { sessionId, sessionKey: keyFor(sessionId) },
       transports: ['websocket'],
       forceNew: true,
     });
@@ -255,7 +264,10 @@ async function run() {
     await once(guest, 'game:question-selected');
 
     guest.emit('game:buzz-in', { roomCode, reactionTime: 40 });
-    host.emit('host:skip-question', { roomCode });
+    await wait(100);
+    // The clue goes away inside the collection window. Straight onto the room:
+    // in an ordinary game nobody may skip a clue for everyone.
+    gameManager.clearCurrentQuestion(roomCode);
 
     assert.ok(
       await notEmitted(guest, 'game:buzzer-winner', 900),
@@ -382,8 +394,10 @@ async function run() {
       host.emit('game:select-question', { roomCode, categoryIndex: c, pointIndex: r });
       const payload = await selected;
       if (payload.isDailyDouble) sawDailyDouble = true;
-      host.emit('host:skip-question', { roomCode });
-      await wait(60);
+      // Clear the clue to move on; nobody may skip one in an ordinary game.
+      gameManager.clearAnswerTimeout(roomCode);
+      gameManager.clearBuzzTimeout(roomCode);
+      gameManager.clearCurrentQuestion(roomCode);
     }
     assert.ok(sawDailyDouble, 'the setting was sent at creation, so it must apply');
   });
@@ -428,10 +442,11 @@ async function run() {
     const { host, guest, roomCode, hostId, guestId } = await startGame();
     open.push(host, guest);
 
-    // Give both players a positive score so both are eligible.
-    host.emit('host:override-score', { roomCode, playerId: hostId, newScore: 500 });
-    host.emit('host:override-score', { roomCode, playerId: guestId, newScore: 500 });
-    await wait(150);
+    // Give both players a positive score so both are eligible. Straight onto
+    // the room: in an ordinary game nobody may override scores.
+    const room = gameManager.rooms.get(roomCode);
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
 
     host.emit('game:start-final-jeopardy', { roomCode });
     await once(guest, 'game:final-jeopardy-started');
@@ -472,6 +487,135 @@ async function run() {
     const codes = new Set(payloads.map((m) => m.roomCode));
     assert.equal(codes.size, 1, 'everyone lands in the same room');
     assert.equal(payloads[0].players.length, 3);
+  });
+
+  /* A player's session id is in every payload that names them, so everyone at
+     the table has it, and the handshake used to take it as given. Anyone could
+     connect as another player and buzz, answer or leave for them. */
+  await test('nobody can connect as another player by sending their id', async (open) => {
+    const { host, guest, guestId } = await startGame();
+    open.push(host, guest);
+
+    const impostor = createClient(URL, {
+      auth: { sessionId: guestId, sessionKey: randomUUID() },
+      transports: ['websocket'], forceNew: true, reconnection: false,
+    });
+    open.push(impostor);
+    const refused = await new Promise((resolve) => {
+      impostor.on('connect', () => resolve(null));
+      impostor.on('connect_error', (err) => resolve(err.message));
+    });
+    assert.equal(refused, 'session-taken');
+
+    const bare = createClient(URL, {
+      auth: { sessionId: `someone-${Math.random()}` }, transports: ['websocket'], forceNew: true, reconnection: false,
+    });
+    open.push(bare);
+    const keyless = await new Promise((resolve) => {
+      bare.on('connect', () => resolve(null));
+      bare.on('connect_error', (err) => resolve(err.message));
+    });
+    assert.equal(keyless, 'session-key-required');
+  });
+
+  /* A hosted room's players are judged by the host, so they never need the
+     responses. They were sent the whole board anyway, responses and the
+     multiple-choice options in written order (the correct one first), and
+     every clue again with its response as it was opened. */
+  await test('the players in a hosted room are not sent the responses', async (open) => {
+    const host = await connect(`hh-${Math.random()}`);
+    const guest = await connect(`hg-${Math.random()}`);
+    open.push(host, guest);
+
+    const { roomCode } = await emitAck(host, 'room:create', {
+      type: 'host', settings: { enableDailyDouble: false, answerMode: 'verbal' },
+    });
+    const hostJoin = await emitAck(host, 'room:join', { roomCode, displayName: 'Host' });
+    await emitAck(guest, 'room:join', { roomCode, displayName: 'Guest' });
+
+    const written = board();
+    written[0][0].options = [written[0][0].question, 'decoy 1', 'decoy 2', 'decoy 3'];
+
+    const guestBoard = once(guest, 'game:questions-ready');
+    const hostBoard = once(host, 'game:questions-ready');
+    host.emit('game:set-questions', {
+      roomCode, questions: written, categories: ['A', 'B'], firstPickerId: hostJoin.players[0].id,
+    });
+    const seen = await guestBoard;
+    for (const clue of seen.questions.flat()) {
+      assert.equal(clue.question, undefined, 'no response on the board');
+      assert.equal(clue.options, undefined, 'no options in written order');
+      assert.ok(clue.answer, 'the clue itself is still there');
+    }
+    assert.equal((await hostBoard).questions[0][0].question, written[0][0].question, 'the host keeps them');
+
+    const guestClue = once(guest, 'game:question-selected');
+    const hostClue = once(host, 'game:question-selected');
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    const opened = await guestClue;
+    assert.equal(opened.question.question, undefined, 'no response with the clue');
+    assert.equal(opened.question.options.length, 4, 'the options still come, shuffled');
+    assert.equal((await hostClue).question.question, written[0][0].question);
+
+    const back = gameManager.reconnectPlayer({ id: 'later', sessionId: [...gameManager.rooms.get(roomCode).players.keys()][1] }, roomCode);
+    assert.equal(back.gameState.currentQuestion.question, undefined, 'nor on a reconnect');
+    assert.equal(back.gameState.questions[1][1].question, undefined);
+  });
+
+  /* host:skip-question cleared the buzz and answer timers before anything
+     checked who sent it, so any player could leave a clue with no timer to
+     end it, and the room hung. */
+  await test('a player cannot cancel the clue timers with host:skip-question', async (open) => {
+    const { host, guest, roomCode } = await startGame({ buzzMs: 700 });
+    open.push(host, guest);
+
+    const selected = once(guest, 'game:question-selected');
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await selected;
+
+    const timedOut = once(host, 'game:buzz-timeout-result', 2500);
+    guest.emit('host:skip-question', { roomCode });
+    host.emit('host:skip-question', { roomCode });
+    assert.ok(await timedOut, 'the clue still times out');
+  });
+
+  await test('the creator of an ordinary room cannot set scores', async (open) => {
+    const { host, guest, roomCode, hostId } = await startGame();
+    open.push(host, guest);
+    host.emit('host:override-score', { roomCode, playerId: hostId, newScore: 99999 });
+    assert.ok(await notEmitted(guest, 'host:score-overridden'));
+    assert.equal(gameManager.rooms.get(roomCode).players.get(hostId).score, 0);
+  });
+
+  /* The clue went out with the category, before anyone had wagered, and the
+     correct response with it, which the server then graded typed answers
+     against. Anyone reading the socket frames won Final Jeopardy. */
+  await test('Final Jeopardy sends the clue only once wagers are in, and the response only at the reveal', async (open) => {
+    const { host, guest, roomCode, hostId, guestId } = await startGame();
+    open.push(host, guest);
+    const room = gameManager.rooms.get(roomCode);
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
+
+    const started = once(guest, 'game:final-jeopardy-started');
+    host.emit('game:start-final-jeopardy', { roomCode });
+    const start = await started;
+    assert.ok(start.category, 'the category is shown first');
+    assert.equal(start.clue, undefined, 'no clue before the wagers');
+    assert.equal(start.answer, undefined, 'no response before the reveal');
+
+    const shown = once(guest, 'game:fj-show-clue');
+    host.emit('game:fj-wager', { roomCode, wager: 100 });
+    guest.emit('game:fj-wager', { roomCode, wager: 100 });
+    const { clue } = await shown;
+    assert.equal(clue, room.gameState.finalJeopardy.clue);
+
+    const revealed = once(guest, 'game:fj-reveal');
+    host.emit('game:fj-answer', { roomCode, answer: 'x' });
+    guest.emit('game:fj-answer', { roomCode, answer: 'y' });
+    const reveal = await revealed;
+    assert.equal(reveal.answer, room.gameState.finalJeopardy.answer);
+    assert.equal(reveal.results.length, 2);
   });
 
   /* Handlers destructured their payload and called their callback blind, so

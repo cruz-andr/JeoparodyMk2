@@ -6,6 +6,7 @@
  * is about the live one.
  */
 import { io } from 'socket.io-client';
+import { randomUUID } from 'node:crypto';
 import { launch } from './driver.mjs';
 const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
@@ -74,7 +75,7 @@ try {
   await b.until("document.querySelectorAll('.ge-cell.is-written').length === 30", { timeout: 10000 });
 
   const join = async (roomCode, sessionId, displayName) => {
-    const socket = io('http://127.0.0.1:3995', { auth: { sessionId }, transports: ['websocket'] });
+    const socket = io('http://127.0.0.1:3995', { auth: { sessionId, sessionKey: randomUUID() }, transports: ['websocket'] });
     await new Promise((r, j) => { socket.on('connect', r); socket.on('connect_error', j); });
     await new Promise((r, j) => socket.emit('room:join',
       { roomCode, displayName, signature: null },

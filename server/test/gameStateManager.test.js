@@ -168,6 +168,66 @@ test('only the picker may wager on a Daily Double', () => {
   assert.equal(gm.handleDailyDoubleWager(code, sockets[1].sessionId, 500), null);
 });
 
+/* The confirmed wager carries the clue, so a second wager was a wager made
+   after reading it. And an answer was taken with no wager at all, at $0. */
+test('a Daily Double wager is locked once the clue is shown', () => {
+  const { gm, code, sockets, room } = mkGame({ settings: { enableDailyDouble: true } });
+  room.gameState.dailyDoubles = [{ categoryIndex: 0, pointIndex: 0 }];
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  assert.equal(gm.handleDailyDoubleWager(code, sockets[0].sessionId, 5).wager, 5);
+  assert.equal(gm.handleDailyDoubleWager(code, sockets[0].sessionId, 1000), null);
+  assert.equal(room.gameState.dailyDoubleWager, 5);
+});
+
+test('a Daily Double answer needs a wager first', () => {
+  const { gm, code, sockets, room } = mkGame({ settings: { enableDailyDouble: true } });
+  room.gameState.dailyDoubles = [{ categoryIndex: 0, pointIndex: 0 }];
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  assert.equal(gm.handleDailyDoubleAnswer(code, sockets[0].sessionId, false), null);
+  assert.ok(room.gameState.currentQuestion, 'the Daily Double is still up');
+});
+
+test('a Daily Double answer cannot end an ordinary clue', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  assert.equal(gm.handleDailyDoubleAnswer(code, sockets[0].sessionId, true), null);
+  assert.ok(room.gameState.currentQuestion, 'the clue is still up for the others');
+});
+
+/* selectQuestion only checked whose turn it was, so the picker could open a
+   new clue on top of a live one: wiping another player's buzz, or walking
+   away from a Daily Double after reading it. */
+test('the picker cannot open a clue while one is live', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+
+  assert.equal(gm.selectQuestion(sockets[0], code, 1, 0), null);
+  assert.equal(room.gameState.buzzedPlayerId, sockets[1].sessionId, 'the buzz stands');
+  assert.equal(room.gameState.questions[1][0].revealed, false);
+});
+
+test('the picker cannot walk away from a Daily Double', () => {
+  const { gm, code, sockets, room } = mkGame({ settings: { enableDailyDouble: true } });
+  room.gameState.dailyDoubles = [{ categoryIndex: 0, pointIndex: 0 }];
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.handleDailyDoubleWager(code, sockets[0].sessionId, 1000);
+  assert.equal(gm.selectQuestion(sockets[0], code, 1, 0), null);
+  assert.equal(room.gameState.isDailyDouble, true);
+});
+
+test('the picker can open the next clue once the last one is settled', () => {
+  const { gm, code, sockets } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.recordBuzz(code, sockets[0].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  gm.handleAnswer(code, sockets[0].sessionId, true);
+  assert.ok(gm.selectQuestion(sockets[0], code, 1, 0));
+});
+
 test('a Final Jeopardy wager cannot exceed the player score', () => {
   const { gm, code, sockets, room } = mkGame();
   room.players.get(sockets[0].sessionId).score = 1200;
@@ -1011,6 +1071,63 @@ test('an ineligible player cannot wager or answer in Final Jeopardy', () => {
   assert.equal(gm.submitFJAnswer(code, sockets[1].sessionId, 'x'), false);
 });
 
+/* On the show a wager is locked in before the clue is seen. A second wager
+   used to overwrite the first, so a player could raise it once the clue was
+   on screen and they knew they had it. */
+test('a Final Jeopardy wager is locked once placed, and none is taken after the clue', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.players.get(sockets[0].sessionId).score = 1000;
+  room.players.get(sockets[1].sessionId).score = 1000;
+  gm.startFinalJeopardy(code);
+  const fj = room.gameState.finalJeopardy;
+
+  assert.equal(gm.submitFJWager(code, sockets[0].sessionId, 100), false);
+  assert.equal(gm.submitFJWager(code, sockets[0].sessionId, 900), false);
+  assert.equal(fj.wagers.get(sockets[0].sessionId), 100, 'the first wager stands');
+
+  assert.equal(gm.submitFJWager(code, sockets[1].sessionId, 200), true, 'all in: the clue is shown');
+  assert.equal(gm.submitFJWager(code, sockets[1].sessionId, 1000), false);
+  assert.equal(fj.wagers.get(sockets[1].sessionId), 200);
+});
+
+test('no Final Jeopardy answer is taken before the clue is shown', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.players.get(sockets[0].sessionId).score = 1000;
+  room.players.get(sockets[1].sessionId).score = 1000;
+  gm.startFinalJeopardy(code);
+  const fj = room.gameState.finalJeopardy;
+
+  gm.submitFJWager(code, sockets[0].sessionId, 100);
+  assert.equal(gm.submitFJAnswer(code, sockets[0].sessionId, fj.answer), false);
+  assert.equal(fj.answers.has(sockets[0].sessionId), false);
+});
+
+/* A reconnect or a late join used to hand over room.gameState whole: the
+   Final Jeopardy clue and response before anyone had wagered, and where the
+   Daily Doubles were hidden on the board. */
+test('a reconnecting player is not sent the hidden Final Jeopardy clue or the Daily Doubles', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.gameState.dailyDoubles = [{ categoryIndex: 2, pointIndex: 3 }];
+  room.players.get(sockets[0].sessionId).score = 1000;
+  gm.startFinalJeopardy(code);
+
+  const back = gm.reconnectPlayer(sockets[1], code);
+  assert.equal(back.gameState.dailyDoubles, undefined);
+  assert.equal(back.gameState.finalJeopardy.category, room.gameState.finalJeopardy.category);
+  assert.equal(back.gameState.finalJeopardy.clue, undefined);
+  assert.equal(back.gameState.finalJeopardy.answer, undefined);
+  assert.equal(room.gameState.dailyDoubles.length, 1, 'the room itself keeps them');
+});
+
+test('a late joiner is not sent where the Daily Doubles are', () => {
+  const { gm, code, room } = mkGame({ count: 2 });
+  room.status = 'in_progress';
+  room.gameState.dailyDoubles = [{ categoryIndex: 2, pointIndex: 3 }];
+  const late = gm.joinRoom(mkSocket(), code, 'Late');
+  assert.ok(late.gameState.questions, 'the board still comes with it');
+  assert.equal(late.gameState.dailyDoubles, undefined);
+});
+
 // =========================================================================
 // 6b. Answer grading
 // =========================================================================
@@ -1617,6 +1734,22 @@ test('a clue nobody answered is counted against nobody', () => {
   gm.selectQuestion(sockets[0], code, 0, 0);
   gm.handleBuzzTimeout(code);
   for (const p of room.players.values()) assert.equal(p.answered || 0, 0);
+});
+
+/* Every room records its creator as hostId, so checking hostId alone gave the
+   creator of an ordinary game the host's powers over the people they were
+   playing against: set any score, judge anyone, skip any clue. */
+test('host-only moves are refused in a room that is not hosted', () => {
+  const { gm, code, sockets, room } = mkGame();
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  const creator = sockets[0].sessionId;
+
+  assert.equal(gm.overridePlayerScore(code, creator, creator, 99999, 'mine'), null);
+  assert.equal(room.players.get(creator).score, 0);
+  assert.equal(gm.hostJudgeAnswer(code, creator, sockets[1].sessionId, false), null);
+  assert.equal(gm.skipQuestion(code, creator), null);
+  assert.ok(room.gameState.currentQuestion, 'the clue is still up');
+  assert.equal(gm.setHostQuestions(code, mkBoard(), ['A', 'B', 'C', 'D', 'E', 'F'], creator), null);
 });
 
 /* A suggestion used to read gameState.questions and gameState.suggestions

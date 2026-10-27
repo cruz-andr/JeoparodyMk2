@@ -401,9 +401,12 @@ await test('in a multiplayer room the host is a player like anyone else', () => 
 
 await test('best score still only rises through the room path', () => {
   const before = statsFor('u-bob').bestScore;
-  recordRoomGame(db, mkRoom('quickplay', [player('s1', { userId: 'u-bob', score: -500, answered: 2 })]));
+  const room = mkRoom('quickplay', [player('s1', { userId: 'u-bob', score: -500, answered: 2 })], { persisted: true });
+  recordRoomGame(db, room);
   assert.equal(statsFor('u-bob').bestScore, before);
-  assert.equal(rowsFor('u-bob').at(-1).score, -500, 'the loss is still on the record');
+  /* Found by its room, not by position: rowsFor is newest first, and .at(-1)
+     was the oldest row, which only matched while every row shared a second. */
+  assert.equal(rowsFor('u-bob').find((r) => r.room_id === room.id)?.score, -500, 'the loss is still on the record');
 });
 
 closeDatabase();

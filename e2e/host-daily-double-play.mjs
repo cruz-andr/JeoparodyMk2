@@ -7,6 +7,7 @@
  * opened and nothing on any screen could move the game on.
  */
 import { io } from 'socket.io-client';
+import { randomUUID } from 'node:crypto';
 import { launch } from './driver.mjs';
 const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
@@ -73,7 +74,7 @@ try {
   await b.until("document.querySelectorAll('.ge-cell.is-double').length === 1", { timeout: 8000 });
 
   const joinPlayers = async (roomCode) => {
-    player = io('http://127.0.0.1:3995', { auth: { sessionId: `dd-${STAMP}` }, transports: ['websocket'] });
+    player = io('http://127.0.0.1:3995', { auth: { sessionId: `dd-${STAMP}`, sessionKey: randomUUID() }, transports: ['websocket'] });
     await new Promise((r, j) => { player.on('connect', r); player.on('connect_error', j); });
     await new Promise((r, j) => player.emit('room:join',
       { roomCode, displayName: 'Ada', signature: null },

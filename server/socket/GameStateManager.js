@@ -154,9 +154,9 @@ export class GameStateManager {
       isLateJoin,
     };
 
-    // Late joiners need the full game state to render the board
+    // Late joiners need the game state to render the board
     if (isLateJoin) {
-      result.gameState = room.gameState;
+      result.gameState = this.publicGameState(room, playerId);
     }
 
     return result;
@@ -323,6 +323,11 @@ export class GameStateManager {
     if (room.gameState.currentPickerId !== playerId) {
       return null; // Not their turn
     }
+
+    // One clue at a time. The picker keeps currentPickerId for the whole clue,
+    // so without this they could open another on top of a live one, wiping
+    // the buzz of whoever was answering, or walk away from a Daily Double.
+    if (room.gameState.currentQuestion) return null;
 
     const question = room.gameState.questions[categoryIndex]?.[pointIndex];
     if (!question || question.revealed) return null;
@@ -622,9 +627,10 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    // Verify this is the picker and we're in Daily Double phase
+    // Verify this is the picker and the wager is still open. The confirmed
+    // wager carries the clue, so a second one would be made after reading it.
     if (room.gameState.currentPickerId !== playerId) return null;
-    if (!room.gameState.isDailyDouble) return null;
+    if (!room.gameState.isDailyDouble || room.gameState.phase !== 'dailyDouble') return null;
 
     const clamped = this.clampDailyDoubleWager(room, playerId, wager);
     room.gameState.dailyDoubleWager = clamped;
@@ -647,7 +653,7 @@ export class GameStateManager {
    */
   hostDailyDoubleWager(roomCode, hostId, playerId, wager) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!room.gameState?.isDailyDouble) return null;
 
     const player = room.players.get(playerId);
@@ -669,7 +675,7 @@ export class GameStateManager {
   /** The verdict on a Daily Double, which pays the wager rather than the clue. */
   hostDailyDoubleAnswer(roomCode, hostId, correct) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!room.gameState?.isDailyDouble) return null;
 
     const playerId = room.gameState.dailyDoubleOwnerId;
@@ -713,8 +719,11 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
 
-    // Verify this is the picker
+    // Verify this is the picker, on a Daily Double they have wagered on.
+    // Without the second check the answer was taken at $0 with no wager, and
+    // sent during an ordinary clue it ended that clue for everyone.
     if (room.gameState.currentPickerId !== playerId) return null;
+    if (!room.gameState.isDailyDouble || room.gameState.phase !== 'dailyDoubleQuestion') return null;
 
     const player = room.players.get(playerId);
     if (!player) return null;
@@ -859,14 +868,20 @@ export class GameStateManager {
     // Only eligible players can wager
     if (!fj.eligiblePlayers.has(playerId)) return false;
 
+    // A wager is locked in before the clue is seen, as on the show. Taking a
+    // second one let a player raise it once they had read the clue.
+    if (fj.clueShown || fj.wagers.has(playerId)) return false;
+
     // Jeopardy rule: you can wager anything from $0 up to your own score.
     const score = room.players.get(playerId)?.score || 0;
     const requested = Number.isFinite(Number(wager)) ? Math.floor(Number(wager)) : 0;
     fj.wagers.set(playerId, Math.min(Math.max(requested, 0), Math.max(score, 0)));
 
-    // Check if everyone still playing has wagered
+    // Check if everyone still playing has wagered; if so, the clue goes up
     const participants = this.getFJParticipants(room);
-    return participants.length > 0 && participants.every(id => fj.wagers.has(id));
+    const allIn = participants.length > 0 && participants.every(id => fj.wagers.has(id));
+    if (allIn) fj.clueShown = true;
+    return allIn;
   }
 
   submitFJAnswer(roomCode, playerId, answer) {
@@ -875,8 +890,9 @@ export class GameStateManager {
 
     const fj = room.gameState.finalJeopardy;
 
-    // Only eligible players can answer
+    // Only eligible players can answer, and only to a clue they have been shown
     if (!fj.eligiblePlayers.has(playerId)) return false;
+    if (!fj.clueShown) return false;
 
     fj.answers.set(playerId, answer);
 
@@ -1211,10 +1227,47 @@ export class GameStateManager {
       type: room.type,  // Include room type for host mode detection
       players: this.publicPlayers(room),
       settings: room.settings,
-      gameState: room.gameState,
+      gameState: this.publicGameState(room, sessionId),
       isHost: player.isHost,
       displayName: player.displayName,
     };
+  }
+
+  /**
+   * Whether this session runs a hosted room. Every room records its creator as
+   * hostId, so hostId alone also matched the creator of an ordinary game, who
+   * then got the host's judging and scoring powers over the people they were
+   * playing against. Kicking is the one host power an ordinary room keeps.
+   */
+  isHostOf(room, sessionId) {
+    return room?.type === 'host' && room.hostId === sessionId;
+  }
+
+  /**
+   * The game state as one viewer may see it. room.gameState also holds what
+   * the room has not been shown yet: where the Daily Doubles are, and the Final
+   * Jeopardy clue and response. Handing it over whole on a reconnect or a late
+   * join let anyone read those. In a hosted room the players also get the board
+   * without its responses. The host of a hosted room wrote the board, so they
+   * get it all.
+   */
+  publicGameState(room, viewerId) {
+    const gs = room.gameState;
+    if (!gs || (room.type === 'host' && viewerId === room.hostId)) return gs;
+
+    const { dailyDoubles: _dailyDoubles, finalJeopardy: fj, ...shown } = gs;
+    if (room.type === 'host') {
+      shown.questions = playerBoard(gs.questions);
+      shown.currentQuestion = playerClue(gs.currentQuestion);
+    }
+    if (fj) {
+      shown.finalJeopardy = {
+        category: fj.category,
+        ...(fj.clueShown ? { clue: fj.clue } : {}),
+        ...(fj.results ? { answer: fj.answer } : {}),
+      };
+    }
+    return shown;
   }
 
   // Utilities
@@ -1282,7 +1335,7 @@ export class GameStateManager {
   // Set custom questions from host
   setHostQuestions(roomCode, questions, categories, hostId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
 
     room.gameState = room.gameState || {};
     room.gameState.questions = questions;
@@ -1584,7 +1637,7 @@ export class GameStateManager {
   // Host judges an answer
   hostJudgeAnswer(roomCode, hostId, playerId, correct) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!this.ensureAnswerState(room)) return null;
 
     const player = room.players.get(playerId);
@@ -1664,7 +1717,7 @@ export class GameStateManager {
   // Host overrides player score
   overridePlayerScore(roomCode, hostId, playerId, newScore, reason) {
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
 
     const player = room.players.get(playerId);
     if (!player) return null;
@@ -1689,7 +1742,7 @@ export class GameStateManager {
   // Host skips current question
   skipQuestion(roomCode, hostId) {
     const room = this.rooms.get(roomCode);
-    if (room?.hostId !== hostId) return null;
+    if (!this.isHostOf(room, hostId)) return null;
     if (!this.ensureAnswerState(room)) return null;
 
     // Clear current question state
@@ -1848,6 +1901,24 @@ const MIN_COVERAGE = 0.6;
 // Strips everything that should not decide whether an answer is right: the
 // "What is ...?" wrapper, punctuation, casing, a leading article, and any
 // irregular spacing.
+/* What the players of a hosted room may see of a clue and of the board. The
+   host judges them, so they never need the response (`question`), and the
+   board's multiple-choice options are in written order, correct one first. A
+   clue's options are sent, shuffled, only when it is opened. */
+export const playerClue = (clue) => {
+  if (!clue) return clue;
+  const { question: _response, ...shown } = clue;
+  return shown;
+};
+export const playerBoard = (questions) => (Array.isArray(questions)
+  ? questions.map((column) => (Array.isArray(column)
+    ? column.map((clue) => {
+      const { options: _options, ...shown } = playerClue(clue) || {};
+      return shown;
+    })
+    : column))
+  : questions);
+
 export function normalizeAnswer(value) {
   return String(value ?? '')
     .toLowerCase()

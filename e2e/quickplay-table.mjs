@@ -61,7 +61,10 @@ try {
   await a.until("document.querySelector('.qp-state')?.dataset.state === 'found'", { timeout: 75000 });
   const filledAt = (Date.now() - startedAt) / 1000;
   check('alone past twenty seconds, other players join', filledAt >= 19 && filledAt < 60, `${filledAt.toFixed(1)}s`);
-  check('and not on a round number', Math.abs(filledAt - Math.round(filledAt)) > 0.02, `${filledAt.toFixed(2)}s`);
+  /* Whether the fill time is jittered is checked in gameStateManager.test.js,
+     with the dice scripted. A browser cannot see it: the queue is settled on a
+     five-second tick whose phase against this test is arbitrary, so "not
+     within 0.02s of a whole second" held or failed by chance (24.99s once). */
   /* They arrive one at a time, so a beat after the first there is still a
      player to come. */
   const partway = await a.evaluate("document.querySelectorAll('.st-plate.is-open').length");

@@ -355,11 +355,13 @@ export function createQuickplayDirector({
     afterClue(code);
   }
 
-  function onFinalStarted(code, { answer }) {
+  function onFinalStarted(code) {
     const table = tableOf(code);
     const room = roomOf(code);
     if (!table || !room) return;
-    table.fjAnswer = answer;
+    /* The house reads the response off the room, not the broadcast: the
+       players are not sent it until the reveal. */
+    table.fjAnswer = room.gameState?.finalJeopardy?.answer ?? null;
     const eligible = room.gameState?.finalJeopardy?.eligiblePlayers ?? new Set();
     const all = scores(room);
     for (const [botId, bot] of table.bots) {
@@ -417,7 +419,7 @@ export function createQuickplayDirector({
         case 'game:buzz-timeout-result': onBuzzTimeout(code); break;
         case 'game:all-continued': onAllContinued(code, payload); break;
         case 'game:daily-double-result': onDailyDoubleResult(code, payload); break;
-        case 'game:final-jeopardy-started': onFinalStarted(code, payload); break;
+        case 'game:final-jeopardy-started': onFinalStarted(code); break;
         case 'game:fj-show-clue': onFinalClue(code); break;
         case 'game:fj-reveal':
           later(code, FINAL_REVEAL_MS, () => actions.endGame(code));
