@@ -127,6 +127,16 @@ try {
   const revealed = await a.evaluate("document.querySelectorAll('.question-cell.revealed').length");
   check('the board remembers the clue', revealed >= 1, `${revealed} revealed`);
 
+  // --- a reload comes back to the game as it stands --------------------------
+  await a.evaluate('location.reload()');
+  await a.until("document.querySelectorAll('.category-header').length === 6", { timeout: 20000 });
+  await a.until("!document.querySelector('.loading-overlay')", { timeout: 10000 });
+  check('a reload comes back to the board, not the lobby', true);
+  const afterReload = await a.evaluate("document.querySelectorAll('.question-cell.revealed').length");
+  check('with the clues already played still played', afterReload >= revealed, `${afterReload} revealed`);
+  check('and the same three players, no second copy of anyone',
+    (await a.evaluate("document.querySelectorAll('.player-chip').length")) === 3);
+
   // --- the words --------------------------------------------------------------
   const copy = await a.evaluate("document.body.innerText");
   check('no em dashes anywhere on the game page', !copy.includes('—'));

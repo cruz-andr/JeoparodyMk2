@@ -372,12 +372,26 @@ export default function HostPage() {
       const two = boardToHost(rounds[2]);
       setCategories(one.categories);
       setQuestions(one.questions);
+      /* Carried so the game never has to invent a second round or reach for
+         one of five hardcoded finals. See GamePage. */
+      const round2 = doubleOn
+        ? {
+          categories: two.categories,
+          questions: two.questions,
+          dailyDoubles: placing ? doubles[2] : null,
+        }
+        : null;
+      const finalJeopardy = finalOn ? final : null;
 
+      /* The rounds still to come go to the server too, which keeps them for
+         the host alone: if they only lived on this page, a reload lost them. */
       socketClient.emit('host:set-custom-questions', {
         roomCode: code,
         categories: one.categories,
         questions: one.questions,
         dailyDoubles: placing ? doubles[1] : null,
+        round2,
+        finalJeopardy,
       });
 
       sessionStorage.setItem('jeopardy_fresh_join', 'true');
@@ -389,16 +403,8 @@ export default function HostPage() {
             answerMode,
             projectorMode,
             dailyDoubles: placing ? doubles[1] : null,
-            /* Carried so the game never has to invent a second round or reach
-               for one of five hardcoded finals. See GamePage. */
-            round2: doubleOn
-              ? {
-                categories: two.categories,
-                questions: two.questions,
-                dailyDoubles: placing ? doubles[2] : null,
-              }
-              : null,
-            finalJeopardy: finalOn ? final : null,
+            round2,
+            finalJeopardy,
           },
         },
       });

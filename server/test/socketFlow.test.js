@@ -637,6 +637,76 @@ async function run() {
     assert.equal(typeof bare.success, 'boolean', 'a callback with no payload still gets an answer');
   });
 
+  // --- Phase 4: players coming and going ---------------------------------
+
+  await test('the host leaving a hosted game ends it for the players, rather than stranding them', async (open) => {
+    const { host, guest, roomCode, hostId } = await startHostGame();
+    open.push(host, guest);
+    // The host presses Start, as the page does.
+    const started = once(guest, 'game:questions-ready');
+    host.emit('game:set-questions', { roomCode, questions: board(), categories: ['A', 'B'], firstPickerId: hostId });
+    await started;
+
+    const ended = once(guest, 'game:ended');
+    host.emit('room:leave', { roomCode });
+    await ended;
+  });
+
+  await test('rejoining a game in progress by its code brings the game back and adds no second seat', async (open) => {
+    const { host, guest, roomCode, guestId: guestSession } = await startGame();
+    open.push(host, guest);
+    guest.disconnect();
+    await wait(100);
+
+    const joinedAgain = notEmitted(host, 'room:player-joined', 600);
+    const reconnected = once(host, 'room:player-reconnected').then(() => true, () => false);
+    const back = await connect(guestSession);
+    open.push(back);
+    const ack = await emitAck(back, 'room:join', { roomCode, displayName: 'Guest' });
+    assert.equal(ack.success, true);
+    assert.equal(ack.isRejoin, true);
+    assert.ok(ack.gameState?.questions, 'the board comes with the ack');
+    assert.equal(ack.players.length, 2);
+    assert.equal(await reconnected, true, 'the others are told the player is back');
+    assert.equal(await joinedAgain, true, 'nobody is told a new player arrived');
+  });
+
+  await test('a host who reloads gets back the second round and final they wrote', async (open) => {
+    const host = await connect(`h-${Math.random()}`);
+    const guest = await connect(`g-${Math.random()}`);
+    open.push(host, guest);
+    const { roomCode } = await emitAck(host, 'room:create', { type: 'host', settings: { enableDailyDouble: false } });
+    await emitAck(host, 'room:join', { roomCode, displayName: 'Host' });
+    await emitAck(guest, 'room:join', { roomCode, displayName: 'Guest' });
+    const round2 = { categories: ['X', 'Y'], questions: board(), dailyDoubles: null };
+    const finalJeopardy = { category: 'F', answer: 'the clue', question: 'the response' };
+    await emitAck(host, 'host:set-custom-questions', {
+      roomCode, questions: board(), categories: ['A', 'B'], round2, finalJeopardy,
+    });
+
+    const hostBack = await emitAck(host, 'room:reconnect', { roomCode });
+    assert.deepEqual(hostBack.hostPlan.finalJeopardy, finalJeopardy);
+    assert.deepEqual(hostBack.hostPlan.round2.categories, ['X', 'Y']);
+    assert.equal(hostBack.status, 'waiting', 'still the lobby: the game has not been started');
+    const guestBack = await emitAck(guest, 'room:reconnect', { roomCode });
+    assert.equal(guestBack.hostPlan, undefined, 'the players are not sent the host\'s answers');
+  });
+
+  await test('a player whose connection drops during Final Jeopardy does not hold up the clue', async (open) => {
+    const { host, guest, roomCode } = await startGame();
+    open.push(host, guest);
+    for (const p of gameManager.rooms.get(roomCode).players.values()) p.score = 1000;
+    const started = once(guest, 'game:final-jeopardy-started');
+    host.emit('game:start-final-jeopardy', { roomCode });
+    await started;
+
+    const clue = once(host, 'game:fj-show-clue').then(() => true, () => false);
+    host.emit('game:fj-wager', { roomCode, wager: 100 });
+    await wait(100);
+    guest.disconnect();
+    assert.equal(await clue, true, 'the clue goes up for the player still here');
+  });
+
   console.log(`\n${passed} passed, ${failures.length} failed\n`);
   for (const { name, err } of failures) {
     console.log(`  FAIL  ${name}`);

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useReducer } from 'react';
 import { socketClient } from '../services/socket/socketClient';
 import { useRoomStore, useUserStore } from '../stores';
-import { initialWait, needsJoin, waitReducer } from './matchmakingWait';
+import { initialWait, leavesOnExit, needsJoin, waitReducer } from './matchmakingWait';
 
 // socketClient is a singleton, so these bindings never change. Creating them
 // per render made the object returned by useSocket unstable, which forced every
@@ -214,6 +214,14 @@ export function useMatchmaking() {
   const { isConnected, subscribe } = useSocket();
   const [wait, dispatch] = useReducer(waitReducer, initialWait);
   const { wants, isInQueue } = wait;
+  // Read when the page goes, which is after the render that last set it.
+  const waitRef = useRef(wait);
+  waitRef.current = wait;
+
+  // Walking away from the search takes the player out of the queue.
+  useEffect(() => () => {
+    if (leavesOnExit(waitRef.current)) socketApi.leaveMatchmaking();
+  }, []);
 
   // What the server says about the queue.
   useEffect(() => {
