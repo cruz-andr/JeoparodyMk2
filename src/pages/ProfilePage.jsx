@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores';
 import { useDailyStore } from '../stores/dailyStore';
-import { currentWeekBest, toDateString } from '../stores/dailyLogic';
+import { currentWeekBest, liveStreak, toDateString } from '../stores/dailyLogic';
 import { useGameRecord } from '../hooks/useGameRecord';
 import { describeGame, deviceOnlyNote, modeLabel, money as gameMoney, whenPlayed } from '../utils/gameRecord';
 import Icon from '../components/common/Icon';
@@ -85,10 +85,10 @@ export default function ProfilePage() {
 
         <div className="profile-record">
           <div className="profile-stat">
-            <b>{dailyStats.board.currentStreak}</b><span>Board streak</span>
+            <b>{liveStreak(dailyStats.board, toDateString())}</b><span>Board streak</span>
           </div>
           <div className="profile-stat">
-            <b>{dailyStats.sixer.currentStreak}</b><span>Sixer streak</span>
+            <b>{liveStreak(dailyStats.sixer, toDateString())}</b><span>Sixer streak</span>
           </div>
           <div className="profile-stat">
             <b>{money(weekBest)}</b><span>Best this week</span>

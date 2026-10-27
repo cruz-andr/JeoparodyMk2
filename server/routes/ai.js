@@ -94,8 +94,10 @@ router.post('/category', wrap(async (req, res) => {
 /** Five clues for each named category. Answers with { categories: [...] }. */
 router.post('/questions', wrap(async (req, res) => {
   const categories = names(req.body?.categories, 'categories');
-  const pointValues = values(req.body?.pointValues);
+  values(req.body?.pointValues); // still refused when malformed, as it always was
   const round = Number(req.body?.round) === 2 ? 2 : 1;
+  // The round sets what a clue is worth; a page asking for other values does not.
+  const pointValues = model.ROUND_VALUES[round];
   const difficulty = Object.hasOwn(model.DIFFICULTY_NOTES, req.body?.difficulty)
     ? req.body.difficulty
     : 'mixed';

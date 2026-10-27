@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
 import { useUserStore } from '../stores';
 import { canPlayDate, toDateString } from '@shared/archiveWindow.js';
+import { isArchiveRunFor, liveStreak } from '../stores/dailyLogic';
 import { getChallengeForDate, getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
 import { useAudio } from '../hooks';
@@ -107,7 +108,8 @@ export default function DailyPage() {
         }
 
         // Already open on this very day, part way through: leave it alone.
-        if (archiveRun.date === archiveDate && archiveRun.questions.length > 0) {
+        // The slot is shared with the other daily, so its format is checked too.
+        if (isArchiveRunFor(archiveRun, { date: archiveDate, format: FORMAT })) {
           setLoading(false);
           return;
         }
@@ -312,9 +314,9 @@ export default function DailyPage() {
           <p className="daily-date">{formatDisplayDate(todayDate)}</p>
         </div>
         <div className="daily-stats-mini">
-          {formatStats.currentStreak > 0 && (
+          {liveStreak(formatStats, toDateString()) > 0 && (
             <span className="streak-badge" title="Current streak">
-              {formatStats.currentStreak} day streak
+              {liveStreak(formatStats, toDateString())} day streak
             </span>
           )}
         </div>

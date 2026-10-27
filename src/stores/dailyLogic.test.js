@@ -16,6 +16,8 @@ import {
   emptyFormatStats,
   startOfWeek,
   currentWeekBest,
+  liveStreak,
+  isArchiveRunFor,
   boardGridRows,
   encodeAnswers,
   decodeAnswers,
@@ -485,6 +487,37 @@ test('every state is a different square, in both palettes', () => {
     const seen = ['correct', 'wrong', 'passed'].map((m) => markEmoji(m, contrast));
     assert.equal(new Set(seen).size, 3, `three distinct squares (highContrast=${contrast})`);
   }
+});
+
+// ------------------------------------------------------------ Phase 5
+
+test('a run finished after midnight counts for its own day, not the next', () => {
+  const stats = { ...emptyFormatStats(), lastPlayedDate: '2026-03-08', currentStreak: 4 };
+  const after = applyCompletion(stats, { correctCount: 3, totalQuestions: 6, today: '2026-03-09' });
+  assert.equal(after.lastPlayedDate, '2026-03-09');
+  assert.equal(after.currentStreak, 5);
+});
+
+test('a run for a day already behind the last one played changes nothing', () => {
+  const stats = { ...emptyFormatStats(), lastPlayedDate: '2026-03-10', currentStreak: 2, gamesPlayed: 9 };
+  assert.equal(applyCompletion(stats, { correctCount: 1, totalQuestions: 6, today: '2026-03-09' }), stats);
+});
+
+test('a streak shows as zero once a day has been missed', () => {
+  const stats = { ...emptyFormatStats(), currentStreak: 7 };
+  assert.equal(liveStreak({ ...stats, lastPlayedDate: '2026-03-10' }, '2026-03-10'), 7, 'played today');
+  assert.equal(liveStreak({ ...stats, lastPlayedDate: '2026-03-09' }, '2026-03-10'), 7, 'yesterday: still alive');
+  assert.equal(liveStreak({ ...stats, lastPlayedDate: '2026-03-08' }, '2026-03-10'), 0, 'a day missed');
+  assert.equal(liveStreak({ ...stats, lastPlayedDate: null }, '2026-03-10'), 0);
+  assert.equal(liveStreak(null, '2026-03-10'), 0);
+});
+
+test('an archive run is only picked up again by the daily it belongs to', () => {
+  const run = { date: '2026-03-01', format: 'sixer', questions: [{}] };
+  assert.equal(isArchiveRunFor(run, { date: '2026-03-01', format: 'sixer' }), true);
+  assert.equal(isArchiveRunFor(run, { date: '2026-03-01', format: 'board' }), false, 'the other daily');
+  assert.equal(isArchiveRunFor(run, { date: '2026-03-02', format: 'sixer' }), false, 'another day');
+  assert.equal(isArchiveRunFor({ ...run, questions: [] }, { date: '2026-03-01', format: 'sixer' }), false, 'empty');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

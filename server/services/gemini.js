@@ -185,6 +185,50 @@ export function singleResponse(text) {
   return `${head}${tail.trim()}?`;
 }
 
+/* What each row of a round is worth. A generated board's values become the
+   players' scores, so they are the round's, never the model's. */
+export const ROUND_VALUES = {
+  1: [200, 400, 600, 800, 1000],
+  2: [400, 800, 1200, 1600, 2000],
+};
+
+const hasText = (value) => typeof value === 'string' && value.trim() !== '';
+
+/**
+ * A generated board made to be the board that was asked for, or refused.
+ *
+ * The model's reply was dealt as it came: a category or a clue short, a clue
+ * with no text, or points it made up, and those points went straight into
+ * the score. Now each category the board was asked for must come back with a
+ * clue per row, every clue with a clue and a response; anything less is
+ * unusable. Clues are put in order of the value the model gave them, then
+ * given the value of their row.
+ */
+export function fitBoard(board, categories, pointValues) {
+  const sent = Array.isArray(board?.categories) ? board.categories : [];
+  if (sent.length < categories.length) throw new AppError(UNUSABLE, 502, 'AI_BAD_REPLY');
+
+  return {
+    ...board,
+    categories: categories.map((asked, c) => {
+      const category = sent[c] ?? {};
+      const questions = Array.isArray(category.questions) ? category.questions : [];
+      const ranked = questions.every((q) => Number.isFinite(Number(q?.points)))
+        ? [...questions].sort((a, b) => Number(a.points) - Number(b.points))
+        : questions;
+      const rows = ranked.slice(0, pointValues.length);
+      if (rows.length < pointValues.length || !rows.every((q) => hasText(q?.answer) && hasText(q?.question))) {
+        throw new AppError(UNUSABLE, 502, 'AI_BAD_REPLY');
+      }
+      return {
+        ...category,
+        name: hasText(category.name) ? category.name : asked,
+        questions: rows.map((q, r) => ({ ...q, points: pointValues[r] })),
+      };
+    }),
+  };
+}
+
 /** Every response on a generated board, tidied. */
 export function tidyBoard(board) {
   if (!board?.categories) return board;
@@ -330,7 +374,7 @@ Generate for all ${categories.length} categories.`;
   /* Tidied on the way out, so nothing downstream has to know the model
      sometimes hedges. This is a pass over text that already arrived: it asks
      the model nothing and costs nothing. */
-  return tidyBoard(board);
+  return tidyBoard(fitBoard(board, categories, pointValues));
 }
 
 export async function generateFinalJeopardyQuestion(genre) {

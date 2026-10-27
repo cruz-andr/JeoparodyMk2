@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useUserStore } from '../../stores';
 import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
-import { currentWeekBest, toDateString } from '../../stores/dailyLogic';
+import { currentWeekBest, liveStreak, toDateString } from '../../stores/dailyLogic';
 import './MainMenu.css';
 import AppTabBar from '../common/AppTabBar';
 import ArchiveRow from './ArchiveRow';
@@ -60,8 +60,9 @@ export default function MainMenu() {
   const identityRef = useRef(null);
   const chipRef = useRef(null);
 
-  const boardStreak = stats.board.currentStreak;
-  const sixerStreak = stats.sixer.currentStreak;
+  // As they stand today: the stored number outlives a missed day.
+  const boardStreak = liveStreak(stats.board, toDateString());
+  const sixerStreak = liveStreak(stats.sixer, toDateString());
   // The Board's own best, for the week in progress. Read through the helper so
   // a value left over from last week is not shown as if it still counted.
   const boardWeekBest = currentWeekBest(stats.board, toDateString());

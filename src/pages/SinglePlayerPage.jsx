@@ -327,7 +327,13 @@ export default function SinglePlayerPage() {
     setPhase('finished');
   };
 
+  /* A new game of the player's own. A community board arrives in the page's
+     navigation state, and that outlived the game played from it: Play Again
+     kept the board's Final Jeopardy (or its lack of one) and would count
+     another play against it. Both are let go here. */
   const handlePlayAgain = () => {
+    boardFinal.current = null;
+    if (location.state) navigate(location.pathname, { replace: true, state: null });
     resetGame();
     setMode('single');
     setPhase('setup');
