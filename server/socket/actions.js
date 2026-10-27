@@ -37,6 +37,8 @@ export const PICKER_GRACE_MS = 15000;
 
 export function createGameActions({
   gameManager, emitRoom, archiveRoom, setTimeout: schedule = setTimeout,
+  /* One player alone, for what only they should see. */
+  emitPlayer = () => {},
   /* One event in two versions: the host's, and everyone else's. Without a
      socket layer to tell them apart, everyone gets the players' version. */
   emitSplit = (roomCode, event, _forHost, forPlayers) => emitRoom(roomCode, event, forPlayers),
@@ -48,9 +50,10 @@ export function createGameActions({
      them as written. Self-judged rooms reveal the response to whoever buzzed,
      so everyone there is sent it as it is. */
   function emitToTable(roomCode, event, payload, forPlayers) {
-    if (rooms.get(roomCode)?.type === 'host') emitSplit(roomCode, event, payload, forPlayers(payload));
+    if (gameManager.answersAreTyped(rooms.get(roomCode))) emitSplit(roomCode, event, payload, forPlayers(payload));
     else emitRoom(roomCode, event, payload);
   }
+  const clueForPlayers = (payload) => ({ ...payload, question: playerClue(payload.question) });
   const boardForPlayers = (payload) => ({ ...payload, questions: playerBoard(payload.questions) });
 
   /* Late joiners are dealt in when a clue fully resolves. */
@@ -193,8 +196,7 @@ export function createGameActions({
       if (!result) return null;
 
       gameManager.clearSuggestions(roomCode);
-      emitToTable(roomCode, 'game:question-selected', result,
-        (full) => ({ ...full, question: playerClue(full.question) }));
+      emitToTable(roomCode, 'game:question-selected', result, clueForPlayers);
 
       // A Daily Double has no buzz window: only the picker answers.
       if (result.isDailyDouble) return result;
@@ -306,7 +308,47 @@ export function createGameActions({
 
     dailyDoubleWager(sessionId, roomCode, wager) {
       const result = gameManager.handleDailyDoubleWager(roomCode, sessionId, wager);
-      if (result) emitRoom(roomCode, 'game:daily-double-wager-confirmed', result);
+      // The confirmed wager carries the clue, and in a typed room not its response.
+      if (result) emitToTable(roomCode, 'game:daily-double-wager-confirmed', result, clueForPlayers);
+      return result;
+    },
+
+    /** A hosted Daily Double's wager, entered by the host for a player. */
+    hostDailyDoubleWager(hostId, roomCode, playerId, wager) {
+      const result = gameManager.hostDailyDoubleWager(roomCode, hostId, playerId, wager);
+      if (result) emitToTable(roomCode, 'game:daily-double-wager-confirmed', result, clueForPlayers);
+      return result;
+    },
+
+    /**
+     * A quickplay response, typed by the player holding the buzz or the
+     * Daily Double, and graded here. A 'close' one is sent back to that
+     * player alone for another go; the room hears the verdict, and what was
+     * typed, once there is one.
+     */
+    submitResponse(sessionId, roomCode, text) {
+      const room = rooms.get(roomCode);
+      const gs = room?.gameState;
+      if (room?.type !== 'quickplay' || !gs?.currentQuestion) return null;
+      const dailyDouble = gs.isDailyDouble && gs.phase === 'dailyDoubleQuestion' && gs.currentPickerId === sessionId;
+      if (!dailyDouble && gs.buzzedPlayerId !== sessionId) return null;
+
+      const said = String(text ?? '').trim().slice(0, 200);
+      const verdict = gameManager.gradeResponse(roomCode, sessionId, said);
+      if (verdict === 'close') {
+        emitPlayer(roomCode, sessionId, 'game:answer-close', {});
+        return { verdict };
+      }
+
+      const correct = verdict === 'correct';
+      if (dailyDouble) {
+        const result = gameManager.handleDailyDoubleAnswer(roomCode, sessionId, correct);
+        if (result) emitRoom(roomCode, 'game:daily-double-result', { ...result, said });
+        return result;
+      }
+      gameManager.clearAnswerTimeout(roomCode);
+      const result = gameManager.handleAnswer(roomCode, sessionId, correct);
+      if (result) settleAnswer(roomCode, result, { said });
       return result;
     },
 

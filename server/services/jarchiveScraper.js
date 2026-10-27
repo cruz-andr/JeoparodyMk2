@@ -44,6 +44,15 @@ export async function fetchGameById(gameId, { fetch: fetchPage = fetch, timeoutM
   return parseGamePage(html, gameId);
 }
 
+/* The response held in an older page's mouseover script. It is read to the
+   end of its <em>, tags and all, and the tags then dropped: reading only up
+   to the first tag emptied every response with a title in italics, about one
+   in eleven, and the clue went with it. */
+function responseInToggle(mouseover) {
+  const match = String(mouseover ?? '').match(/correct_response[^>]*>([\s\S]*?)<\/em>/);
+  return match ? cheerio.load(`<div>${match[1]}</div>`)('div').text().replace(/\\/g, '').trim() : '';
+}
+
 // Parse the game page HTML to extract clues
 function parseGamePage(html, gameId) {
   const $ = cheerio.load(html);
@@ -90,12 +99,8 @@ function parseGamePage(html, gameId) {
     if (!answer) {
       const $toggle = $clue.find('[onmouseover]');
       if ($toggle.length > 0) {
-        const mouseover = $toggle.attr('onmouseover') || '';
         // Extract answer from the toggle script
-        const match = mouseover.match(/correct_response[^>]*>([^<]+)</);
-        if (match) {
-          answer = match[1].trim();
-        }
+        answer = responseInToggle($toggle.attr('onmouseover'));
       }
     }
 
@@ -155,11 +160,7 @@ function parseGamePage(html, gameId) {
     if (!answer) {
       const $toggle = $clue.find('[onmouseover]');
       if ($toggle.length > 0) {
-        const mouseover = $toggle.attr('onmouseover') || '';
-        const match = mouseover.match(/correct_response[^>]*>([^<]+)</);
-        if (match) {
-          answer = match[1].trim();
-        }
+        answer = responseInToggle($toggle.attr('onmouseover'));
       }
     }
 

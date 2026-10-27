@@ -707,6 +707,30 @@ async function run() {
     assert.equal(await clue, true, 'the clue goes up for the player still here');
   });
 
+  await test('in quickplay a player cannot mark their own answer right; the typed one is graded', async (open) => {
+    const { host, guest, roomCode, guestId } = await startGame();
+    open.push(host, guest);
+    gameManager.rooms.get(roomCode).type = 'quickplay';
+
+    const selected = once(guest, 'game:question-selected');
+    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
+    await selected;
+    const winner = once(guest, 'game:buzzer-winner');
+    guest.emit('game:buzz-in', { roomCode, reactionTime: 10 });
+    await winner;
+    assert.equal(gameManager.rooms.get(roomCode).gameState.buzzedPlayerId, guestId);
+
+    guest.emit('game:submit-answer', { roomCode, correct: true });
+    guest.emit('game:reveal-answer', { roomCode });
+    assert.equal(await notEmitted(host, 'game:answer-result', 400), true, 'self-judging is ignored');
+
+    const result = once(host, 'game:answer-result');
+    guest.emit('game:submit-response', { roomCode, answer: 'What is answer 0-0?' });
+    const { correct, said } = await result;
+    assert.equal(correct, true);
+    assert.equal(said, 'What is answer 0-0?');
+  });
+
   console.log(`\n${passed} passed, ${failures.length} failed\n`);
   for (const { name, err } of failures) {
     console.log(`  FAIL  ${name}`);

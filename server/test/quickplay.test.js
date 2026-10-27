@@ -530,6 +530,23 @@ await atest('a J-Archive fetch that hangs is given up on', async () => {
   assert.ok(Date.now() - started < 2000);
 });
 
+/* The response sits in the clue's mouseover on older pages, and a title in
+   it is in italics. Reading up to the first tag kept nothing, so the clue
+   had no response and was dropped from the board. */
+await atest('a response read from the mouseover keeps an italic title', async () => {
+  const mouseover = "toggle('clue_J_1_1', 'x', '&lt;em class=&quot;correct_response&quot;&gt;"
+    + "&lt;i&gt;Uncle Tom\\'s Cabin&lt;/i&gt;&lt;/em&gt;')";
+  const page = `<div id="jeopardy_round"><table>
+    <tr>${'<td class="category_name">BOOKS</td>'.repeat(6)}</tr>
+    <tr><td class="clue"><div onmouseover="${mouseover}"><table>
+      <tr><td class="clue_value">$200</td></tr>
+      <tr><td id="clue_J_1_1" class="clue_text">Harriet Beecher Stowe novel</td></tr>
+    </table></div></td></tr></table></div>`;
+  const game = await fetchGameById(1, { fetch: async () => ({ ok: true, text: async () => page }) });
+  assert.equal(game.clues.length, 1, 'the clue is kept');
+  assert.equal(game.clues[0].answer, "Uncle Tom's Cabin");
+});
+
 await atest('the match payload carries the settings and marks the house seats', async () => {
   const t = mkTable({ preset: 'speed' });
   assert.equal(t.match.settings.questionTimeLimit, 15000);
