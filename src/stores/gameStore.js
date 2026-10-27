@@ -157,7 +157,7 @@ export const useGameStore = create((set, get) => ({
   },
 
   closeQuestion: () => {
-    const { questions, currentRound } = get();
+    const { questions } = get();
 
     // Check if all questions in current round are revealed
     const allRevealed = questions.every(category =>
@@ -165,23 +165,16 @@ export const useGameStore = create((set, get) => ({
     );
 
     if (allRevealed) {
-      if (currentRound === 1) {
-        // Move to Double Jeopardy
-        set({
-          currentQuestion: null,
-          showAnswer: false,
-          dailyDoubleWager: 0,
-          phase: 'roundEnd',
-        });
-      } else {
-        // Game finished
-        set({
-          currentQuestion: null,
-          showAnswer: false,
-          dailyDoubleWager: 0,
-          phase: 'finished',
-        });
-      }
+      /* Every round ends on the round-end screen, which offers what comes next
+         (Double Jeopardy, Final Jeopardy, or the results) and is where the game
+         is saved. Going straight to 'finished' after Double Jeopardy skipped
+         both, so Final Jeopardy was never played and nothing was recorded. */
+      set({
+        currentQuestion: null,
+        showAnswer: false,
+        dailyDoubleWager: 0,
+        phase: 'roundEnd',
+      });
     } else {
       set({
         currentQuestion: null,

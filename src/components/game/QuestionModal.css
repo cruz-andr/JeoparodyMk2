@@ -122,6 +122,12 @@
   margin-bottom: 30px;
 }
 
+.time-up-note {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
 .scoring-buttons {
   display: flex;
   gap: 20px;

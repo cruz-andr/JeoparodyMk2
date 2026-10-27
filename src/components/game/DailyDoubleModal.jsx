@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAudio } from '../../hooks';
+import { dailyDoubleLimit, clampDailyDoubleWager, wagerEntry } from '../../utils/wagers';
 import './DailyDoubleModal.css';
 
 export default function DailyDoubleModal({
@@ -9,9 +10,10 @@ export default function DailyDoubleModal({
   currentRound,
   onWagerConfirm,
 }) {
-  const maxBoardValue = currentRound === 1 ? 1000 : 2000;
-  const maxWager = Math.max(currentScore, maxBoardValue, 5);
-  const [wager, setWager] = useState(5);
+  const maxWager = dailyDoubleLimit(currentScore, currentRound);
+  // What is in the box, as typed. The limits apply to the wager it makes.
+  const [entry, setEntry] = useState('5');
+  const wager = clampDailyDoubleWager(entry, maxWager);
   const [showWagerInput, setShowWagerInput] = useState(false);
   const { playDailyDouble } = useAudio();
   const stingPlayed = useRef(false);
@@ -24,18 +26,19 @@ export default function DailyDoubleModal({
     playDailyDouble();
   }, [playDailyDouble]);
 
+  /* Kept as typed. Clamping each keystroke to $5..max turned the first digit
+     of "300" into 5, and the box ended up reading 500. */
   const handleWagerChange = (e) => {
-    const value = parseInt(e.target.value, 10) || 0;
-    setWager(Math.max(5, Math.min(maxWager, value)));
+    setEntry(wagerEntry(e.target.value));
   };
 
   const handleQuickWager = (amount) => {
     if (amount === 'all') {
-      setWager(Math.max(currentScore, 5));
+      setEntry(String(Math.max(currentScore, 5)));
     } else if (amount === 'max') {
-      setWager(maxWager);
+      setEntry(String(maxWager));
     } else {
-      setWager(Math.min(amount, maxWager));
+      setEntry(String(Math.min(amount, maxWager)));
     }
   };
 
@@ -101,7 +104,7 @@ export default function DailyDoubleModal({
               type="number"
               min={5}
               max={maxWager}
-              value={wager}
+              value={entry}
               onChange={handleWagerChange}
               className="wager-input"
             />

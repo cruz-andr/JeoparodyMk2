@@ -18,6 +18,7 @@ import { boardToHost } from '../stores/boardShape';
 import { countPlay } from '../services/api/boardsService';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { finishGame } from '../services/api/gamesService';
+import { canPlayFinalJeopardy as scoreQualifiesForFinal } from '../utils/wagers';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
@@ -227,7 +228,7 @@ export default function SinglePlayerPage() {
     : true;
 
   const handleStartFinalJeopardy = async () => {
-    // Only eligible if score >= 0 or we allow negative scores to play
+    // Only offered above $0 (see the round-end screen), as on the show
     setError(null);
 
     if (boardFinal.current) {
@@ -441,7 +442,7 @@ export default function SinglePlayerPage() {
             <button onClick={handleNextRound} className="btn-primary">
               Continue to Double Jeopardy
             </button>
-          ) : enableFinalJeopardy && canPlayFinalJeopardy && score >= 0 ? (
+          ) : enableFinalJeopardy && canPlayFinalJeopardy && scoreQualifiesForFinal(score) ? (
             <div className="round-end-buttons">
               <button onClick={handleStartFinalJeopardy} className="btn-primary">
                 Play Final Jeopardy!
@@ -455,9 +456,9 @@ export default function SinglePlayerPage() {
               See Final Results
             </button>
           )}
-          {enableFinalJeopardy && canPlayFinalJeopardy && score < 0 && (
+          {enableFinalJeopardy && canPlayFinalJeopardy && !scoreQualifiesForFinal(score) && (
             <p className="fj-ineligible">
-              (Final Jeopardy requires a non-negative score)
+              (Final Jeopardy needs a score above $0)
             </p>
           )}
           {enableFinalJeopardy && !canPlayFinalJeopardy && (

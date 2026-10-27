@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Timer from '../common/Timer';
 import { useAudio } from '../../hooks';
+import { finalWagerLimit, clampFinalWager } from '../../utils/wagers';
 import './FinalJeopardyModal.css';
 
 const WAGER_TIME = 30000; // 30 seconds for wager
@@ -21,7 +22,9 @@ export default function FinalJeopardyModal({
   const [showTimer, setShowTimer] = useState(false);
   const { playFinalJeopardy, stopFinalJeopardy, playCorrect, playWrong } = useAudio();
 
-  const maxWager = currentScore > 0 ? currentScore : 1000;
+  // $0 up to the score. It used to invent a $1,000 limit for a score of $0;
+  // a player at $0 is no longer offered Final Jeopardy at all.
+  const maxWager = finalWagerLimit(currentScore);
 
   // The think music runs while the answer is being written, and stops the
   // moment the answer is locked in — as it does on the show.
@@ -47,16 +50,19 @@ export default function FinalJeopardyModal({
     }
   }, [phase]);
 
+  // $0 is a real wager: standing pat is a common Final Jeopardy play.
   const handleWagerSubmit = () => {
-    if (wager > 0 && wager <= maxWager) {
+    if (wager >= 0 && wager <= maxWager) {
       setShowTimer(false);
       setPhase('clue');
     }
   };
 
+  /* Out of time, the wager is whatever was in the box. It used to become the
+     whole score, betting everything for a player who had typed something
+     smaller or had decided to wager nothing. */
   const handleWagerTimeUp = () => {
-    // Default to max wager if time runs out
-    setWager(maxWager);
+    setWager((w) => clampFinalWager(w, currentScore));
     setShowTimer(false);
     setPhase('clue');
   };
@@ -186,7 +192,7 @@ export default function FinalJeopardyModal({
               <button
                 className="fj-submit-btn"
                 onClick={handleWagerSubmit}
-                disabled={wager <= 0 || wager > maxWager}
+                disabled={wager < 0 || wager > maxWager}
               >
                 Lock In Wager
               </button>
