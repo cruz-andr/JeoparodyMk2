@@ -401,7 +401,7 @@ await test('in a multiplayer room the host is a player like anyone else', () => 
 
 await test('best score still only rises through the room path', () => {
   const before = statsFor('u-bob').bestScore;
-  const room = mkRoom('quickplay', [player('s1', { userId: 'u-bob', score: -500, answered: 2 })]);
+  const room = mkRoom('quickplay', [player('s1', { userId: 'u-bob', score: -500, answered: 2 })], { persisted: true });
   recordRoomGame(db, room);
   assert.equal(statsFor('u-bob').bestScore, before);
   /* Found by its room, not by position: rowsFor is newest first, and .at(-1)
