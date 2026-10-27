@@ -13,8 +13,8 @@ import {
   answerMark,
   boardGridRows,
   encodeAnswers,
-} from './dailyLogic';
-import { useSettingsStore } from './settingsStore';
+} from './dailyLogic.js';
+import { useSettingsStore } from './settingsStore.js';
 
 /**
  * Two daily formats, each with its own run and its own streak.
@@ -245,10 +245,14 @@ export const useDailyStore = create(
           [slot]: finished,
           stats: {
             ...state.stats,
+            /* The day the run was dealt for, not the day it ended. A run
+               started before midnight and finished after it was credited to
+               the next day, which marked that day's puzzle as played before
+               it had been seen and broke the streak the day after. */
             [slot]: applyCompletion(state.stats[slot], {
               correctCount,
               totalQuestions: run.questions.length,
-              today: toDateString(),
+              today: run.date || toDateString(),
               score,
               timeMs,
             }),

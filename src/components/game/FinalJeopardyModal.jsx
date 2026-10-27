@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Timer from '../common/Timer';
 import { useAudio } from '../../hooks';
@@ -19,6 +19,7 @@ export default function FinalJeopardyModal({
   const [wager, setWager] = useState(0);
   const [playerAnswer, setPlayerAnswer] = useState('');
   const [result, setResult] = useState(null);
+  const judged = useRef(false);
   const [showTimer, setShowTimer] = useState(false);
   const { playFinalJeopardy, stopFinalJeopardy, playCorrect, playWrong } = useAudio();
 
@@ -83,6 +84,11 @@ export default function FinalJeopardyModal({
   };
 
   const handleJudgment = (isCorrect) => {
+    /* One verdict. A double click on it used to run all of this twice, and
+       onComplete with it, which files the game: the same game, recorded
+       twice. A ref, because the second click lands before a re-render. */
+    if (judged.current) return;
+    judged.current = true;
     const pointsChange = isCorrect ? wager : -wager;
     const newScore = currentScore + pointsChange;
 

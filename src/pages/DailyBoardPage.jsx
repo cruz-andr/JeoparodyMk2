@@ -6,6 +6,8 @@ import {
   toBoardGrid,
   BOARD_ROW_COUNT,
   currentWeekBest,
+  liveStreak,
+  isArchiveRunFor,
   toDateString,
   boardScore,
   elapsedMs,
@@ -109,7 +111,8 @@ export default function DailyBoardPage() {
         }
 
         // Already open on this very day, part way through: leave it alone.
-        if (archiveRun.date === archiveDate && archiveRun.questions.length > 0) {
+        // The slot is shared with the other daily, so its format is checked too.
+        if (isArchiveRunFor(archiveRun, { date: archiveDate, format: FORMAT })) {
           setLoading(false);
           return;
         }
@@ -321,7 +324,7 @@ export default function DailyBoardPage() {
   }
 
   const playedCount = answers.filter((a) => a?.revealed).length;
-  const streak = stats[FORMAT].currentStreak;
+  const streak = liveStreak(stats[FORMAT], toDateString());
 
   const clueModal = (
     <AnimatePresence>

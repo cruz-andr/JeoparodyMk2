@@ -71,6 +71,26 @@ export function currentWeekBest(stats, today) {
 }
 
 /**
+ * The streak as it stands today. The stored number only changes when a run
+ * is finished, so a streak broken by a missed day went on showing until the
+ * next puzzle was played. Read through this rather than off the field.
+ */
+export function liveStreak(stats, today) {
+  if (!stats?.lastPlayedDate) return 0;
+  const alive = stats.lastPlayedDate === today || stats.lastPlayedDate === previousDateString(today);
+  return alive ? stats.currentStreak || 0 : 0;
+}
+
+/**
+ * Whether the archive slot already holds this daily's run for this day. The
+ * slot is shared by both dailies, so a date alone matched the other one's
+ * run: The Board picked up a Sixer, and sat on a spinner for good.
+ */
+export function isArchiveRunFor(run, { date, format }) {
+  return Boolean(run && run.date === date && run.format === format && run.questions?.length > 0);
+}
+
+/**
  * The streak after finishing a run: showing up is what counts.
  *
  * The original rule only extended a streak on a PERFECT run. That was written
@@ -99,7 +119,8 @@ export function applyCompletion(
   stats,
   { correctCount, totalQuestions, today, score = null, timeMs = null }
 ) {
-  if (stats.lastPlayedDate === today) return stats;
+  // Already counted, or a day behind one that was: a streak only moves forward.
+  if (stats.lastPlayedDate && today <= stats.lastPlayedDate) return stats;
 
   const currentStreak = computeStreak(stats, { totalQuestions, today });
   const week = startOfWeek(today);

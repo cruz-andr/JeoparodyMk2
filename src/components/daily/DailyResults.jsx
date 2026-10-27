@@ -4,6 +4,8 @@ import { useDailyStore } from '../../stores/dailyStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { boardGridRows, decodeAnswers,
   answerMark,
+  liveStreak,
+  toDateString,
   elapsedMs,
   formatDuration,
 } from '../../stores/dailyLogic';
@@ -224,7 +226,7 @@ export default function DailyResults({
             <span className="stat-label">Accuracy</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">{formatStats.currentStreak}</span>
+            <span className="stat-value">{liveStreak(formatStats, toDateString())}</span>
             <span className="stat-label">Streak</span>
           </div>
           <div className="stat-item">
