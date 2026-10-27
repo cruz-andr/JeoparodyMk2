@@ -1011,6 +1011,63 @@ test('an ineligible player cannot wager or answer in Final Jeopardy', () => {
   assert.equal(gm.submitFJAnswer(code, sockets[1].sessionId, 'x'), false);
 });
 
+/* On the show a wager is locked in before the clue is seen. A second wager
+   used to overwrite the first, so a player could raise it once the clue was
+   on screen and they knew they had it. */
+test('a Final Jeopardy wager is locked once placed, and none is taken after the clue', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.players.get(sockets[0].sessionId).score = 1000;
+  room.players.get(sockets[1].sessionId).score = 1000;
+  gm.startFinalJeopardy(code);
+  const fj = room.gameState.finalJeopardy;
+
+  assert.equal(gm.submitFJWager(code, sockets[0].sessionId, 100), false);
+  assert.equal(gm.submitFJWager(code, sockets[0].sessionId, 900), false);
+  assert.equal(fj.wagers.get(sockets[0].sessionId), 100, 'the first wager stands');
+
+  assert.equal(gm.submitFJWager(code, sockets[1].sessionId, 200), true, 'all in: the clue is shown');
+  assert.equal(gm.submitFJWager(code, sockets[1].sessionId, 1000), false);
+  assert.equal(fj.wagers.get(sockets[1].sessionId), 200);
+});
+
+test('no Final Jeopardy answer is taken before the clue is shown', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.players.get(sockets[0].sessionId).score = 1000;
+  room.players.get(sockets[1].sessionId).score = 1000;
+  gm.startFinalJeopardy(code);
+  const fj = room.gameState.finalJeopardy;
+
+  gm.submitFJWager(code, sockets[0].sessionId, 100);
+  assert.equal(gm.submitFJAnswer(code, sockets[0].sessionId, fj.answer), false);
+  assert.equal(fj.answers.has(sockets[0].sessionId), false);
+});
+
+/* A reconnect or a late join used to hand over room.gameState whole: the
+   Final Jeopardy clue and response before anyone had wagered, and where the
+   Daily Doubles were hidden on the board. */
+test('a reconnecting player is not sent the hidden Final Jeopardy clue or the Daily Doubles', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.gameState.dailyDoubles = [{ categoryIndex: 2, pointIndex: 3 }];
+  room.players.get(sockets[0].sessionId).score = 1000;
+  gm.startFinalJeopardy(code);
+
+  const back = gm.reconnectPlayer(sockets[1], code);
+  assert.equal(back.gameState.dailyDoubles, undefined);
+  assert.equal(back.gameState.finalJeopardy.category, room.gameState.finalJeopardy.category);
+  assert.equal(back.gameState.finalJeopardy.clue, undefined);
+  assert.equal(back.gameState.finalJeopardy.answer, undefined);
+  assert.equal(room.gameState.dailyDoubles.length, 1, 'the room itself keeps them');
+});
+
+test('a late joiner is not sent where the Daily Doubles are', () => {
+  const { gm, code, room } = mkGame({ count: 2 });
+  room.status = 'in_progress';
+  room.gameState.dailyDoubles = [{ categoryIndex: 2, pointIndex: 3 }];
+  const late = gm.joinRoom(mkSocket(), code, 'Late');
+  assert.ok(late.gameState.questions, 'the board still comes with it');
+  assert.equal(late.gameState.dailyDoubles, undefined);
+});
+
 // =========================================================================
 // 6b. Answer grading
 // =========================================================================

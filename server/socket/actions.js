@@ -218,7 +218,10 @@ export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeo
       emitRoom(roomCode, 'game:round-2-started', { questions, categories, firstPickerId });
     },
 
-    /** Final Jeopardy, or straight to the standings if nobody can play it. */
+    /** Final Jeopardy, or straight to the standings if nobody can play it.
+        The room hears the category now, the clue once every wager is in, and
+        the response at the reveal; sending all three up front let anyone
+        reading the socket frames wager on the clue and type the response. */
     startFinalJeopardy(roomCode, written) {
       const fjData = gameManager.startFinalJeopardy(roomCode, written);
       if (!fjData) return null;
@@ -227,13 +230,19 @@ export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeo
         emitRoom(roomCode, 'game:ended');
         return fjData;
       }
-      emitRoom(roomCode, 'game:final-jeopardy-started', fjData);
+      emitRoom(roomCode, 'game:final-jeopardy-started', {
+        category: fjData.category,
+        eligibleCount: fjData.eligibleCount,
+      });
       return fjData;
     },
 
     fjWager(sessionId, roomCode, wager) {
       const allIn = gameManager.submitFJWager(roomCode, sessionId, wager);
-      if (allIn) emitRoom(roomCode, 'game:fj-show-clue');
+      if (allIn) {
+        const { clue } = rooms.get(roomCode).gameState.finalJeopardy;
+        emitRoom(roomCode, 'game:fj-show-clue', { clue });
+      }
       return allIn;
     },
 
@@ -245,7 +254,8 @@ export function createGameActions({ gameManager, emitRoom, archiveRoom, setTimeo
          game:end, which only arrives if the host goes on to press "See Final
          Standings". A second archive call is a no-op. */
       archiveRoom(roomCode);
-      emitRoom(roomCode, 'game:fj-reveal', { results });
+      const correctResponse = rooms.get(roomCode).gameState.finalJeopardy.answer;
+      emitRoom(roomCode, 'game:fj-reveal', { results, answer: correctResponse });
       return true;
     },
 

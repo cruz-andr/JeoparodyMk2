@@ -19,7 +19,7 @@ const httpServer = createServer();
 const ioServer = new Server(httpServer, { cors: { origin: '*' } });
 /* NODE_ENV=test deals quickplay the written board: a unit run must not scrape
    another site for an episode. */
-initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' } });
+const { gameManager } = initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' } });
 
 const PORT = 34117;
 const URL = `http://localhost:${PORT}`;
@@ -472,6 +472,37 @@ async function run() {
     const codes = new Set(payloads.map((m) => m.roomCode));
     assert.equal(codes.size, 1, 'everyone lands in the same room');
     assert.equal(payloads[0].players.length, 3);
+  });
+
+  /* The clue went out with the category, before anyone had wagered, and the
+     correct response with it, which the server then graded typed answers
+     against. Anyone reading the socket frames won Final Jeopardy. */
+  await test('Final Jeopardy sends the clue only once wagers are in, and the response only at the reveal', async (open) => {
+    const { host, guest, roomCode, hostId, guestId } = await startGame();
+    open.push(host, guest);
+    const room = gameManager.rooms.get(roomCode);
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
+
+    const started = once(guest, 'game:final-jeopardy-started');
+    host.emit('game:start-final-jeopardy', { roomCode });
+    const start = await started;
+    assert.ok(start.category, 'the category is shown first');
+    assert.equal(start.clue, undefined, 'no clue before the wagers');
+    assert.equal(start.answer, undefined, 'no response before the reveal');
+
+    const shown = once(guest, 'game:fj-show-clue');
+    host.emit('game:fj-wager', { roomCode, wager: 100 });
+    guest.emit('game:fj-wager', { roomCode, wager: 100 });
+    const { clue } = await shown;
+    assert.equal(clue, room.gameState.finalJeopardy.clue);
+
+    const revealed = once(guest, 'game:fj-reveal');
+    host.emit('game:fj-answer', { roomCode, answer: 'x' });
+    guest.emit('game:fj-answer', { roomCode, answer: 'y' });
+    const reveal = await revealed;
+    assert.equal(reveal.answer, room.gameState.finalJeopardy.answer);
+    assert.equal(reveal.results.length, 2);
   });
 
   /* Handlers destructured their payload and called their callback blind, so

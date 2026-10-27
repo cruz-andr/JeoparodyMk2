@@ -154,9 +154,9 @@ export class GameStateManager {
       isLateJoin,
     };
 
-    // Late joiners need the full game state to render the board
+    // Late joiners need the game state to render the board
     if (isLateJoin) {
-      result.gameState = room.gameState;
+      result.gameState = this.publicGameState(room, playerId);
     }
 
     return result;
@@ -859,14 +859,20 @@ export class GameStateManager {
     // Only eligible players can wager
     if (!fj.eligiblePlayers.has(playerId)) return false;
 
+    // A wager is locked in before the clue is seen, as on the show. Taking a
+    // second one let a player raise it once they had read the clue.
+    if (fj.clueShown || fj.wagers.has(playerId)) return false;
+
     // Jeopardy rule: you can wager anything from $0 up to your own score.
     const score = room.players.get(playerId)?.score || 0;
     const requested = Number.isFinite(Number(wager)) ? Math.floor(Number(wager)) : 0;
     fj.wagers.set(playerId, Math.min(Math.max(requested, 0), Math.max(score, 0)));
 
-    // Check if everyone still playing has wagered
+    // Check if everyone still playing has wagered; if so, the clue goes up
     const participants = this.getFJParticipants(room);
-    return participants.length > 0 && participants.every(id => fj.wagers.has(id));
+    const allIn = participants.length > 0 && participants.every(id => fj.wagers.has(id));
+    if (allIn) fj.clueShown = true;
+    return allIn;
   }
 
   submitFJAnswer(roomCode, playerId, answer) {
@@ -875,8 +881,9 @@ export class GameStateManager {
 
     const fj = room.gameState.finalJeopardy;
 
-    // Only eligible players can answer
+    // Only eligible players can answer, and only to a clue they have been shown
     if (!fj.eligiblePlayers.has(playerId)) return false;
+    if (!fj.clueShown) return false;
 
     fj.answers.set(playerId, answer);
 
@@ -1211,10 +1218,32 @@ export class GameStateManager {
       type: room.type,  // Include room type for host mode detection
       players: this.publicPlayers(room),
       settings: room.settings,
-      gameState: room.gameState,
+      gameState: this.publicGameState(room, sessionId),
       isHost: player.isHost,
       displayName: player.displayName,
     };
+  }
+
+  /**
+   * The game state as one viewer may see it. room.gameState also holds what
+   * the room has not been shown yet: where the Daily Doubles are, and the Final
+   * Jeopardy clue and response. Handing it over whole on a reconnect or a late
+   * join let anyone read those. The host of a hosted room wrote the board, so
+   * they get it all.
+   */
+  publicGameState(room, viewerId) {
+    const gs = room.gameState;
+    if (!gs || (room.type === 'host' && viewerId === room.hostId)) return gs;
+
+    const { dailyDoubles: _dailyDoubles, finalJeopardy: fj, ...shown } = gs;
+    if (fj) {
+      shown.finalJeopardy = {
+        category: fj.category,
+        ...(fj.clueShown ? { clue: fj.clue } : {}),
+        ...(fj.results ? { answer: fj.answer } : {}),
+      };
+    }
+    return shown;
   }
 
   // Utilities
