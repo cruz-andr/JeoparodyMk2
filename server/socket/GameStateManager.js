@@ -249,7 +249,9 @@ export class GameStateManager {
    */
   resolveDailyDoubles(chosen, categoryCount, rowCount, round) {
     const wanted = round === 2 ? 2 : 1;
-    const seen = new Set();
+    /* One per category, as on the show. De-duplicating by cell alone let a
+       host's two picks in one column both stand. */
+    const usedCategories = new Set();
     const kept = [];
 
     for (const spot of Array.isArray(chosen) ? chosen : []) {
@@ -257,22 +259,22 @@ export class GameStateManager {
       const r = Number(spot?.pointIndex);
       if (!Number.isInteger(c) || !Number.isInteger(r)) continue;
       if (c < 0 || c >= categoryCount || r < 0 || r >= rowCount) continue;
-      const key = `${c}:${r}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (usedCategories.has(c)) continue;
+      usedCategories.add(c);
       kept.push({ categoryIndex: c, pointIndex: r });
       if (kept.length === wanted) break;
     }
 
-    if (kept.length === wanted) return kept;
-
-    /* Top up from a random placement, skipping anything already taken. */
-    for (const spot of placeDailyDoubles(categoryCount, round, rowCount)) {
-      const key = `${spot.categoryIndex}:${spot.pointIndex}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      kept.push(spot);
-      if (kept.length === wanted) break;
+    /* Top up at random, in categories nobody has used yet. placeDailyDoubles
+       keeps its own picks apart but knows nothing of the host's, so it is
+       asked until it lands somewhere free. */
+    for (let attempt = 0; kept.length < wanted && attempt < 50; attempt++) {
+      for (const spot of placeDailyDoubles(categoryCount, round, rowCount)) {
+        if (usedCategories.has(spot.categoryIndex)) continue;
+        usedCategories.add(spot.categoryIndex);
+        kept.push(spot);
+        if (kept.length === wanted) break;
+      }
     }
     return kept;
   }
@@ -433,14 +435,19 @@ export class GameStateManager {
     if (!room.gameState.buzzWindowOpen) return false;
     if (room.gameState.buzzedPlayerId) return false;
     if (room.gameState.playersWhoBuzzed?.has(playerId)) return false;
+    // One buzz per player per window.
+    if (Object.prototype.hasOwnProperty.call(room.gameState.buzzes || {}, playerId)) return false;
 
     // Timed server-side, so a client cannot claim a faster thumb than it had.
     const serverReactionTime = room.gameState.buzzWindowStartTime
       ? this.now() - room.gameState.buzzWindowStartTime
       : reactionTime;
 
+    // Only the winner is marked as having had their shot, in
+    // determineBuzzerWinner. Marking every buzz in the window locked out the
+    // players who lost the race from a clue they never got to answer.
+    room.gameState.buzzes = room.gameState.buzzes || {};
     room.gameState.buzzes[playerId] = serverReactionTime;
-    room.gameState.playersWhoBuzzed.add(playerId);
 
     // Mark that a valid buzz was received (guards against stale timeout callbacks)
     room.gameState.buzzReceived = true;
@@ -460,6 +467,8 @@ export class GameStateManager {
 
     room.gameState.buzzedPlayerId = winner[0];
     room.gameState.buzzWindowOpen = false;
+    room.gameState.playersWhoBuzzed = room.gameState.playersWhoBuzzed || new Set();
+    room.gameState.playersWhoBuzzed.add(winner[0]);
 
     return {
       playerId: winner[0],
@@ -753,14 +762,31 @@ export class GameStateManager {
     };
   }
 
+  /**
+   * Who opens Double Jeopardy: on the show, the player in last place. The
+   * client used to choose at random and the server took its word. A tie keeps
+   * the client's pick if it is one of the tied. In a hosted room the host picks
+   * every clue, so their pick stands.
+   */
+  trailingPlayer(room, preferred) {
+    if (room.type === 'host') return preferred;
+    const ids = this.getActivePlayerIds(room);
+    if (ids.length === 0) return preferred;
+    const scoreOf = (id) => room.players.get(id)?.score || 0;
+    const lowest = Math.min(...ids.map(scoreOf));
+    const tied = ids.filter((id) => scoreOf(id) === lowest);
+    return tied.includes(preferred) ? preferred : tied[0];
+  }
+
+  /** Returns who picks first, which may not be who the client asked for. */
   startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles = null) {
     const room = this.rooms.get(roomCode);
-    if (!room) return;
+    if (!room) return null;
 
     room.gameState = room.gameState || {};
     room.gameState.questions = questions;
     room.gameState.categories = categories;
-    room.gameState.currentPickerId = firstPickerId;
+    room.gameState.currentPickerId = this.trailingPlayer(room, firstPickerId);
     room.gameState.phase = 'playing';
     room.gameState.buzzes = {};
     room.gameState.buzzedPlayerId = null;
@@ -779,6 +805,7 @@ export class GameStateManager {
 
     room.gameState.isDailyDouble = false;
     room.gameState.dailyDoubleWager = 0;
+    return room.gameState.currentPickerId;
   }
 
   /**
@@ -1855,6 +1882,12 @@ export class GameStateManager {
   playerSkipped(roomCode, playerId) {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState) return null;
+
+    // Nothing to skip without a live clue, and nobody skips once someone has
+    // buzzed in: skips inside the collection window used to count everyone
+    // out, fire the timeout, and throw the buzzer's answer away.
+    if (!room.gameState.currentQuestion) return null;
+    if (room.gameState.buzzedPlayerId || Object.keys(room.gameState.buzzes || {}).length) return null;
 
     // Can't skip if already buzzed (they had their chance)
     if (room.gameState.playersWhoBuzzed?.has(playerId)) return null;

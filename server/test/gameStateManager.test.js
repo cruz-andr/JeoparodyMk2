@@ -68,6 +68,57 @@ test('recordBuzz accepts the first eligible buzz and marks buzzReceived', () => 
   assert.equal(room.gameState.buzzReceived, true);
 });
 
+/* Every buzz inside the 500ms collection window was marked as having had its
+   shot, so the players who lost the race were locked out of a clue they never
+   answered. On the show only the one who answered is. */
+test('a player who lost the buzz race can buzz again after a wrong answer', () => {
+  const { gm, code, sockets } = mkGame({ count: 2 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.recordBuzz(code, sockets[0].sessionId, 10);
+  gm.recordBuzz(code, sockets[1].sessionId, 20);
+  assert.equal(gm.determineBuzzerWinner(code).playerId, sockets[0].sessionId);
+
+  const result = gm.handleAnswer(code, sockets[0].sessionId, false);
+  assert.equal(result.canBuzzAgain, true, 'the runner-up still gets a go');
+  gm.startBuzzWindow(code);
+  assert.equal(gm.recordBuzz(code, sockets[1].sessionId, 30), true);
+  assert.equal(gm.recordBuzz(code, sockets[0].sessionId, 30), false, 'the one who answered is out');
+});
+
+test('one buzz per player per window', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  assert.equal(gm.recordBuzz(code, sockets[1].sessionId, 10), true);
+  assert.equal(gm.recordBuzz(code, sockets[1].sessionId, 5), false);
+  assert.equal(Object.keys(room.gameState.buzzes).length, 1);
+});
+
+/* Skips were taken after someone had buzzed. The others skipping inside the
+   collection window counted everyone out, the buzz timeout fired, and the
+   buzzer's answer was thrown away. */
+test('nobody can skip a clue someone has buzzed in on', () => {
+  const { gm, code, sockets } = mkGame({ count: 3 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.recordBuzz(code, sockets[0].sessionId, 10);
+  assert.equal(gm.playerSkipped(code, sockets[1].sessionId), null, 'inside the collection window');
+  gm.determineBuzzerWinner(code);
+  assert.equal(gm.playerSkipped(code, sockets[2].sessionId), null, 'while they answer');
+});
+
+test('a skip is taken again once a wrong answer reopens the clue', () => {
+  const { gm, code, sockets } = mkGame({ count: 3 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.recordBuzz(code, sockets[0].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  gm.handleAnswer(code, sockets[0].sessionId, false);
+  gm.startBuzzWindow(code);
+  assert.ok(gm.playerSkipped(code, sockets[1].sessionId));
+});
+
 test('a re-buzz from a player who already answered is rejected and leaves buzzReceived false', () => {
   const { gm, code, sockets, room } = mkGame();
   gm.selectQuestion(sockets[0], code, 0, 0);
@@ -287,6 +338,54 @@ test('a host who marks one of two still gets two', () => {
     [{ categoryIndex: 0, pointIndex: 4 }]);
   assert.equal(room.gameState.dailyDoubles.length, 2);
   assert.ok(room.gameState.dailyDoubles.some((d) => d.categoryIndex === 0 && d.pointIndex === 4));
+});
+
+/* On the show the two Double Jeopardy Daily Doubles are never in one
+   category. Placements were de-duplicated by cell alone, so a host's two picks
+   in one column both stood, and the random top-up could join one of them. */
+test('Double Jeopardy Daily Doubles land in two different categories', () => {
+  const { gm, room, code, sockets } = mkGame({ type: 'host', settings: { enableDailyDouble: true } });
+  gm.startRound2(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId,
+    [{ categoryIndex: 3, pointIndex: 1 }, { categoryIndex: 3, pointIndex: 4 }]);
+  const [first, second] = room.gameState.dailyDoubles;
+  assert.deepEqual(first, { categoryIndex: 3, pointIndex: 1 }, 'the first pick stands');
+  assert.notEqual(second.categoryIndex, 3, 'the second goes elsewhere');
+});
+
+test('a topped-up Daily Double never joins the host\'s category', () => {
+  for (let i = 0; i < 200; i++) {
+    const { gm, room, code, sockets } = mkGame({ type: 'host', settings: { enableDailyDouble: true } });
+    gm.startRound2(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId,
+      [{ categoryIndex: 0, pointIndex: 4 }]);
+    const categories = room.gameState.dailyDoubles.map((d) => d.categoryIndex);
+    assert.equal(new Set(categories).size, 2, `run ${i}: ${JSON.stringify(room.gameState.dailyDoubles)}`);
+  }
+});
+
+/* On the show the trailing player picks first in Double Jeopardy. The client
+   chose at random and the server took whatever it was sent. */
+test('Double Jeopardy opens with the lowest score in control, whoever the client named', () => {
+  const { gm, room, code, sockets } = mkGame({ count: 3 });
+  room.players.get(sockets[0].sessionId).score = 2000;
+  room.players.get(sockets[1].sessionId).score = -400;
+  room.players.get(sockets[2].sessionId).score = 600;
+  const picker = gm.startRound2(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId);
+  assert.equal(picker, sockets[1].sessionId);
+  assert.equal(room.gameState.currentPickerId, sockets[1].sessionId);
+});
+
+test('a tie for last keeps the client\'s pick if it is one of the tied', () => {
+  const { gm, room, code, sockets } = mkGame({ count: 3 });
+  room.players.get(sockets[0].sessionId).score = 2000;
+  room.players.get(sockets[1].sessionId).score = 200;
+  room.players.get(sockets[2].sessionId).score = 200;
+  assert.equal(gm.startRound2(code, mkBoard(), ['A','B','C','D','E','F'], sockets[2].sessionId), sockets[2].sessionId);
+});
+
+test('a hosted room keeps the host picking in Double Jeopardy', () => {
+  const { gm, room, code, sockets } = mkGame({ type: 'host' });
+  room.players.get(sockets[1].sessionId).score = -400;
+  assert.equal(gm.startRound2(code, mkBoard(), ['A','B','C','D','E','F'], sockets[0].sessionId), sockets[0].sessionId);
 });
 
 test('handing the board over a second time keeps the placements', () => {

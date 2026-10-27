@@ -39,16 +39,23 @@ export default function QuestionModal({
      over the clue the moment it appears, so the clue is read around it. */
   const isPhone = useMediaQuery('(max-width: 768px)');
 
+  /* Time ran out before the player answered. As on the show, a clue nobody
+     answered moves the score neither way, and a Daily Double not answered in
+     time loses the wager. Before, the response was revealed and +points was
+     still on offer. */
+  const [timedOut, setTimedOut] = useState(false);
+
   // A new clue starts with an empty box, not the last one's text.
   useEffect(() => {
     setEntry('');
+    setTimedOut(false);
   }, [question]);
 
   const handleTimeUp = () => {
     if (onTimeUp) {
       onTimeUp();
     } else {
-      // Default: reveal answer when time runs out
+      setTimedOut(true);
       onRevealAnswer();
     }
   };
@@ -74,6 +81,12 @@ export default function QuestionModal({
           e.preventDefault();
           onRevealAnswer();
         }
+      } else if (timedOut) {
+        // Out of time: the only move is on, and a Daily Double costs its wager.
+        if (e.code === 'Space' || e.code === 'Enter') {
+          e.preventDefault();
+          (isDailyDouble ? onIncorrect : onClose)();
+        }
       } else {
         if (e.code === 'Digit1' || e.code === 'ArrowLeft') {
           e.preventDefault();
@@ -86,7 +99,7 @@ export default function QuestionModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [typed, result, onContinue, showAnswer, onRevealAnswer, onCorrect, onIncorrect]);
+  }, [typed, result, onContinue, showAnswer, timedOut, isDailyDouble, onRevealAnswer, onCorrect, onIncorrect, onClose]);
 
   return (
     <motion.div
@@ -207,6 +220,24 @@ export default function QuestionModal({
             <p className="answer-label">Correct Response:</p>
             <p className="answer-text">{question.question}</p>
 
+            {timedOut ? (
+              <>
+                <p className="time-up-note">
+                  {isDailyDouble ? `Time's up: the wager of $${points.toLocaleString()} is lost.` : "Time's up: no change to your score."}
+                </p>
+                <div className="scoring-buttons">
+                  <motion.button
+                    className={isDailyDouble ? 'btn-incorrect' : 'btn-primary'}
+                    onClick={isDailyDouble ? onIncorrect : onClose}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Continue
+                  </motion.button>
+                </div>
+              </>
+            ) : (
+            <>
             <div className="scoring-buttons">
               <motion.button
                 className="btn-correct"
@@ -226,6 +257,8 @@ export default function QuestionModal({
               </motion.button>
             </div>
             <span className="keyboard-hint">Press 1 for Correct, 2 for Incorrect</span>
+            </>
+            )}
           </motion.div>
         ) : (
           <div>
@@ -241,7 +274,10 @@ export default function QuestionModal({
           </div>
         )}
 
-        {!(typed && result) && (
+        {/* No skipping a Daily Double: the wager is placed before the clue is
+            read, so a skip would walk away from it. And once time is up the
+            Continue above is the way on. */}
+        {!(typed && result) && !isDailyDouble && !timedOut && (
           <button className="close-button" onClick={onClose}>
             {closeLabel}
           </button>

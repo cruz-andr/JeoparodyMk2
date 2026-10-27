@@ -26,7 +26,7 @@ const firstRows = [
     ['Ottawa, not Toronto, is the capital of this country', 'What is Canada?'],
     ['Its capital, Canberra, was purpose-built as a compromise between Sydney and Melbourne', 'What is Australia?'],
     ['This South American capital sits about 2,850 metres up in the Andes', 'What is Quito?'],
-    ['Since 1991 this city on the Volga has not been a capital; Astana, later Nur-Sultan, took the role in its country', 'What is Almaty?'],
+    ['In 1997 Kazakhstan moved its capital to Astana from this largest city, at the foot of the Tian Shan mountains', 'What is Almaty?'],
   ],
   [
     ['This organ pumps roughly 7,000 litres of blood a day', 'What is the heart?'],
