@@ -232,8 +232,10 @@ export function createGameActions({
     },
 
     startRound2(roomCode, { questions, categories, firstPickerId, dailyDoubles }) {
-      gameManager.startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles);
-      emitToTable(roomCode, 'game:round-2-started', { questions, categories, firstPickerId }, boardForPlayers);
+      // The server decides who opens the round (the trailing player), so the
+      // room is told its choice rather than the one the client sent.
+      const picker = gameManager.startRound2(roomCode, questions, categories, firstPickerId, dailyDoubles);
+      emitToTable(roomCode, 'game:round-2-started', { questions, categories, firstPickerId: picker }, boardForPlayers);
     },
 
     /** Final Jeopardy, or straight to the standings if nobody can play it.
