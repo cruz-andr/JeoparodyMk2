@@ -106,7 +106,9 @@ export function createBoardSource({ mode = 'archive', fetchGame = fetchGameById,
   }
 
   async function take() {
-    if (!ready) await prepare();
+    /* A loop, not an if: two tables can wait on the same fetch, and only the
+       first to wake gets its board. The second waits on the next one. */
+    while (!ready) await prepare();
     const game = ready;
     ready = null;
     prepare().catch(() => {}); // warm the next one for the next table
@@ -139,7 +141,11 @@ export function createQuickplayDirector({
     const t = schedule(() => {
       table.timers.delete(t);
       if (!tables.has(code) || !roomOf(code)) return;
-      try { fn(); } catch (err) { log(`quickplay ${code}: ${err.message}`); }
+      /* Some moves are async (dealing waits on a board); a rejection from one
+         must end up here too, not as an unhandled rejection that exits the
+         process. */
+      const report = (err) => log(`quickplay ${code}: ${err.message}`);
+      try { Promise.resolve(fn()).catch(report); } catch (err) { report(err); }
     }, ms);
     table.timers.add(t);
   }
@@ -169,6 +175,10 @@ export function createQuickplayDirector({
       table.game = await boardSource.take();
     } catch (err) {
       log(`quickplay ${code}: no board (${err.message}), dealing the house board`);
+      table.game = copyGame(FALLBACK_GAME);
+    }
+    if (!table.game) {
+      log(`quickplay ${code}: the board source came back empty, dealing the house board`);
       table.game = copyGame(FALLBACK_GAME);
     }
     if (!tables.has(code) || !roomOf(code)) return;
@@ -390,7 +400,7 @@ export function createQuickplayDirector({
         if (seat.isBot) bots.set(seat.socket.sessionId, { profile: seat.profile, sure: false, lastPick: null });
       }
       tables.set(match.roomCode, { timers: new Set(), bots, game: null, fjAnswer: null });
-      later(match.roomCode, DEAL_AFTER_MS, () => { deal(match.roomCode); });
+      later(match.roomCode, DEAL_AFTER_MS, () => deal(match.roomCode));
     },
 
     /** Everything the room is told, in the order it is told. */

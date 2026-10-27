@@ -474,6 +474,25 @@ async function run() {
     assert.equal(payloads[0].players.length, 3);
   });
 
+  /* Handlers destructured their payload and called their callback blind, so
+     one bare emit threw inside socket.io's dispatch, and the server's
+     uncaughtException handler exited the process with every room in it. */
+  await test('an event with no payload or no callback is shrugged off, not fatal', async (open) => {
+    const s = await connect(`bare-${Math.random()}`);
+    open.push(s);
+
+    s.emit('game:buzz-in');
+    s.emit('game:suggest-question', null);
+    s.emit('room:join', null);
+    s.emit('room:create', { type: 'multiplayer', settings: {} }); // no callback
+    await wait(200);
+
+    const created = await emitAck(s, 'room:create', { type: 'multiplayer', settings: {} });
+    assert.equal(created.success, true, 'the server is still up and answering');
+    const bare = await new Promise((resolve) => s.emit('room:create', resolve));
+    assert.equal(typeof bare.success, 'boolean', 'a callback with no payload still gets an answer');
+  });
+
   console.log(`\n${passed} passed, ${failures.length} failed\n`);
   for (const { name, err } of failures) {
     console.log(`  FAIL  ${name}`);

@@ -206,6 +206,16 @@ await atest('the static source never fetches; the archive source falls back to t
   assert.equal(c.round1.questions[0][0].revealed, false, 'each table gets its own copy');
 });
 
+/* Two tables seated while one fetch was in flight both waited on it. The
+   first claimed the board and the second got null, and dealing null threw
+   where nothing caught it, which took the whole server down. */
+await atest('two tables waiting on one fetch each get a board', async () => {
+  const source = createBoardSource({ mode: 'static' });
+  const [a, b] = await Promise.all([source.take(), source.take()]);
+  assert.equal(a?.source, 'house');
+  assert.equal(b?.source, 'house');
+});
+
 // =========================================================================
 // the director
 // =========================================================================
@@ -222,6 +232,14 @@ await atest('the board is dealt a few seconds after the table is seated, to a ra
   assert.ok(t.room.players.has(ready.payload.firstPickerId));
   assert.equal(t.room.status, 'in_progress');
   assert.equal(t.room.settings.questionTimeLimit, 30000);
+});
+
+await atest('a source that comes back empty-handed deals the house board', async () => {
+  const t = mkTable({ game: null });
+  await t.clock.advance(DEAL_AFTER_MS);
+  const [ready] = t.events('game:questions-ready');
+  assert.ok(ready, 'dealt');
+  assert.deepEqual(ready.payload.categories, FALLBACK_GAME.round1.categories);
 });
 
 await atest('a bot holding the pick opens a clue, rings in, answers, and the next pick follows', async () => {

@@ -1619,6 +1619,33 @@ test('a clue nobody answered is counted against nobody', () => {
   for (const p of room.players.values()) assert.equal(p.answered || 0, 0);
 });
 
+/* A suggestion used to read gameState.questions and gameState.suggestions
+   blind. A hosted board never set suggestions, and a room between
+   set-categories and its questions has no questions yet; either threw, and a
+   throw in a socket handler took the whole process down. */
+test('a suggestion in a hosted room is recorded rather than throwing', () => {
+  const gm = new GameStateManager();
+  const host = mkSocket();
+  const player = mkSocket();
+  const room = gm.createRoom('host', host, { enableDailyDouble: false });
+  gm.joinRoom(player, room.code, 'Player');
+  gm.setHostQuestions(room.code, mkBoard(), ['A', 'B', 'C', 'D', 'E', 'F'], host.sessionId);
+
+  const suggestions = gm.handleSuggestion(room.code, player.sessionId, 0, 0);
+  assert.deepEqual(suggestions, { [player.sessionId]: { categoryIndex: 0, pointIndex: 0 } });
+});
+
+test('a suggestion before the questions arrive is refused rather than throwing', () => {
+  const gm = new GameStateManager();
+  const host = mkSocket();
+  const player = mkSocket();
+  const room = gm.createRoom('multiplayer', host, { enableDailyDouble: false });
+  gm.joinRoom(player, room.code, 'Player');
+  gm.setCategories(room.code, ['A', 'B', 'C', 'D', 'E', 'F']);
+
+  assert.equal(gm.handleSuggestion(room.code, player.sessionId, 0, 0), null);
+});
+
 // --- report --------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

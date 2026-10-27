@@ -1304,6 +1304,7 @@ export class GameStateManager {
     }
 
     // Initialize host mode tracking
+    room.gameState.suggestions = {};
     room.gameState.typedAnswers = new Map();
     room.gameState.mcSelections = new Map();
     room.gameState.autoGradeResults = new Map();
@@ -1772,9 +1773,12 @@ export class GameStateManager {
     // Don't allow current picker to suggest
     if (room.gameState.currentPickerId === playerId) return null;
 
-    // Don't allow suggesting revealed questions
-    const question = room.gameState.questions[categoryIndex]?.[pointIndex];
+    // Don't allow suggesting revealed questions, or any before the board exists
+    const question = room.gameState.questions?.[categoryIndex]?.[pointIndex];
     if (!question || question.revealed) return null;
+
+    // A hosted board arrives through setHostQuestions, which has no suggestions yet
+    room.gameState.suggestions = room.gameState.suggestions || {};
 
     // Toggle off if same suggestion
     const existing = room.gameState.suggestions[playerId];
