@@ -194,6 +194,44 @@ await test('questions: round two is asked for harder', async () => {
   assert.match(calls[0], /point values: 400, 800, 1200, 1600, 2000/);
 });
 
+/* The model's board becomes a game's scores, so what it says about points
+   and shape is not taken on trust. */
+const replyBoard = (categories) => says(JSON.stringify({ categories }));
+const clues = (n, points = () => 99999) => Array.from({ length: n }, (_, i) => ({
+  points: points(i), answer: `Clue ${i}`, question: `What is ${i}?`,
+}));
+
+await test('questions: the points are the round\'s, whatever the model or the page says', async () => {
+  replyBoard([{ name: 'A', questions: clues(5) }]);
+  const one = await post('/questions', { categories: ['A'], pointValues: [1, 2, 3, 4, 5], round: 1 });
+  assert.equal(one.status, 200);
+  assert.deepEqual(one.data.categories[0].questions.map((q) => q.points), [200, 400, 600, 800, 1000]);
+
+  replyBoard([{ name: 'A', questions: clues(5, (i) => `${i}`) }]);
+  const two = await post('/questions', { categories: ['A'], pointValues: [200, 400, 600, 800, 1000], round: 2 });
+  assert.deepEqual(two.data.categories[0].questions.map((q) => q.points), [400, 800, 1200, 1600, 2000]);
+});
+
+await test('questions: clues the model sent out of order are put in order of value', async () => {
+  replyBoard([{ name: 'A', questions: [...clues(5, (i) => (i + 1) * 200)].reverse() }]);
+  const { data } = await post('/questions', { categories: ['A'], pointValues: [200, 400, 600, 800, 1000], round: 1 });
+  assert.equal(data.categories[0].questions[0].answer, 'Clue 0', 'the cheapest clue is first');
+});
+
+await test('questions: a board short a category, or a clue, is refused rather than dealt', async () => {
+  replyBoard([{ name: 'A', questions: clues(5) }]);
+  const shortCategory = await post('/questions', { categories: ['A', 'B'], pointValues: [200, 400, 600, 800, 1000] });
+  assert.equal(shortCategory.status, 502);
+
+  replyBoard([{ name: 'A', questions: clues(3) }]);
+  const shortClue = await post('/questions', { categories: ['A'], pointValues: [200, 400, 600, 800, 1000] });
+  assert.equal(shortClue.status, 502);
+
+  replyBoard([{ name: 'A', questions: [...clues(4), { points: 1000, answer: '', question: 'What is it?' }] }]);
+  const blank = await post('/questions', { categories: ['A'], pointValues: [200, 400, 600, 800, 1000] });
+  assert.equal(blank.status, 502, 'a clue with no text is not a clue');
+});
+
 await test('final: a category, a clue and a response', async () => {
   answering();
   const { status, data } = await post('/final', { genre: 'Endings' });
