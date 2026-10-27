@@ -26,10 +26,15 @@ export function getTodayDateString() {
   return today.toISOString().split('T')[0];
 }
 
+/* How long one page from the archive is waited on. It is somebody else's
+   site: without a limit a page that never finished held up every quickplay
+   deal and daily build waiting behind it. */
+const FETCH_TIMEOUT_MS = 8000;
+
 // Fetch a game by its ID
-export async function fetchGameById(gameId) {
+export async function fetchGameById(gameId, { fetch: fetchPage = fetch, timeoutMs = FETCH_TIMEOUT_MS } = {}) {
   const url = `${JARCHIVE_BASE}/showgame.php?game_id=${gameId}`;
-  const response = await fetch(url);
+  const response = await fetchPage(url, { signal: AbortSignal.timeout(timeoutMs) });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch game ${gameId}`);

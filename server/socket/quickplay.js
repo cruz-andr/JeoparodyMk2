@@ -29,6 +29,11 @@ import {
    "match found" for two seconds, then loads the game page; the rest is room
    for a slow phone to get there and take its seat. */
 export const DEAL_AFTER_MS = 6000;
+/* How long a seated table waits on an episode before it is dealt the house
+   board instead. The archive is somebody else's site, and one slow page used
+   to hold the table, and every table queued behind the same fetch, for as
+   long as that site took. */
+export const DEAL_WAIT_MS = 5000;
 /* The client shows a correct answer for three seconds before the board comes
    back. A pick that lands inside that window is drawn over by the reveal
    clearing, so nothing the house does follows a closed clue sooner than this. */
@@ -123,7 +128,7 @@ export function createQuickplayDirector({
   setTimeout: schedule = setTimeout, clearTimeout: cancel = clearTimeout,
   random = Math.random, log = () => {},
 }) {
-  /* roomCode -> { timers, game, bots: Map(botId -> { profile, sure, lastPick }), fjAnswer } */
+  /* roomCode -> { timers, game, bots: Map(botId -> { profile, sure, lastPick }), fjAnswer, clue } */
   const tables = new Map();
 
   const roomOf = (code) => gameManager.rooms.get(code);
@@ -150,6 +155,18 @@ export function createQuickplayDirector({
     table.timers.add(t);
   }
 
+  /* A move that belongs to one clue. Each clue opened bumps the table's count,
+     and a move from an earlier one is dropped when it comes due: a bot still
+     reading the last clue when somebody answered it used to ring in on
+     whichever clue was up by then. */
+  function laterThisClue(code, ms, fn) {
+    const clue = tableOf(code)?.clue;
+    later(code, ms, () => {
+      if (tableOf(code)?.clue !== clue) return;
+      return fn();
+    });
+  }
+
   function dispose(code) {
     const table = tableOf(code);
     if (!table) return;
@@ -172,7 +189,7 @@ export function createQuickplayDirector({
     if (!room || !table) return;
     if (!humansSeated(room)) { abandon(code); return; }
     try {
-      table.game = await boardSource.take();
+      table.game = await boardInTime();
     } catch (err) {
       log(`quickplay ${code}: no board (${err.message}), dealing the house board`);
       table.game = copyGame(FALLBACK_GAME);
@@ -190,6 +207,14 @@ export function createQuickplayDirector({
       dailyDoubles: null,
     });
     log(`quickplay ${code}: dealt ${table.game.source}`);
+  }
+
+  /* The board source, or nothing once DEAL_WAIT_MS has passed. Nothing is
+     dealt as the house board. */
+  function boardInTime() {
+    let timer;
+    const giveUp = new Promise((resolve) => { timer = schedule(() => resolve(null), DEAL_WAIT_MS); });
+    return Promise.race([boardSource.take(), giveUp]).finally(() => cancel(timer));
   }
 
   function boardCleared(room) {
@@ -270,17 +295,18 @@ export function createQuickplayDirector({
     if (!table || !room) return;
     const { question, pointIndex, isDailyDouble, pickerId } = payload;
     const clueText = question?.answer ?? '';
+    table.clue += 1;
 
     if (isDailyDouble) {
       const bot = table.bots.get(pickerId);
       if (!bot) return;
       bot.sure = knows(bot.profile, pointIndex, random);
-      later(code, between(3000, 5000, random), () => {
+      laterThisClue(code, between(3000, 5000, random), () => {
         const player = roomOf(code)?.players.get(pickerId);
         if (!player) return;
         const wager = dailyDoubleWager(bot.profile, player.score || 0, roomOf(code).gameState.currentRound || 1, random);
         actions.dailyDoubleWager(pickerId, code, wager);
-        later(code, between(4000, 7000, random), () => {
+        laterThisClue(code, between(4000, 7000, random), () => {
           actions.dailyDoubleAnswer(pickerId, code, bot.sure && answersCorrectly(true, random));
         });
       });
@@ -291,7 +317,7 @@ export function createQuickplayDirector({
       bot.sure = knows(bot.profile, pointIndex, random);
       const ringsIn = bot.sure || guesses(bot.profile, random);
       if (ringsIn) {
-        later(code, buzzDelayMs(bot.profile, clueText, { sure: bot.sure, random }), () => {
+        laterThisClue(code, buzzDelayMs(bot.profile, clueText, { sure: bot.sure, random }), () => {
           const current = roomOf(code);
           if (!current?.gameState?.buzzWindowOpen) return;
           actions.buzz(botId, code, 0);
@@ -299,7 +325,7 @@ export function createQuickplayDirector({
       } else if (random() < 0.75) {
         /* Most people who do not know a clue say so, which is what lets a clue
            nobody knows end before the whole clock runs out. */
-        later(code, skipDelayMs(clueText, random), () => {
+        laterThisClue(code, skipDelayMs(clueText, random), () => {
           const current = roomOf(code);
           if (!current?.gameState?.currentQuestion || current.gameState.buzzedPlayerId) return;
           actions.skipQuestion(botId, code);
@@ -311,7 +337,7 @@ export function createQuickplayDirector({
   function onBuzzerWinner(code, { playerId }) {
     const bot = tableOf(code)?.bots.get(playerId);
     if (!bot) return;
-    later(code, answerDelayMs(bot.profile, { sure: bot.sure, random }), () => {
+    laterThisClue(code, answerDelayMs(bot.profile, { sure: bot.sure, random }), () => {
       const current = roomOf(code);
       if (current?.gameState?.buzzedPlayerId !== playerId) return;
       actions.submitAnswer(playerId, code, answersCorrectly(bot.sure, random));
@@ -327,7 +353,7 @@ export function createQuickplayDirector({
         if (room.gameState.playersWhoBuzzed?.has(botId)) continue;
         if (room.gameState.skippedPlayers?.has(botId)) continue;
         if (!(bot.sure || guesses(bot.profile, random))) continue;
-        later(code, rebuzzDelayMs(bot.profile, random), () => {
+        laterThisClue(code, rebuzzDelayMs(bot.profile, random), () => {
           const current = roomOf(code);
           if (!current?.gameState?.buzzWindowOpen) return;
           actions.buzz(botId, code, 0);
@@ -341,7 +367,7 @@ export function createQuickplayDirector({
 
   function onBuzzTimeout(code) {
     for (const [botId] of botsAt(code)) {
-      later(code, between(900, 2600, random), () => actions.timeoutContinue(botId, code));
+      laterThisClue(code, between(900, 2600, random), () => actions.timeoutContinue(botId, code));
     }
   }
 
@@ -401,7 +427,7 @@ export function createQuickplayDirector({
       for (const seat of match.seats ?? []) {
         if (seat.isBot) bots.set(seat.socket.sessionId, { profile: seat.profile, sure: false, lastPick: null });
       }
-      tables.set(match.roomCode, { timers: new Set(), bots, game: null, fjAnswer: null });
+      tables.set(match.roomCode, { timers: new Set(), bots, game: null, fjAnswer: null, clue: 0 });
       later(match.roomCode, DEAL_AFTER_MS, () => deal(match.roomCode));
     },
 
@@ -414,6 +440,9 @@ export function createQuickplayDirector({
           pickerMoves(code, payload.firstPickerId, 1200 + pickDelayMs(random));
           break;
         case 'game:question-selected': onClueOpened(code, payload); break;
+        /* The pick moved because its holder left or dropped. A bot handed it
+           takes it the way it would after any clue. */
+        case 'game:picker-changed': pickerMoves(code, payload.nextPickerId, pickDelayMs(random)); break;
         case 'game:buzzer-winner': onBuzzerWinner(code, payload); break;
         case 'game:answer-result': onAnswerResult(code, payload); break;
         case 'game:buzz-timeout-result': onBuzzTimeout(code); break;

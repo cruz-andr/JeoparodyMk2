@@ -7,8 +7,11 @@
  */
 import assert from 'node:assert/strict';
 import { GameStateManager } from '../socket/GameStateManager.js';
-import { createGameActions } from '../socket/actions.js';
-import { createBoardSource, createQuickplayDirector, gameFromEpisode, toGrid, DEAL_AFTER_MS } from '../socket/quickplay.js';
+import { createGameActions, PICKER_GRACE_MS } from '../socket/actions.js';
+import {
+  createBoardSource, createQuickplayDirector, gameFromEpisode, toGrid, DEAL_AFTER_MS, DEAL_WAIT_MS,
+} from '../socket/quickplay.js';
+import { fetchGameById } from '../services/jarchiveScraper.js';
 import {
   ROSTER, seatBots, knows, buzzDelayMs, readingMs, pickCell, finalWager, dailyDoubleWager,
 } from '../socket/bots.js';
@@ -42,8 +45,10 @@ function mkClock() {
       due.delete(next.id);
       now = next.t.at;
       next.t.fn();
-      await Promise.resolve(); // let a resolved await (the deal) settle
-      await Promise.resolve();
+      /* Let whatever the timer started settle (the deal awaits a board) before
+         the next one fires. A macrotask turn drains every microtask, however
+         many awaits deep, where counting them broke whenever one was added. */
+      await new Promise((resolve) => setImmediate(resolve));
     }
     now = until;
   }
@@ -55,7 +60,7 @@ function mkClock() {
 const always = (v) => () => v;
 
 /** A seated quickplay table: one person, two bots, everything wired. */
-function mkTable({ random = always(0.5), people = 1, preset = 'standard', game = FALLBACK_GAME } = {}) {
+function mkTable({ random = always(0.5), people = 1, preset = 'standard', game = FALLBACK_GAME, boardSource: source = null } = {}) {
   const clock = mkClock();
   /* No jitter here: these tests are about what the director does once a game
      is filled, not about the window it is filled in. */
@@ -66,7 +71,7 @@ function mkTable({ random = always(0.5), people = 1, preset = 'standard', game =
     director.onRoomEvent(code, event, payload);
   };
   const actions = createGameActions({ gameManager: gm, emitRoom, archiveRoom: () => {}, setTimeout: clock.setTimeout });
-  const boardSource = { take: async () => JSON.parse(JSON.stringify(game)), prepare: async () => {} };
+  const boardSource = source ?? { take: async () => JSON.parse(JSON.stringify(game)), prepare: async () => {} };
   const director = createQuickplayDirector({
     gameManager: gm, actions, boardSource, random,
     setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
@@ -460,6 +465,69 @@ await atest('a person who comes back within the minute keeps the table', async (
   t.gm.reconnectPlayer({ id: 's-9', sessionId: t.humans[0].sessionId }, t.code);
   await t.clock.advance(40_000);
   assert.ok(t.gm.rooms.has(t.code), 'still here');
+});
+
+/* A bot that was still reading the last clue when somebody answered it used
+   to ring in on whichever clue was up when its timer came due. */
+await atest('a bot timer from one clue does not fire into the next', async () => {
+  let roll = 0.01;
+  const t = mkTable({ random: () => roll });
+  await t.clock.advance(DEAL_AFTER_MS);
+  const person = t.humans[0].sessionId;
+  t.room.gameState.currentPickerId = person;
+  t.actions.selectQuestion(person, t.code, 0, 0);
+  /* The person rings in at once and has it, while both bots, who know it,
+     are still reading. */
+  t.actions.buzz(person, t.code, 100);
+  await t.clock.advance(600);
+  t.actions.submitAnswer(person, t.code, true);
+  assert.equal(t.room.gameState.currentQuestion, null);
+
+  /* The next clue is one nobody at the house knows or guesses at. */
+  roll = 0.99;
+  t.actions.selectQuestion(person, t.code, 1, 0);
+  await t.clock.advance(12000);
+  assert.equal(t.events('game:buzzer-winner').length, 1, 'nobody rang in on the second clue');
+});
+
+await atest('a person who drops holding the pick does not stall the table', async () => {
+  const t = mkTable({ random: always(0.5) });
+  await t.clock.advance(DEAL_AFTER_MS);
+  const person = t.humans[0].sessionId;
+  t.room.gameState.currentPickerId = person;
+  t.gm.handleDisconnect(t.humans[0]);
+  t.actions.playerDropped(t.code, person);
+  t.director.onPlayerGone(t.code);
+
+  await t.clock.advance(PICKER_GRACE_MS + 6000);
+  const [changed] = t.events('game:picker-changed');
+  assert.ok(changed && t.bots.includes(changed.payload.nextPickerId), 'a bot is handed the pick');
+  assert.ok(t.events('game:question-selected').some((e) => e.payload.pickerId === changed.payload.nextPickerId),
+    'and picks');
+});
+
+await atest('a board that never arrives does not keep a seated table waiting', async () => {
+  const t = mkTable({ boardSource: { take: () => new Promise(() => {}), prepare: async () => {} } });
+  await t.clock.advance(DEAL_AFTER_MS + DEAL_WAIT_MS);
+  const [ready] = t.events('game:questions-ready');
+  assert.ok(ready, 'dealt');
+  assert.deepEqual(ready.payload.categories, FALLBACK_GAME.round1.categories, 'the house board');
+});
+
+await atest('a J-Archive fetch that hangs is given up on', async () => {
+  const hang = (_url, { signal }) => new Promise((_, reject) => {
+    signal.addEventListener('abort', () => reject(signal.reason));
+  });
+  /* The abort's own timer does not hold the process open (a real fetch's
+     socket would), so this one does while the test waits. */
+  const holdOpen = setTimeout(() => {}, 5000);
+  const started = Date.now();
+  try {
+    await assert.rejects(fetchGameById(1, { fetch: hang, timeoutMs: 50 }));
+  } finally {
+    clearTimeout(holdOpen);
+  }
+  assert.ok(Date.now() - started < 2000);
 });
 
 await atest('the match payload carries the settings and marks the house seats', async () => {
