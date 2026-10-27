@@ -4,7 +4,7 @@ import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager } from './GameStateManager.js';
 import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
-import { info as logInfo } from '../utils/log.js';
+import { info as logInfo, error as logError } from '../utils/log.js';
 
 const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
 
@@ -157,8 +157,24 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       isGuest: socket.isGuest,
     });
 
+    /* Every client event comes in through here. A client can send anything or
+       nothing: a missing payload becomes {}, a missing callback a no-op, and a
+       handler that throws or rejects is a log line. Without this, one bare
+       emit threw inside socket.io's dispatch, and the uncaughtException
+       handler in server/index.js took every room on the machine down with it. */
+    const on = (event, handler) => socket.on(event, (...args) => {
+      const callback = typeof args[args.length - 1] === 'function' ? args.pop() : () => {};
+      const payload = args[0] ?? {};
+      const fail = (err) => logError({ msg: 'Socket handler failed', event, socketId: socket.id }, err);
+      try {
+        Promise.resolve(handler(payload, callback)).catch(fail);
+      } catch (err) {
+        fail(err);
+      }
+    });
+
     // Room events
-    socket.on('room:create', async ({ type, settings }, callback) => {
+    on('room:create', async ({ type, settings }, callback) => {
       try {
         const room = gameManager.createRoom(type, socket, settings);
         console.log(`Room created: ${room.code} by ${socket.id}`);
@@ -168,7 +184,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       }
     });
 
-    socket.on('room:join', async ({ roomCode, displayName, signature }, callback) => {
+    on('room:join', async ({ roomCode, displayName, signature }, callback) => {
       try {
         const result = await gameManager.joinRoom(socket, roomCode, displayName, signature);
         socket.join(roomCode);
@@ -185,7 +201,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       }
     });
 
-    socket.on('room:leave', ({ roomCode }) => {
+    on('room:leave', ({ roomCode }) => {
       socket.leave(roomCode);
       gameManager.leaveRoom(socket, roomCode);
 
@@ -195,7 +211,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       director.onPlayerGone(roomCode);
     });
 
-    socket.on('room:ready', ({ roomCode, ready }) => {
+    on('room:ready', ({ roomCode, ready }) => {
       gameManager.setPlayerReady(socket, roomCode, ready);
 
       io.to(roomCode).emit('room:player-ready', {
@@ -205,7 +221,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Player reconnects to room after page reload
-    socket.on('room:reconnect', ({ roomCode }, callback) => {
+    on('room:reconnect', ({ roomCode }, callback) => {
       console.log(`Reconnect attempt: session ${socket.sessionId} to room ${roomCode}`);
 
       const result = gameManager.reconnectPlayer(socket, roomCode);
@@ -230,7 +246,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host updates room settings
-    socket.on('room:update-settings', ({ roomCode, settings }) => {
+    on('room:update-settings', ({ roomCode, settings }) => {
       const result = gameManager.updateRoomSettings(socket, roomCode, settings);
       if (result) {
         // Broadcast to all players in the room (including sender)
@@ -242,14 +258,14 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Game events
 
     // Host starts game setup
-    socket.on('game:start-setup', ({ roomCode }) => {
+    on('game:start-setup', ({ roomCode }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game setup started for room ${roomCode}`);
       io.to(roomCode).emit('game:setup-started');
     });
 
     // Host sets categories
-    socket.on('game:set-categories', ({ roomCode, categories }) => {
+    on('game:set-categories', ({ roomCode, categories }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Categories set for room ${roomCode}:`, categories);
       gameManager.setCategories(roomCode, categories);
@@ -257,45 +273,45 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host selected a genre (sync to other players for viewing)
-    socket.on('game:genre-selected', ({ roomCode, genre }) => {
+    on('game:genre-selected', ({ roomCode, genre }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Genre selected for room ${roomCode}: ${genre}`);
       io.to(roomCode).emit('game:genre-selected', { genre });
     });
 
     // Host edits a category in real-time (sync to other players)
-    socket.on('game:category-edited', ({ roomCode, index, value }) => {
+    on('game:category-edited', ({ roomCode, index, value }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       // Broadcast to others (not back to sender)
       socket.to(roomCode).emit('game:category-edited', { index, value });
     });
 
     // Host sets questions and starts game
-    socket.on('game:set-questions', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
+    on('game:set-questions', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Questions set for room ${roomCode}, first picker: ${firstPickerId}`);
       actions.setQuestions(roomCode, { questions, categories, firstPickerId, dailyDoubles });
     });
 
     // Player buzzes in with reaction time
-    socket.on('game:buzz-in', ({ roomCode, reactionTime }) => {
+    on('game:buzz-in', ({ roomCode, reactionTime }) => {
       console.log(`Player ${socket.sessionId} buzzed with reaction time ${reactionTime}ms`);
       actions.buzz(socket.sessionId, roomCode, reactionTime);
     });
 
     // Player submits answer
-    socket.on('game:submit-answer', ({ roomCode, correct }) => {
+    on('game:submit-answer', ({ roomCode, correct }) => {
       // `points` deliberately ignored if sent — the board is the only source.
       actions.submitAnswer(socket.sessionId, roomCode, correct);
     });
 
     // Player reveals the answer (broadcast to all)
-    socket.on('game:reveal-answer', ({ roomCode }) => {
+    on('game:reveal-answer', ({ roomCode }) => {
       actions.revealAnswer(socket.sessionId, roomCode);
     });
 
     // Buzz timer expired - no one buzzed in time (legacy client event - server now handles this)
-    socket.on('game:buzz-timeout', ({ roomCode }) => {
+    on('game:buzz-timeout', ({ roomCode }) => {
       // The server owns the buzz timer. This legacy client event is kept only
       // so old clients do not error; honouring it let any player kill a live
       // clue for everyone.
@@ -305,7 +321,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Player clicks Continue after timeout - wait for all players
-    socket.on('game:timeout-continue', ({ roomCode }) => {
+    on('game:timeout-continue', ({ roomCode }) => {
       if (DEBUG_GAME) {
         console.log(`[GAME] Player ${socket.sessionId} clicked Continue in room ${roomCode}`);
       }
@@ -313,33 +329,33 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Daily Double wager submitted
-    socket.on('game:daily-double-wager', ({ roomCode, wager }) => {
+    on('game:daily-double-wager', ({ roomCode, wager }) => {
       console.log(`Daily Double wager ${wager} from ${socket.sessionId} in room ${roomCode}`);
       actions.dailyDoubleWager(socket.sessionId, roomCode, wager);
     });
 
     // Daily Double answer submitted
-    socket.on('game:daily-double-answer', ({ roomCode, correct }) => {
+    on('game:daily-double-answer', ({ roomCode, correct }) => {
       console.log(`Daily Double answer (correct: ${correct}) from ${socket.sessionId} in room ${roomCode}`);
       actions.dailyDoubleAnswer(socket.sessionId, roomCode, correct);
     });
 
     // Round 1 ended - transition to Double Jeopardy
-    socket.on('game:round-end', ({ roomCode, round }) => {
+    on('game:round-end', ({ roomCode, round }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Round ${round} ended for room ${roomCode}`);
       actions.roundEnd(roomCode, round);
     });
 
     // Start Round 2 (Double Jeopardy)
-    socket.on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
+    on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Round 2 for room ${roomCode}`);
       actions.startRound2(roomCode, { questions, categories, firstPickerId, dailyDoubles });
     });
 
     // Start Final Jeopardy
-    socket.on('game:start-final-jeopardy', ({ roomCode, finalJeopardy }) => {
+    on('game:start-final-jeopardy', ({ roomCode, finalJeopardy }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Starting Final Jeopardy for room ${roomCode}`);
       const fjData = actions.startFinalJeopardy(roomCode, finalJeopardy);
@@ -349,33 +365,33 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Final Jeopardy wager submitted
-    socket.on('game:fj-wager', ({ roomCode, wager }) => {
+    on('game:fj-wager', ({ roomCode, wager }) => {
       console.log(`FJ wager ${wager} from ${socket.sessionId} in room ${roomCode}`);
       actions.fjWager(socket.sessionId, roomCode, wager);
     });
 
     // Final Jeopardy answer submitted
-    socket.on('game:fj-answer', ({ roomCode, answer }) => {
+    on('game:fj-answer', ({ roomCode, answer }) => {
       console.log(`FJ answer from ${socket.sessionId} in room ${roomCode}`);
       actions.fjAnswer(socket.sessionId, roomCode, answer);
     });
 
     // Game ends
-    socket.on('game:end', ({ roomCode }) => {
+    on('game:end', ({ roomCode }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
       console.log(`Game ended for room ${roomCode}`);
       actions.endGame(roomCode);
     });
 
     // Legacy game events (keep for backward compatibility)
-    socket.on('game:start', ({ roomCode }) => {
+    on('game:start', ({ roomCode }) => {
       const gameState = gameManager.startGame(roomCode);
       if (gameState) {
         io.to(roomCode).emit('game:started', gameState);
       }
     });
 
-    socket.on('game:buzz', ({ roomCode }) => {
+    on('game:buzz', ({ roomCode }) => {
       const result = gameManager.playerBuzz(socket, roomCode);
       if (result.success) {
         io.to(roomCode).emit('game:player-buzzed', {
@@ -384,7 +400,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       }
     });
 
-    socket.on('game:answer', ({ roomCode, answer }) => {
+    on('game:answer', ({ roomCode, answer }) => {
       const result = gameManager.submitAnswer(socket, roomCode, answer);
       if (result) {
         io.to(roomCode).emit('game:answer-result', result);
@@ -392,7 +408,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Quickplay matchmaking
-    socket.on('quickplay:join-queue', ({ displayName, signature, preset }) => {
+    on('quickplay:join-queue', ({ displayName, signature, preset }) => {
       gameManager.joinMatchmakingQueue(socket, displayName, signature, preset);
       // The thresholds travel with the ack so the waiting screen and the
       // matchmaker never disagree about when the table fills.
@@ -405,7 +421,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       settleMatchmaking();
     });
 
-    socket.on('quickplay:leave-queue', () => {
+    on('quickplay:leave-queue', () => {
       gameManager.leaveMatchmakingQueue(socket);
       socket.emit('quickplay:queue-left');
     });
@@ -415,7 +431,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // =====================
 
     // Host sets custom questions
-    socket.on('host:set-custom-questions', ({ roomCode, questions, categories, dailyDoubles }, callback) => {
+    on('host:set-custom-questions', ({ roomCode, questions, categories, dailyDoubles }, callback) => {
       const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId, dailyDoubles);
 
       if (result?.success) {
@@ -427,12 +443,12 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Question selection, for host-run rooms and player-run ones alike
-    socket.on('game:select-question', ({ roomCode, categoryIndex, pointIndex }) => {
+    on('game:select-question', ({ roomCode, categoryIndex, pointIndex }) => {
       actions.selectQuestion(socket.sessionId, roomCode, categoryIndex, pointIndex);
     });
 
     // Non-picker suggests a question
-    socket.on('game:suggest-question', ({ roomCode, categoryIndex, pointIndex }) => {
+    on('game:suggest-question', ({ roomCode, categoryIndex, pointIndex }) => {
       const playerId = socket.sessionId;
       const suggestions = gameManager.handleSuggestion(roomCode, playerId, categoryIndex, pointIndex);
       if (suggestions) {
@@ -441,12 +457,12 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Player skips question (I don't know)
-    socket.on('game:skip-question', ({ roomCode }) => {
+    on('game:skip-question', ({ roomCode }) => {
       actions.skipQuestion(socket.sessionId, roomCode);
     });
 
     // Player submits typed answer (host mode)
-    socket.on('player:submit-typed-answer', ({ roomCode, answer }) => {
+    on('player:submit-typed-answer', ({ roomCode, answer }) => {
       const playerId = socket.sessionId;
       const result = gameManager.submitTypedAnswer(roomCode, playerId, answer);
 
@@ -479,7 +495,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Player selects MC option (host mode)
-    socket.on('player:select-mc-option', ({ roomCode, optionIndex }) => {
+    on('player:select-mc-option', ({ roomCode, optionIndex }) => {
       const playerId = socket.sessionId;
       const result = gameManager.submitMCSelection(roomCode, playerId, optionIndex);
 
@@ -499,7 +515,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host judges answer
-    socket.on('host:judge-answer', ({ roomCode, playerId, correct }) => {
+    on('host:judge-answer', ({ roomCode, playerId, correct }) => {
       // `points` deliberately ignored if sent — the board is the only source.
       const result = gameManager.hostJudgeAnswer(roomCode, socket.sessionId, playerId, correct);
 
@@ -518,18 +534,18 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     /* A Daily Double in a hosted room. The host names the player it belongs to
        and enters their wager, because the host picked the clue and has no score
        of their own for the usual rule to land on. */
-    socket.on('host:daily-double-wager', ({ roomCode, playerId, wager }) => {
+    on('host:daily-double-wager', ({ roomCode, playerId, wager }) => {
       const result = gameManager.hostDailyDoubleWager(roomCode, socket.sessionId, playerId, wager);
       if (result) io.to(roomCode).emit('game:daily-double-wager-confirmed', result);
     });
 
-    socket.on('host:daily-double-answer', ({ roomCode, correct }) => {
+    on('host:daily-double-answer', ({ roomCode, correct }) => {
       const result = gameManager.hostDailyDoubleAnswer(roomCode, socket.sessionId, correct);
       if (result) io.to(roomCode).emit('game:daily-double-result', result);
     });
 
     // Host overrides score
-    socket.on('host:override-score', ({ roomCode, playerId, newScore, reason }) => {
+    on('host:override-score', ({ roomCode, playerId, newScore, reason }) => {
       const result = gameManager.overridePlayerScore(roomCode, socket.sessionId, playerId, newScore, reason);
 
       if (result) {
@@ -538,7 +554,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host skips question
-    socket.on('host:skip-question', ({ roomCode }) => {
+    on('host:skip-question', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
 
       // Abandoning a clue must also abandon its timers, or a stale one fires
@@ -558,7 +574,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host reveals typed answers
-    socket.on('host:reveal-answers', ({ roomCode }) => {
+    on('host:reveal-answers', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
 
@@ -569,7 +585,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host kicks player
-    socket.on('host:kick-player', ({ roomCode, playerId }) => {
+    on('host:kick-player', ({ roomCode, playerId }) => {
       const result = gameManager.kickPlayer(roomCode, socket.sessionId, playerId);
 
       if (result) {
@@ -583,7 +599,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host opens buzzer (verbal mode) — manual override
-    socket.on('host:open-buzzer', ({ roomCode }) => {
+    on('host:open-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
 
@@ -595,7 +611,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host closes buzzer
-    socket.on('host:close-buzzer', ({ roomCode }) => {
+    on('host:close-buzzer', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
 
@@ -607,7 +623,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host opens answer window (typed/MC mode) — manual override
-    socket.on('host:open-answer-window', ({ roomCode }) => {
+    on('host:open-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
 
@@ -621,7 +637,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host controls media playback (synced to all players)
-    socket.on('host:media-control', ({ roomCode, action }) => {
+    on('host:media-control', ({ roomCode, action }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
       // action: 'play' | 'pause' | 'replay'
@@ -629,7 +645,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
 
     // Host closes answer window
-    socket.on('host:close-answer-window', ({ roomCode }) => {
+    on('host:close-answer-window', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (room?.hostId !== socket.sessionId) return;
 
