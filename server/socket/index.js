@@ -4,6 +4,7 @@ import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager, playerBoard } from './GameStateManager.js';
 import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
+import { createSessionClaims } from './sessionClaims.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
 
 const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
@@ -130,13 +131,27 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
   }
 
+  const sessionClaims = createSessionClaims();
+
   // Authentication middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     const sessionId = socket.handshake.auth.sessionId;
 
-    // Session ID is the primary identifier for reconnection
-    socket.sessionId = sessionId || socket.id;
+    // Session ID is the primary identifier for reconnection. It is also the
+    // player's public id, so it only counts with the key that claimed it.
+    if (sessionId) {
+      const id = String(sessionId).slice(0, 128);
+      const verdict = sessionClaims.admit(id, socket.handshake.auth.sessionKey, {
+        seated: gameManager.sessionRooms.has(id),
+      });
+      if (verdict !== 'ok') {
+        return next(new Error(verdict === 'taken' ? 'session-taken' : 'session-key-required'));
+      }
+      socket.sessionId = id;
+    } else {
+      socket.sessionId = socket.id;
+    }
 
     if (token) {
       try {
@@ -674,6 +689,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Disconnect handling
     socket.on('disconnect', (reason) => {
       logInfo({ msg: 'Socket disconnected', socketId: socket.id, reason });
+      sessionClaims.touch(socket.sessionId);
       const roomCode = gameManager.sessionRooms.get(socket.sessionId);
       gameManager.handleDisconnect(socket);
       if (roomCode) director.onPlayerGone(roomCode);
@@ -682,8 +698,9 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
 
   // Periodic tasks
   const tick = setInterval(() => {
-    // Clean up stale rooms
+    // Clean up stale rooms, then the claims of anyone long gone
     gameManager.cleanupStaleRooms();
+    sessionClaims.sweep((id) => gameManager.sessionRooms.has(id));
 
     // Update matchmaking queue
     settleMatchmaking();

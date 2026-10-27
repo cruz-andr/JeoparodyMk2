@@ -11,7 +11,7 @@ class SocketClient {
   }
 
   // Connect to the socket server
-  connect(authToken = null, sessionId = null) {
+  connect(authToken = null, sessionId = null, sessionKey = null) {
     if (this.socket?.connected) {
       return Promise.resolve(this.socket);
     }
@@ -20,7 +20,7 @@ class SocketClient {
       return this.connectionPromise;
     }
 
-    const auth = { token: authToken, sessionId };
+    const auth = { token: authToken, sessionId, sessionKey };
     const authKey = JSON.stringify(auth);
 
     // A socket built for a different identity can never become the right one,

@@ -8,6 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { Server } from 'socket.io';
 import { io as createClient } from 'socket.io-client';
 import { initializeSocketHandlers } from '../socket/index.js';
@@ -26,11 +27,19 @@ const URL = `http://localhost:${PORT}`;
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Each session's key, so a test that reconnects as the same player brings the
+   same one, the way the browser keeps it in a cookie. */
+const sessionKeys = new Map();
+const keyFor = (sessionId) => {
+  if (!sessionKeys.has(sessionId)) sessionKeys.set(sessionId, randomUUID());
+  return sessionKeys.get(sessionId);
+};
+
 /** Connect a client with a stable session id (the reconnection identity). */
 function connect(sessionId) {
   return new Promise((resolve, reject) => {
     const socket = createClient(URL, {
-      auth: { sessionId },
+      auth: { sessionId, sessionKey: keyFor(sessionId) },
       transports: ['websocket'],
       forceNew: true,
     });
@@ -478,6 +487,35 @@ async function run() {
     const codes = new Set(payloads.map((m) => m.roomCode));
     assert.equal(codes.size, 1, 'everyone lands in the same room');
     assert.equal(payloads[0].players.length, 3);
+  });
+
+  /* A player's session id is in every payload that names them, so everyone at
+     the table has it, and the handshake used to take it as given. Anyone could
+     connect as another player and buzz, answer or leave for them. */
+  await test('nobody can connect as another player by sending their id', async (open) => {
+    const { host, guest, guestId } = await startGame();
+    open.push(host, guest);
+
+    const impostor = createClient(URL, {
+      auth: { sessionId: guestId, sessionKey: randomUUID() },
+      transports: ['websocket'], forceNew: true, reconnection: false,
+    });
+    open.push(impostor);
+    const refused = await new Promise((resolve) => {
+      impostor.on('connect', () => resolve(null));
+      impostor.on('connect_error', (err) => resolve(err.message));
+    });
+    assert.equal(refused, 'session-taken');
+
+    const bare = createClient(URL, {
+      auth: { sessionId: `someone-${Math.random()}` }, transports: ['websocket'], forceNew: true, reconnection: false,
+    });
+    open.push(bare);
+    const keyless = await new Promise((resolve) => {
+      bare.on('connect', () => resolve(null));
+      bare.on('connect_error', (err) => resolve(err.message));
+    });
+    assert.equal(keyless, 'session-key-required');
   });
 
   /* A hosted room's players are judged by the host, so they never need the

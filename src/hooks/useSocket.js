@@ -24,11 +24,21 @@ const socketApi = {
   leaveMatchmaking: socketClient.leaveMatchmaking.bind(socketClient),
 };
 
+/* The server refuses a session whose id is claimed by another browser's key,
+   or that has no key. Neither will ever be let in, so start a fresh session;
+   the connect effect runs again because sessionId changed. Every mounted
+   useSocket hears the same refusal, so only the first to act on it resets. */
+const SESSION_REFUSED = new Set(['session-taken', 'session-key-required']);
+function recoverFromRefusal(err, refusedSessionId) {
+  const store = useUserStore.getState();
+  if (SESSION_REFUSED.has(err?.message) && store.sessionId === refusedSessionId) store.resetSession();
+}
+
 export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
-  const { user, sessionId } = useUserStore();
+  const { user, sessionId, sessionKey } = useUserStore();
   const mountedRef = useRef(true);
 
   // Connect on mount
@@ -42,12 +52,13 @@ export function useSocket() {
       try {
         // Get auth token if available
         const token = user?.token || null;
-        await socketClient.connect(token, sessionId);
+        await socketClient.connect(token, sessionId, sessionKey);
 
         if (mountedRef.current) {
           setIsConnected(true);
         }
       } catch (err) {
+        recoverFromRefusal(err, sessionId);
         if (mountedRef.current) {
           setError(err.message);
           setIsConnected(false);
@@ -91,7 +102,7 @@ export function useSocket() {
       socketClient.off('disconnect', handleDisconnect);
       socketClient.off('connect_error', handleError);
     };
-  }, [user?.token, sessionId]);
+  }, [user?.token, sessionId, sessionKey]);
 
   // Disconnect helper
   const disconnect = useCallback(() => {
@@ -106,15 +117,16 @@ export function useSocket() {
 
     try {
       const token = user?.token || null;
-      await socketClient.connect(token, sessionId);
+      await socketClient.connect(token, sessionId, sessionKey);
       setIsConnected(true);
     } catch (err) {
+      recoverFromRefusal(err, sessionId);
       setError(err.message);
       setIsConnected(false);
     } finally {
       setIsConnecting(false);
     }
-  }, [user?.token, sessionId]);
+  }, [user?.token, sessionId, sessionKey]);
 
   // Subscribe to an event
   const subscribe = useCallback((event, callback) => {
