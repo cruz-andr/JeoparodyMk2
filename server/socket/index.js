@@ -131,6 +131,36 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     });
   }
 
+  /* Every typed answer a hosted clue is waiting on is in: tell the room, and
+     grade them if the room grades itself. Once per clue. */
+  function announceAllAnswers(roomCode) {
+    const room = gameManager.rooms.get(roomCode);
+    if (!room?.gameState || room.gameState.allAnswersIn) return;
+    room.gameState.allAnswersIn = true;
+    io.to(roomCode).emit('game:all-answers-in');
+
+    if (room.settings?.answerMode === 'auto_grade') {
+      const gradeResults = gameManager.autoGradeAnswers(roomCode);
+      io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
+      // Refresh so the panel shows each answer with its grade attached.
+      sendTypedAnswersToHost(roomCode);
+    }
+  }
+
+  /* A hosted clue waits on an answer from every player who can give one.
+     Asked again when a player goes, since theirs is never coming. */
+  function settleHostedAnswers(roomCode) {
+    const room = gameManager.rooms.get(roomCode);
+    const gs = room?.gameState;
+    if (room?.type !== 'host' || !gs?.currentQuestion) return;
+    const expected = gameManager.countActivePlayers(roomCode);
+    if (expected === 0) return;
+    if (gs.typedAnswers?.size && gs.typedAnswers.size >= expected) announceAllAnswers(roomCode);
+    if (gs.mcSelections?.size && gs.mcSelections.size >= expected) {
+      io.to(roomCode).emit('game:mc-results', gameManager.scoreMCAnswers(roomCode));
+    }
+  }
+
   const sessionClaims = createSessionClaims();
 
   // Authentication middleware
@@ -220,24 +250,43 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
         socket.join(roomCode);
         callback({ success: true, ...result });
 
-        // Notify others in room (include signature)
-        socket.to(roomCode).emit('room:player-joined', {
-          playerId: socket.sessionId,
-          displayName,
-          signature,
-        });
+        // Notify others in room (include signature). A player coming back
+        // by the code is a return: announcing them as new put a second copy
+        // of them on everybody else's screen.
+        if (result.isRejoin) {
+          socket.to(roomCode).emit('room:player-reconnected', {
+            playerId: socket.sessionId,
+            displayName,
+          });
+        } else {
+          socket.to(roomCode).emit('room:player-joined', {
+            playerId: socket.sessionId,
+            displayName,
+            signature,
+          });
+        }
       } catch (error) {
         callback({ success: false, error: error.message });
       }
     });
 
     on('room:leave', ({ roomCode }) => {
+      /* The host of a hosted game is the one running it, so their leaving
+         ends it: archived, and the players sent to the standings, rather than
+         left looking at a clue nobody is ever going to judge. */
+      const room = gameManager.rooms.get(roomCode);
+      if (gameManager.isHostOf(room, socket.sessionId) && room.status === 'in_progress') {
+        actions.endGame(roomCode);
+      }
+
       socket.leave(roomCode);
-      gameManager.leaveRoom(socket, roomCode);
+      const left = gameManager.leaveRoom(socket, roomCode);
 
       socket.to(roomCode).emit('room:player-left', {
         playerId: socket.sessionId,
       });
+      actions.playerLeft(roomCode, socket.sessionId, left ?? {});
+      settleHostedAnswers(roomCode);
       director.onPlayerGone(roomCode);
     });
 
@@ -461,8 +510,10 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // =====================
 
     // Host sets custom questions
-    on('host:set-custom-questions', ({ roomCode, questions, categories, dailyDoubles }, callback) => {
-      const result = gameManager.setHostQuestions(roomCode, questions, categories, socket.sessionId, dailyDoubles);
+    on('host:set-custom-questions', ({ roomCode, questions, categories, dailyDoubles, round2, finalJeopardy }, callback) => {
+      const result = gameManager.setHostQuestions(
+        roomCode, questions, categories, socket.sessionId, dailyDoubles, { round2, finalJeopardy }
+      );
 
       if (result?.success) {
         // The host already has the board; the players are told it is set, not what it says.
@@ -511,17 +562,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
         sendTypedAnswersToHost(roomCode);
 
         // If all answered, notify host
-        if (result.allAnswered) {
-          io.to(roomCode).emit('game:all-answers-in');
-
-          // Auto-grade if in auto_grade mode
-          if (room?.settings?.answerMode === 'auto_grade') {
-            const gradeResults = gameManager.autoGradeAnswers(roomCode);
-            io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
-            // Refresh so the panel shows each answer with its grade attached.
-            sendTypedAnswersToHost(roomCode);
-          }
-        }
+        if (result.allAnswered) announceAllAnswers(roomCode);
       }
     });
 
@@ -628,6 +669,8 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
         if (result.socketId) {
           io.to(result.socketId).emit('kicked', { reason: 'Removed by host' });
         }
+        actions.playerLeft(roomCode, result.playerId, { nextPickerId: result.nextPickerId });
+        settleHostedAnswers(roomCode);
       }
     });
 
@@ -692,7 +735,10 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       sessionClaims.touch(socket.sessionId);
       const roomCode = gameManager.sessionRooms.get(socket.sessionId);
       gameManager.handleDisconnect(socket);
-      if (roomCode) director.onPlayerGone(roomCode);
+      if (!roomCode) return;
+      actions.playerDropped(roomCode, socket.sessionId);
+      settleHostedAnswers(roomCode);
+      director.onPlayerGone(roomCode);
     });
   });
 

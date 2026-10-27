@@ -30,6 +30,11 @@ export const answerWindowMs = (room) => room?.settings?.answerTimeLimit || DEFAU
    room to be torn down, so everything after a buzz re-reads the live room. */
 const BUZZ_COLLECT_MS = 500;
 
+/* How long a picker whose connection dropped keeps the pick. Long enough for
+   a reload or a phone waking up to come back; short enough that the rest of
+   the room is not left looking at a board nobody can choose from. */
+export const PICKER_GRACE_MS = 15000;
+
 export function createGameActions({
   gameManager, emitRoom, archiveRoom, setTimeout: schedule = setTimeout,
   /* One event in two versions: the host's, and everyone else's. Without a
@@ -78,6 +83,102 @@ export function createGameActions({
     } else {
       activateLateJoiners(roomCode);
     }
+  }
+
+  /* Everyone still here has passed, or the clock ran out: nobody is going to
+     buzz, so the clue is over and the room waits on its Continues. */
+  function endBuzzing(roomCode) {
+    gameManager.clearBuzzTimeout(roomCode);
+    const result = gameManager.handleBuzzTimeout(roomCode);
+    if (result) emitRoom(roomCode, 'game:buzz-timeout-result', result);
+  }
+
+  /* Every Continue is in. */
+  function finishContinue(roomCode) {
+    gameManager.clearCurrentQuestion(roomCode);
+    emitRoom(roomCode, 'game:all-continued', { nextPickerId: gameManager.getCurrentPicker(roomCode) });
+    activateLateJoiners(roomCode);
+  }
+
+  function showFinalClue(roomCode) {
+    const { clue } = rooms.get(roomCode).gameState.finalJeopardy;
+    emitRoom(roomCode, 'game:fj-show-clue', { clue });
+  }
+
+  function revealFinal(roomCode) {
+    const results = gameManager.getFJResults(roomCode);
+    /* The scores are final here, so file the game now rather than at
+       game:end, which only arrives if the host goes on to press "See Final
+       Standings". A second archive call is a no-op. */
+    archiveRoom(roomCode);
+    const correctResponse = rooms.get(roomCode).gameState.finalJeopardy.answer;
+    emitRoom(roomCode, 'game:fj-reveal', { results, answer: correctResponse });
+  }
+
+  /* Whatever the room was waiting on from everyone, asked again without the
+     player who has just gone. Each of these used to count them in, so one
+     dropped connection held a wager, an answer, a Continue or a pass open for
+     good, and with it the whole room. */
+  function settleWaits(roomCode) {
+    const next = gameManager.finalJeopardyNext(roomCode);
+    if (next === 'clue') showFinalClue(roomCode);
+    else if (next === 'reveal') revealFinal(roomCode);
+    if (gameManager.everyoneContinued(roomCode)) finishContinue(roomCode);
+    if (gameManager.everyoneSkipped(roomCode)) endBuzzing(roomCode);
+  }
+
+  /* The player holding the buzz has left the room. Their answer clock would
+     have docked a player who no longer exists, which did nothing, and the
+     clue sat waiting on them. */
+  function releaseBuzzOf(roomCode, playerId) {
+    const room = rooms.get(roomCode);
+    if (!room?.gameState || room.gameState.buzzedPlayerId !== playerId) return;
+    gameManager.clearAnswerTimeout(roomCode);
+    const result = gameManager.releaseBuzz(roomCode, playerId);
+    if (!result) return;
+
+    if (room.type !== 'host') {
+      settleAnswer(roomCode, result);
+      return;
+    }
+    /* A hosted room's buzzer is the host's to run, and nothing there is
+       timed, so the room is told directly: open again, or the clue is over. */
+    if (result.canBuzzAgain) {
+      gameManager.startBuzzWindow(roomCode);
+      emitRoom(roomCode, 'host:buzzer-opened', { buzzReleased: playerId });
+    } else {
+      emitRoom(roomCode, 'host:question-skipped', { nextPickerId: room.hostId });
+    }
+  }
+
+  /* A picker whose connection has dropped keeps the pick for a grace period,
+     then it passes to somebody who is here. While a clue is up the pick is
+     not in play, so the check waits for it to close; a Daily Double is the
+     picker's alone, so one left waiting on them is put away unplayed. The
+     socket the player had is how a return is spotted, even one followed by
+     another drop. */
+  function watchDroppedPicker(roomCode, playerId, socketId) {
+    const timer = schedule(() => {
+      const room = rooms.get(roomCode);
+      const gs = room?.gameState;
+      const player = room?.players.get(playerId);
+      if (!gs || !player || player.isConnected || player.socketId !== socketId) return;
+      if (room.type === 'host' || gs.currentPickerId !== playerId) return;
+      if (gs.phase === 'finalJeopardy' || gs.phase === 'finished') return;
+
+      if (gs.isDailyDouble && gs.currentQuestion) {
+        const result = gameManager.abandonDailyDouble(roomCode);
+        if (result) emitRoom(roomCode, 'game:daily-double-result', result);
+      }
+      if (gs.currentQuestion || gameManager.getActivePlayerIds(room).length === 0) {
+        watchDroppedPicker(roomCode, playerId, socketId);
+        return;
+      }
+      const next = gameManager.reassignPickerIfNeeded(room, playerId);
+      if (next) emitRoom(roomCode, 'game:picker-changed', { nextPickerId: next });
+    }, PICKER_GRACE_MS);
+    /* A watch on a room is not a reason for the process to stay up. */
+    timer?.unref?.();
   }
 
   return {
@@ -192,20 +293,14 @@ export function createGameActions({
         skippedCount: result.skippedCount,
         totalEligible: result.totalEligible,
       });
-      if (result.allSkipped) {
-        gameManager.clearBuzzTimeout(roomCode);
-        const timeoutResult = gameManager.handleBuzzTimeout(roomCode);
-        if (timeoutResult) emitRoom(roomCode, 'game:buzz-timeout-result', timeoutResult);
-      }
+      if (result.allSkipped) endBuzzing(roomCode);
       return result;
     },
 
     /** Continue after nobody buzzed. The board comes back when everyone has. */
     timeoutContinue(sessionId, roomCode) {
       if (!gameManager.playerContinued(roomCode, sessionId)) return false;
-      gameManager.clearCurrentQuestion(roomCode);
-      emitRoom(roomCode, 'game:all-continued', { nextPickerId: gameManager.getCurrentPicker(roomCode) });
-      activateLateJoiners(roomCode);
+      finishContinue(roomCode);
       return true;
     },
 
@@ -228,6 +323,7 @@ export function createGameActions({
     },
 
     roundEnd(roomCode, round) {
+      gameManager.endRound(roomCode);
       emitRoom(roomCode, 'game:round-ended', { round });
     },
 
@@ -247,6 +343,7 @@ export function createGameActions({
       if (!fjData) return null;
       if (fjData.eligibleCount === 0) {
         archiveRoom(roomCode);
+        gameManager.finishGame(roomCode);
         emitRoom(roomCode, 'game:ended');
         return fjData;
       }
@@ -259,29 +356,38 @@ export function createGameActions({
 
     fjWager(sessionId, roomCode, wager) {
       const allIn = gameManager.submitFJWager(roomCode, sessionId, wager);
-      if (allIn) {
-        const { clue } = rooms.get(roomCode).gameState.finalJeopardy;
-        emitRoom(roomCode, 'game:fj-show-clue', { clue });
-      }
+      if (allIn) showFinalClue(roomCode);
       return allIn;
     },
 
     fjAnswer(sessionId, roomCode, answer) {
       const allIn = gameManager.submitFJAnswer(roomCode, sessionId, answer);
       if (!allIn) return false;
-      const results = gameManager.getFJResults(roomCode);
-      /* The scores are final here, so file the game now rather than at
-         game:end, which only arrives if the host goes on to press "See Final
-         Standings". A second archive call is a no-op. */
-      archiveRoom(roomCode);
-      const correctResponse = rooms.get(roomCode).gameState.finalJeopardy.answer;
-      emitRoom(roomCode, 'game:fj-reveal', { results, answer: correctResponse });
+      revealFinal(roomCode);
       return true;
     },
 
     endGame(roomCode) {
       archiveRoom(roomCode);
+      gameManager.finishGame(roomCode);
       emitRoom(roomCode, 'game:ended');
+    },
+
+    /** A player has left the room for good, by choice or by a kick.
+        `nextPickerId` is who leaveRoom handed their pick to, if they had it. */
+    playerLeft(roomCode, playerId, { nextPickerId = null } = {}) {
+      if (!rooms.get(roomCode)?.gameState) return;
+      releaseBuzzOf(roomCode, playerId);
+      if (nextPickerId) emitRoom(roomCode, 'game:picker-changed', { nextPickerId });
+      settleWaits(roomCode);
+    },
+
+    /** A player's connection has dropped. They may well be back. */
+    playerDropped(roomCode, playerId) {
+      const room = rooms.get(roomCode);
+      if (!room?.gameState) return;
+      settleWaits(roomCode);
+      watchDroppedPicker(roomCode, playerId, room.players.get(playerId)?.socketId);
     },
   };
 }

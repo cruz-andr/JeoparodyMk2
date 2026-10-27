@@ -1878,6 +1878,116 @@ test('a suggestion before the questions arrive is refused rather than throwing',
   assert.equal(gm.handleSuggestion(room.code, player.sessionId, 0, 0), null);
 });
 
+// =========================================================================
+// 9. Coming back
+// =========================================================================
+
+test('rejoining a game in progress by its code is a return, not a second seat', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  room.players.get(sockets[1].sessionId).score = 400;
+  gm.handleDisconnect(sockets[1]);
+
+  const result = gm.joinRoom({ id: 'socket-again', sessionId: sockets[1].sessionId }, code, 'Player1');
+  assert.equal(result.isRejoin, true);
+  assert.equal(result.isLateJoin, false);
+  assert.ok(result.gameState?.questions, 'the board comes with it, so the page is not the lobby');
+  assert.equal(room.players.size, 2, 'still two players');
+  assert.equal(room.players.get(sockets[1].sessionId).score, 400);
+});
+
+test('a reconnect carries the room status, so a page can tell a lobby from a game', () => {
+  const { gm, code, sockets } = mkGame({ count: 2 });
+  const result = gm.reconnectPlayer({ id: 'x', sessionId: sockets[1].sessionId }, code);
+  assert.equal(result.status, 'in_progress');
+});
+
+test('a reconnect tells a player where they were in Final Jeopardy', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  for (const p of room.players.values()) p.score = 1000;
+  gm.startFinalJeopardy(code, null);
+  gm.submitFJWager(code, sockets[0].sessionId, 300);
+
+  const mine = gm.reconnectPlayer({ id: 'x', sessionId: sockets[0].sessionId }, code).gameState;
+  assert.deepEqual(mine.you.fj, { eligible: true, wager: 300, answered: false });
+  const theirs = gm.reconnectPlayer({ id: 'y', sessionId: sockets[1].sessionId }, code).gameState;
+  assert.deepEqual(theirs.you.fj, { eligible: true, wager: null, answered: false });
+  assert.equal(theirs.finalJeopardy.clue, undefined, 'the clue is still hidden');
+});
+
+test('a reconnect after the Final Jeopardy reveal brings the results', () => {
+  const { gm, code, sockets, room } = mkGame({ count: 2 });
+  for (const p of room.players.values()) p.score = 1000;
+  gm.startFinalJeopardy(code, null);
+  sockets.forEach((s) => gm.submitFJWager(code, s.sessionId, 100));
+  sockets.forEach((s) => gm.submitFJAnswer(code, s.sessionId, 'nope'));
+  gm.getFJResults(code);
+
+  const gs = gm.reconnectPlayer({ id: 'x', sessionId: sockets[1].sessionId }, code).gameState;
+  assert.equal(gs.finalJeopardy.results.length, 2);
+  assert.ok(gs.finalJeopardy.answer);
+});
+
+test('a reconnect during a timed-out clue says whether this player pressed Continue', () => {
+  const { gm, code, sockets } = mkGame({ count: 2 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.handleBuzzTimeout(code);
+  gm.playerContinued(code, sockets[0].sessionId);
+
+  const mine = gm.reconnectPlayer({ id: 'x', sessionId: sockets[0].sessionId }, code).gameState;
+  assert.equal(mine.awaitingContinue, true);
+  assert.equal(mine.you.continued, true);
+  const theirs = gm.reconnectPlayer({ id: 'y', sessionId: sockets[1].sessionId }, code).gameState;
+  assert.equal(theirs.you.continued, false);
+});
+
+test('a reconnect says whether this player has already had their go at the clue', () => {
+  const { gm, code, sockets } = mkGame({ count: 3 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  gm.startBuzzWindow(code);
+  gm.recordBuzz(code, sockets[1].sessionId, 10);
+  gm.determineBuzzerWinner(code);
+  gm.handleAnswer(code, sockets[1].sessionId, false);
+  gm.playerSkipped(code, sockets[2].sessionId);
+
+  const view = (s) => gm.reconnectPlayer({ id: `r-${s.sessionId}`, sessionId: s.sessionId }, code).gameState.you;
+  assert.equal(view(sockets[1]).buzzed, true);
+  assert.equal(view(sockets[2]).skipped, true);
+  assert.equal(view(sockets[0]).buzzed, false);
+});
+
+test('Continue is refused when no clue has timed out', () => {
+  const { gm, code, sockets } = mkGame({ count: 2 });
+  gm.selectQuestion(sockets[0], code, 0, 0);
+  assert.equal(gm.playerContinued(code, sockets[0].sessionId), false);
+  assert.equal(gm.playerContinued(code, sockets[1].sessionId), false);
+});
+
+test('leaveRoom says who holds the pick when the leaver had it', () => {
+  const { gm, code, sockets } = mkGame({ count: 3 });
+  const { nextPickerId } = gm.leaveRoom(sockets[0], code);
+  assert.ok([sockets[1].sessionId, sockets[2].sessionId].includes(nextPickerId));
+  const bystander = sockets.slice(1).find((s) => s.sessionId !== nextPickerId);
+  assert.equal(gm.leaveRoom(bystander, code).nextPickerId, null, 'not the picker: nothing changes');
+});
+
+test('the host of a hosted game gets back the rounds they wrote; a player does not', () => {
+  const gm = new GameStateManager();
+  const host = mkSocket('the-host');
+  const player = mkSocket('a-player');
+  const room = gm.createRoom('host', host, {});
+  gm.joinRoom(host, room.code, 'Host');
+  gm.joinRoom(player, room.code, 'Player');
+  const plan = { round2: { categories: ['X'], questions: [[{ answer: 'a', question: 'q' }]] }, finalJeopardy: { category: 'F', answer: 'c', question: 'r' } };
+  gm.setHostQuestions(room.code, mkBoard(), ['A', 'B', 'C', 'D', 'E', 'F'], host.sessionId, null, plan);
+
+  const forHost = gm.reconnectPlayer({ id: 'h2', sessionId: host.sessionId }, room.code);
+  assert.deepEqual(forHost.hostPlan.round2, plan.round2);
+  assert.deepEqual(forHost.hostPlan.finalJeopardy, plan.finalJeopardy);
+  const forPlayer = gm.reconnectPlayer({ id: 'p2', sessionId: player.sessionId }, room.code);
+  assert.equal(forPlayer.hostPlan, undefined);
+});
+
 // --- report --------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

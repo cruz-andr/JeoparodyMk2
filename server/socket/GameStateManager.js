@@ -104,19 +104,25 @@ export class GameStateManager {
       throw new Error('Room not found');
     }
 
-    // Block joins during Final Jeopardy
-    if (room.status === 'in_progress' && room.gameState?.phase === 'finalJeopardy') {
+    const playerId = socket.sessionId;
+    const existing = room.players.get(playerId);
+
+    // Block new players during Final Jeopardy. Someone already playing it
+    // who comes back by the code is let back in to finish it.
+    if (!existing && room.status === 'in_progress' && room.gameState?.phase === 'finalJeopardy') {
       throw new Error('Game is in Final Jeopardy, cannot join');
     }
 
-    if (!room.players.has(socket.sessionId) &&
-        room.players.size >= room.settings.maxPlayers) {
+    if (!existing && room.players.size >= room.settings.maxPlayers) {
       throw new Error('Room is full');
     }
 
-    const playerId = socket.sessionId;
-    const existing = room.players.get(playerId);
-    const isLateJoin = room.status === 'in_progress' && !existing;
+    const started = room.status !== 'waiting';
+    const isLateJoin = started && !existing;
+    /* A player already seated who joins again by the code, after closing the
+       tab say, is coming back, not arriving. They used to be sent no game
+       state and land in the lobby of a game that was half over. */
+    const isRejoin = started && Boolean(existing);
     const player = {
       id: playerId,
       socketId: socket.id,
@@ -152,10 +158,12 @@ export class GameStateManager {
       settings: room.settings,
       isHost: player.isHost,
       isLateJoin,
+      isRejoin,
+      status: room.status,
     };
 
-    // Late joiners need the game state to render the board
-    if (isLateJoin) {
+    // Late joiners and returning players need the game state to render the board
+    if (isLateJoin || isRejoin) {
       result.gameState = this.publicGameState(room, playerId);
     }
 
@@ -172,14 +180,17 @@ export class GameStateManager {
     this.sessionRooms.delete(socket.sessionId);
 
     // If the leaver held the pick, hand it to someone who is still here so the
-    // board does not sit waiting on a player who has gone.
-    this.reassignPickerIfNeeded(room, playerId);
+    // board does not sit waiting on a player who has gone. Returned, because
+    // the room has to be told: changing it here alone left every screen, and
+    // the house players, waiting on the one who left.
+    const nextPickerId = this.reassignPickerIfNeeded(room, playerId);
 
     // If room is empty, delete it. A quickplay table whose last person has
     // left is empty too, however many house players are still sitting at it.
     if (room.players.size === 0 || !this.hasHuman(room)) {
       this.destroyRoom(roomCode);
     }
+    return { nextPickerId };
   }
 
   /** Whether anybody at the table is a person, connected or not. */
@@ -587,6 +598,10 @@ export class GameStateManager {
     room.gameState.buzzWindowOpen = false;
     room.gameState.playersWhoBuzzed = new Set();
     room.gameState.continuedPlayers = new Set(); // Reset for this question
+    // The room now waits on everyone's Continue, and only now: a Continue is
+    // an answer to a timed-out clue, and taken at any other time it closed
+    // whatever clue was up.
+    room.gameState.awaitingContinue = true;
 
     // Keep the same picker (they get to pick again since no one answered)
     return {
@@ -598,16 +613,30 @@ export class GameStateManager {
   // Track when a player clicks Continue after timeout
   playerContinued(roomCode, playerId) {
     const room = this.rooms.get(roomCode);
-    if (!room || !room.gameState) return false;
+    if (!room || !room.gameState?.awaitingContinue) return false;
 
     room.gameState.continuedPlayers = room.gameState.continuedPlayers || new Set();
     room.gameState.continuedPlayers.add(playerId);
 
-    // Check if all players who can act have continued (a disconnected player
-    // will never click Continue, so waiting on them hangs the board)
     const activeIds = this.getActivePlayerIds(room);
-    if (activeIds.length === 0) return true;
-    return activeIds.every(id => room.gameState.continuedPlayers.has(id));
+    if (activeIds.length === 0) {
+      room.gameState.awaitingContinue = false;
+      return true;
+    }
+    return this.everyoneContinued(roomCode);
+  }
+
+  /* Whether every player who can act has pressed Continue, closing the wait
+     if so. A disconnected player will never press it, so this is asked again
+     whenever somebody drops. */
+  everyoneContinued(roomCode) {
+    const room = this.rooms.get(roomCode);
+    const gs = room?.gameState;
+    if (!gs?.awaitingContinue) return false;
+    const activeIds = this.getActivePlayerIds(room);
+    const done = activeIds.length > 0 && activeIds.every((id) => gs.continuedPlayers?.has(id));
+    if (done) gs.awaitingContinue = false;
+    return done;
   }
 
   // Reset continue tracking (called when new question is selected)
@@ -629,7 +658,73 @@ export class GameStateManager {
     const room = this.rooms.get(roomCode);
     if (room && room.gameState) {
       room.gameState.currentQuestion = null;
+      room.gameState.awaitingContinue = false;
     }
+  }
+
+  /**
+   * The player holding the buzz has left the room. Nobody is going to answer,
+   * so the clue goes back to whoever has not had a go at it, or ends if that
+   * is nobody. Nobody is scored: the leaver never answered. Without this the
+   * clue waited on them for good.
+   */
+  releaseBuzz(roomCode, playerId) {
+    const room = this.rooms.get(roomCode);
+    const gs = room?.gameState;
+    if (!gs?.currentQuestion || !playerId || gs.buzzedPlayerId !== playerId) return null;
+
+    const correctAnswer = gs.currentQuestion.question;
+    const canBuzzAgain = this.someoneCanStillBuzz(room);
+    gs.buzzedPlayerId = null;
+    gs.buzzes = {};
+
+    if (!canBuzzAgain) {
+      gs.currentQuestion = null;
+      gs.phase = 'playing';
+      this.resetBuzzState(gs);
+    }
+    return {
+      playerId,
+      correct: false,
+      left: true,
+      canBuzzAgain,
+      nextPickerId: gs.currentPickerId,
+      correctAnswer: canBuzzAgain ? null : correctAnswer,
+    };
+  }
+
+  /** Whether anyone who can act has yet to buzz on, or pass on, this clue. */
+  someoneCanStillBuzz(room) {
+    const gs = room.gameState;
+    const buzzed = gs.playersWhoBuzzed || new Set();
+    const skipped = gs.skippedPlayers || new Set();
+    return this.getActivePlayerIds(room).some((id) => !buzzed.has(id) && !skipped.has(id));
+  }
+
+  /**
+   * A Daily Double whose player has gone. It is theirs alone, so nobody else
+   * can answer it: it is put away unplayed, and nobody's score moves.
+   */
+  abandonDailyDouble(roomCode) {
+    const room = this.rooms.get(roomCode);
+    const gs = room?.gameState;
+    if (!gs?.isDailyDouble || !gs.currentQuestion) return null;
+
+    const playerId = gs.dailyDoubleOwnerId || gs.currentPickerId;
+    gs.isDailyDouble = false;
+    gs.dailyDoubleWager = 0;
+    gs.dailyDoubleOwnerId = null;
+    gs.currentQuestion = null;
+    gs.phase = 'playing';
+    this.resetBuzzState(gs);
+
+    return {
+      playerId,
+      correct: false,
+      wager: 0,
+      newScore: room.players.get(playerId)?.score || 0,
+      nextPickerId: gs.currentPickerId,
+    };
   }
 
   handleDailyDoubleWager(roomCode, playerId, wager) {
@@ -776,6 +871,21 @@ export class GameStateManager {
     const lowest = Math.min(...ids.map(scoreOf));
     const tied = ids.filter((id) => scoreOf(id) === lowest);
     return tied.includes(preferred) ? preferred : tied[0];
+  }
+
+  /* The break between rounds and the end of the game, recorded on the room so
+     that a page reloaded during either comes back to it rather than to a
+     cleared board. */
+  endRound(roomCode) {
+    const gs = this.rooms.get(roomCode)?.gameState;
+    if (gs) gs.phase = 'roundEnd';
+  }
+
+  finishGame(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return;
+    room.status = 'finished';
+    if (room.gameState) room.gameState.phase = 'finished';
   }
 
   /** Returns who picks first, which may not be who the client asked for. */
@@ -926,6 +1036,27 @@ export class GameStateManager {
     // Check if everyone still playing has answered
     const participants = this.getFJParticipants(room);
     return participants.length > 0 && participants.every(id => fj.answers.has(id));
+  }
+
+  /**
+   * Whether Final Jeopardy can move on now: 'clue' when everyone still here
+   * has wagered (the clue is marked shown), 'reveal' when everyone still here
+   * has answered, null while it is still waiting. Asked when a player drops,
+   * since the wager or answer they owed is never coming.
+   */
+  finalJeopardyNext(roomCode) {
+    const room = this.rooms.get(roomCode);
+    const fj = room?.gameState?.finalJeopardy;
+    if (!fj || fj.results || room.gameState.phase !== 'finalJeopardy') return null;
+
+    const participants = this.getFJParticipants(room);
+    if (participants.length === 0) return null;
+    if (!fj.clueShown) {
+      if (!participants.every((id) => fj.wagers.has(id))) return null;
+      fj.clueShown = true;
+      return 'clue';
+    }
+    return participants.every((id) => fj.answers.has(id)) ? 'reveal' : null;
   }
 
   getFJResults(roomCode) {
@@ -1255,8 +1386,13 @@ export class GameStateManager {
       players: this.publicPlayers(room),
       settings: room.settings,
       gameState: this.publicGameState(room, sessionId),
+      status: room.status,
       isHost: player.isHost,
       displayName: player.displayName,
+      /* The rounds the host wrote and has not played yet. Only the host's
+         page held them, so a host who reloaded lost Double Jeopardy, their
+         Final Jeopardy and their Daily Double placements. */
+      ...(this.isHostOf(room, sessionId) && room.hostPlan ? { hostPlan: room.hostPlan } : {}),
     };
   }
 
@@ -1291,10 +1427,35 @@ export class GameStateManager {
       shown.finalJeopardy = {
         category: fj.category,
         ...(fj.clueShown ? { clue: fj.clue } : {}),
-        ...(fj.results ? { answer: fj.answer } : {}),
+        ...(fj.results ? { answer: fj.answer, results: fj.results } : {}),
       };
     }
+    shown.you = this.viewerState(room, viewerId);
     return shown;
+  }
+
+  /* Where this one player stands in whatever the room is waiting on. The
+     sets that hold it do not survive being sent, so a page reloaded during a
+     wager, a Continue or a buzz came back with no controls, or with the
+     wrong ones. */
+  viewerState(room, viewerId) {
+    const gs = room.gameState;
+    const fj = gs.finalJeopardy;
+    return {
+      buzzed: Boolean(gs.playersWhoBuzzed?.has(viewerId)),
+      skipped: Boolean(gs.skippedPlayers?.has(viewerId)),
+      continued: Boolean(gs.continuedPlayers?.has(viewerId)),
+      submitted: Boolean(gs.typedAnswers?.has(viewerId) || gs.mcSelections?.has(viewerId)),
+      // A late joiner sits the current clue out.
+      waiting: Boolean(room.players.get(viewerId)?.waitingToJoin),
+      ...(fj ? {
+        fj: {
+          eligible: fj.eligiblePlayers.has(viewerId),
+          wager: fj.wagers.has(viewerId) ? fj.wagers.get(viewerId) : null,
+          answered: fj.answers.has(viewerId),
+        },
+      } : {}),
+    };
   }
 
   // Utilities
@@ -1360,9 +1521,17 @@ export class GameStateManager {
   // =====================
 
   // Set custom questions from host
-  setHostQuestions(roomCode, questions, categories, hostId, dailyDoubles = null) {
+  setHostQuestions(roomCode, questions, categories, hostId, dailyDoubles = null, plan = null) {
     const room = this.rooms.get(roomCode);
     if (!this.isHostOf(room, hostId)) return null;
+
+    /* The rest of what the host wrote, kept with the room for the host alone
+       (see reconnectPlayer). Never part of gameState, which players are sent. */
+    room.hostPlan = {
+      round2: plan?.round2 ?? null,
+      finalJeopardy: plan?.finalJeopardy ?? null,
+      dailyDoubles: dailyDoubles ?? null,
+    };
 
     room.gameState = room.gameState || {};
     room.gameState.questions = questions;
@@ -1403,6 +1572,8 @@ export class GameStateManager {
     gameState.buzzReceived = false;
     gameState.playersWhoBuzzed = new Set();
     gameState.skippedPlayers = new Set();
+    gameState.continuedPlayers = new Set();
+    gameState.awaitingContinue = false;
   }
 
   // Host-mode answer tracking is created when a clue is dealt, but clients can
@@ -1463,6 +1634,7 @@ export class GameStateManager {
     room.gameState.mcSelections = new Map();
     room.gameState.autoGradeResults = new Map();
     room.gameState.judgedPlayers = new Set();
+    room.gameState.allAnswersIn = false;
     this.resetBuzzState(room.gameState);
 
     // Check if this is a Daily Double
@@ -1835,6 +2007,7 @@ export class GameStateManager {
     room.gameState.answerWindowStartTime = Date.now();
     room.gameState.typedAnswers = new Map();
     room.gameState.mcSelections = new Map();
+    room.gameState.allAnswersIn = false;
   }
 
   // Close answer window
@@ -1896,19 +2069,30 @@ export class GameStateManager {
 
     room.gameState.skippedPlayers = room.gameState.skippedPlayers || new Set();
     room.gameState.skippedPlayers.add(playerId);
+    return this.skipCount(room);
+  }
 
-    // Players who already buzzed are excluded from skip eligibility
+  // Players who already buzzed are excluded from skip eligibility
+  skipCount(room) {
     const buzzed = room.gameState.playersWhoBuzzed || new Set();
     const eligibleIds = this.getActivePlayerIds(room).filter(id => !buzzed.has(id));
-    const skippedSet = room.gameState.skippedPlayers;
+    const skippedSet = room.gameState.skippedPlayers || new Set();
     const skipped = eligibleIds.filter(id => skippedSet.has(id)).length;
-    const allSkipped = eligibleIds.length > 0 && skipped >= eligibleIds.length;
-
     return {
-      allSkipped,
+      allSkipped: eligibleIds.length > 0 && skipped >= eligibleIds.length,
       skippedCount: skipped,
       totalEligible: eligibleIds.length,
     };
+  }
+
+  /* Whether everyone still here has passed on a clue nobody has buzzed on.
+     Asked when somebody drops: the pass they owed is never coming. */
+  everyoneSkipped(roomCode) {
+    const room = this.rooms.get(roomCode);
+    const gs = room?.gameState;
+    if (!gs?.currentQuestion || !gs.buzzWindowOpen || gs.buzzedPlayerId) return false;
+    if (Object.keys(gs.buzzes || {}).length) return false;
+    return this.skipCount(room).allSkipped;
   }
 
   // Clear waitingToJoin flag for late joiners when a question resolves
