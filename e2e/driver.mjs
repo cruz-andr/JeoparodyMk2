@@ -1,6 +1,6 @@
 // Minimal CDP driver: real Chrome, real viewport, real clicks.
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdtempSync, mkdirSync, existsSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, delimiter } from 'node:path';
 import WebSocket from './ws.mjs';
@@ -52,13 +52,25 @@ async function freePort(from = 9400) {
 }
 
 const strays = new Set();
-const reap = () => { for (const p of strays) { try { p.kill('SIGKILL'); } catch { /* gone */ } } };
+/* Each launch gets a throwaway profile, and a throwaway profile is 60 to 140
+   MB. Left behind, every run of the suite added a few gigabytes to the temp
+   folder until the disk was full. Removed when the browser goes. */
+const profiles = new Set();
+const forget = (profile) => {
+  try { rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch { /* still in use: next run */ }
+  profiles.delete(profile);
+};
+const reap = () => {
+  for (const p of strays) { try { p.kill('SIGKILL'); } catch { /* gone */ } }
+  for (const profile of profiles) forget(profile);
+};
 process.on('exit', reap);
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { reap(); process.exit(1); });
 
 export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
   const port = await freePort();
   const profile = mkdtempSync(join(tmpdir(), 'cdp-'));
+  profiles.add(profile);
   const proc = spawn(CHROME, [
     '--headless=new', `--remote-debugging-port=${port}`, '--no-first-run',
     `--user-data-dir=${profile}`, `--window-size=${width},${height}`, ...PLATFORM_FLAGS, 'about:blank',
@@ -219,6 +231,7 @@ export async function launch({ width = 393, height = 852, dpr = 3 } = {}) {
          browser is what breaks the next run. */
       try { proc.kill('SIGKILL'); } catch { /* already gone */ }
       strays.delete(proc);
+      forget(profile);
     },
   };
   return api;

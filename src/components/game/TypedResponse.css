@@ -1,0 +1,48 @@
+.typed-response {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 8px auto 24px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.typed-response-input {
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 1.15rem;
+  text-align: center;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-md);
+}
+
+.typed-response-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+}
+
+.typed-response-submit {
+  min-width: 200px;
+  /* A thumb on a phone, not a cursor. */
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.typed-response-close {
+  margin: 0;
+  color: var(--jeopardy-gold);
+  font-weight: 700;
+}
+
+.said-note {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.said-note q {
+  color: var(--text-primary);
+  font-weight: 600;
+}

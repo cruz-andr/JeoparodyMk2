@@ -75,7 +75,18 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     director?.onRoomEvent(roomCode, event, forHost);
   }
 
-  const actions = createGameActions({ gameManager, emitRoom, emitSplit, archiveRoom });
+  /* One player's socket alone. */
+  function emitPlayer(roomCode, playerId, event, payload) {
+    const socketId = gameManager.rooms.get(roomCode)?.players.get(playerId)?.socketId;
+    if (socketId) io.to(socketId).emit(event, payload);
+  }
+
+  const actions = createGameActions({ gameManager, emitRoom, emitSplit, emitPlayer, archiveRoom });
+
+  /* Quickplay players type their response and the server grades it; their
+     own word on whether they were right is not taken. The house players
+     move through actions directly, so this only shuts the socket door. */
+  const selfJudged = (roomCode) => gameManager.rooms.get(roomCode)?.type !== 'quickplay';
 
   const boardSource = createBoardSource({ mode: knobs.boardMode, log: (m) => logInfo({ msg: m }) });
   director = createQuickplayDirector({
@@ -380,12 +391,19 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
 
     // Player submits answer
     on('game:submit-answer', ({ roomCode, correct }) => {
+      if (!selfJudged(roomCode)) return;
       // `points` deliberately ignored if sent — the board is the only source.
       actions.submitAnswer(socket.sessionId, roomCode, correct);
     });
 
+    // A typed response, graded by the server (quickplay)
+    on('game:submit-response', ({ roomCode, answer }) => {
+      actions.submitResponse(socket.sessionId, roomCode, answer);
+    });
+
     // Player reveals the answer (broadcast to all)
     on('game:reveal-answer', ({ roomCode }) => {
+      if (!selfJudged(roomCode)) return;
       actions.revealAnswer(socket.sessionId, roomCode);
     });
 
@@ -415,6 +433,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
 
     // Daily Double answer submitted
     on('game:daily-double-answer', ({ roomCode, correct }) => {
+      if (!selfJudged(roomCode)) return;
       console.log(`Daily Double answer (correct: ${correct}) from ${socket.sessionId} in room ${roomCode}`);
       actions.dailyDoubleAnswer(socket.sessionId, roomCode, correct);
     });
@@ -607,8 +626,8 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
        and enters their wager, because the host picked the clue and has no score
        of their own for the usual rule to land on. */
     on('host:daily-double-wager', ({ roomCode, playerId, wager }) => {
-      const result = gameManager.hostDailyDoubleWager(roomCode, socket.sessionId, playerId, wager);
-      if (result) io.to(roomCode).emit('game:daily-double-wager-confirmed', result);
+      // Sent through actions, so the players are not sent the response with it.
+      actions.hostDailyDoubleWager(socket.sessionId, roomCode, playerId, wager);
     });
 
     on('host:daily-double-answer', ({ roomCode, correct }) => {

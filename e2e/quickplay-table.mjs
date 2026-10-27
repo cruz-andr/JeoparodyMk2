@@ -104,9 +104,15 @@ try {
   /* We do not ring in. Somebody else does, or the clock runs out; either way
      the clue closes and the game moves on. */
   const t0 = Date.now();
-  await a.until("!document.querySelector('.mp-question-overlay') || !!document.querySelector('.correct-answer-reveal') || document.body.textContent.includes('buzzed first')", { timeout: 40000 });
+  /* Or nobody knew it, every house player passed or the clock ran out, and
+     the clue sits on Continue: that is a clue played too. */
+  await a.until(`!document.querySelector('.mp-question-overlay') || !!document.querySelector('.correct-answer-reveal')
+    || document.body.textContent.includes('buzzed first')
+    || [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Continue')`, { timeout: 45000 });
   const rangIn = await a.evaluate("document.body.textContent.includes('buzzed first')");
-  check('a house player rang in on it', rangIn, `${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  const nobodyKnew = await a.evaluate("[...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Continue')");
+  check('a house player rang in on it, or nobody knew it', rangIn || nobodyKnew,
+    `${((Date.now() - t0) / 1000).toFixed(1)}s${rangIn ? '' : ', nobody knew it'}`);
   await a.shot('quickplay-buzz.png');
 
   /* The clue ends one of two ways, and which one is down to whether anybody
@@ -128,14 +134,56 @@ try {
   check('the board remembers the clue', revealed >= 1, `${revealed} revealed`);
 
   // --- a reload comes back to the game as it stands --------------------------
-  await a.evaluate('location.reload()');
-  await a.until("document.querySelectorAll('.category-header').length === 6", { timeout: 20000 });
+  /* Marked first, because reload() returns before the old page has gone:
+     waiting on the board alone could find the old one and read it half
+     unloaded. */
+  await a.evaluate('window.__beforeReload = true; location.reload()');
+  await a.until("!window.__beforeReload && document.querySelectorAll('.category-header').length === 6", { timeout: 20000 });
+  await a.until("document.querySelectorAll('.player-chip').length > 0", { timeout: 10000 });
   await a.until("!document.querySelector('.loading-overlay')", { timeout: 10000 });
   check('a reload comes back to the board, not the lobby', true);
+  await a.shot('quickplay-reloaded.png');
   const afterReload = await a.evaluate("document.querySelectorAll('.question-cell.revealed').length");
   check('with the clues already played still played', afterReload >= revealed, `${afterReload} revealed`);
   check('and the same three players, no second copy of anyone',
     (await a.evaluate("document.querySelectorAll('.player-chip').length")) === 3);
+
+  // --- ringing in: the response is typed, and graded by the server ----------
+  /* The next clue, whoever opens it. We ring in at once, before any house
+     player has finished reading. */
+  /* A clue already open when the page came back has had the house reading
+     it for a while, and one of them may beat us to it. Then the next. */
+  let ours = false;
+  for (let attempt = 0; attempt < 4 && !ours; attempt++) {
+    await a.until(`!document.querySelector('.mp-question-overlay') || !!document.querySelector('.buzzer-button')`, { timeout: 60000 });
+    if ((await text(a, '.turn-indicator-subtle')).includes('Your turn')) await a.click('.question-cell:not(.revealed)');
+    await a.until("!!document.querySelector('.buzzer-button')", { timeout: 60000 });
+    await a.click('.buzzer-button');
+    await a.until("!!document.querySelector('.typed-response-input') || document.body.textContent.includes('buzzed first')", { timeout: 10000 });
+    ours = await a.evaluate("!!document.querySelector('.typed-response-input')");
+    if (!ours) {
+      /* Lost it. The clue ends with the response shown, or on Continue,
+         which waits for us like everyone else. */
+      const continueShown = "[...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Continue')";
+      await a.until(`!document.querySelector('.mp-question-overlay') || ${continueShown}`, { timeout: 60000 });
+      if (await a.evaluate(continueShown)) {
+        await a.evaluate("[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Continue').click()");
+      }
+      await a.until("!document.querySelector('.mp-question-overlay')", { timeout: 30000 });
+    }
+  }
+  check('rung in first, we get a box to type the response in', ours);
+  if (ours) {
+    check('and no Reveal Answer, and no "I got it right"',
+      !(await a.evaluate("[...document.querySelectorAll('button')].some(b => /Reveal Answer|I Got It/.test(b.textContent))")));
+    check('nor any correct response anywhere on the page',
+      !(await a.evaluate("document.body.innerText.includes('Correct Response')")));
+    await a.type('.typed-response-input', 'xyzzy plugh');
+    await a.click('.typed-response-submit');
+    await a.until("!!document.querySelector('.said-note')", { timeout: 10000 });
+    check('the room is shown what we typed', (await text(a, '.said-note')).includes('xyzzy plugh'));
+    await a.shot('quickplay-typed.png');
+  }
 
   // --- the words --------------------------------------------------------------
   const copy = await a.evaluate("document.body.innerText");

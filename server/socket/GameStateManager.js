@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { seatBots } from './bots.js';
+import { gradeAnswer } from '../shared/answerMatch.js';
 
 /* How long the matchmaker holds out for a full table before the house fills
    the empty seats.
@@ -29,11 +30,15 @@ export const GIVE_UP_AFTER_MS = 45000;
 
 /* The two tables quickplay offers. Chosen on the quickplay screen and carried
    into the queue; the table plays by the rules of whoever has waited longest,
-   which is the person the others were seated with. */
+   which is the person the others were seated with.
+
+   The answer clock is longer than a spoken game's: quickplay answers are
+   typed, and five or seven seconds is the show's time to say a response,
+   not to type one on a phone. */
 export const QUICKPLAY_PRESETS = {
   standard: {
     questionTimeLimit: 30000,
-    answerTimeLimit: 7000,
+    answerTimeLimit: 12000,
     finalJeopardyTimeLimit: 30000,
     enableDoubleJeopardy: true,
     enableDailyDouble: true,
@@ -41,7 +46,7 @@ export const QUICKPLAY_PRESETS = {
   },
   speed: {
     questionTimeLimit: 15000,
-    answerTimeLimit: 5000,
+    answerTimeLimit: 9000,
     finalJeopardyTimeLimit: 20000,
     enableDoubleJeopardy: false,
     enableDailyDouble: true,
@@ -833,6 +838,8 @@ export class GameStateManager {
     if (!player) return null;
 
     const wager = room.gameState.dailyDoubleWager || 0;
+    // Captured before the clue is cleared, so the room can be shown it.
+    const correctAnswer = room.gameState.currentQuestion?.question;
 
     if (correct) {
       player.score = (player.score || 0) + wager;
@@ -854,6 +861,7 @@ export class GameStateManager {
       wager,
       newScore: player.score,
       nextPickerId: playerId,
+      correctAnswer,
     };
   }
 
@@ -1406,6 +1414,32 @@ export class GameStateManager {
     return room?.type === 'host' && room.hostId === sessionId;
   }
 
+  /* Rooms whose players are judged by somebody else, the host or the server,
+     and so are never sent a response before the clue is over. In a hosted
+     room the host judges; in quickplay the players type and the server
+     grades, because the players are strangers and their word on whether
+     they were right is not worth taking. */
+  answersAreTyped(room) {
+    return room?.type === 'host' || room?.type === 'quickplay';
+  }
+
+  /**
+   * A quickplay response, graded. 'close' is handed back once per player per
+   * clue, to ask for the spelling again without saying what the answer is;
+   * a second close is wrong.
+   */
+  gradeResponse(roomCode, playerId, text) {
+    const gs = this.rooms.get(roomCode)?.gameState;
+    if (!gs?.currentQuestion) return null;
+    const { verdict } = this.fuzzyMatchAnswer(text, gs.currentQuestion.question);
+    gs.retried = gs.retried || new Set();
+    if (verdict === 'close' && !gs.retried.has(playerId)) {
+      gs.retried.add(playerId);
+      return 'close';
+    }
+    return verdict === 'correct' ? 'correct' : 'wrong';
+  }
+
   /**
    * The game state as one viewer may see it. room.gameState also holds what
    * the room has not been shown yet: where the Daily Doubles are, and the Final
@@ -1419,7 +1453,7 @@ export class GameStateManager {
     if (!gs || (room.type === 'host' && viewerId === room.hostId)) return gs;
 
     const { dailyDoubles: _dailyDoubles, finalJeopardy: fj, ...shown } = gs;
-    if (room.type === 'host') {
+    if (this.answersAreTyped(room)) {
       shown.questions = playerBoard(gs.questions);
       shown.currentQuestion = playerClue(gs.currentQuestion);
     }
@@ -1574,6 +1608,7 @@ export class GameStateManager {
     gameState.skippedPlayers = new Set();
     gameState.continuedPlayers = new Set();
     gameState.awaitingContinue = false;
+    gameState.retried = new Set();
   }
 
   // Host-mode answer tracking is created when a clue is dealt, but clients can
@@ -1763,74 +1798,11 @@ export class GameStateManager {
     return results;
   }
 
-  // Fuzzy match answer against correct answer
+  /* Graded by the shared matcher (server/shared/answerMatch.js), which the
+     daily pages use too, so a response is right or wrong the same way
+     everywhere. */
   fuzzyMatchAnswer(playerAnswer, correctAnswer) {
-    const player = normalizeAnswer(playerAnswer);
-    const correct = normalizeAnswer(correctAnswer);
-
-    if (!player || !correct) {
-      return { isCorrect: false, confidence: 0, reason: 'No answer given' };
-    }
-
-    // Exact match
-    if (player === correct) {
-      return { isCorrect: true, confidence: 1.0, reason: 'Exact match' };
-    }
-
-    // Saying more than the answer is fine — "the novel Moby Dick" for
-    // "Moby Dick" is how people actually answer.
-    if (correct.length >= MIN_CONTAINMENT_LENGTH && player.includes(correct)) {
-      return { isCorrect: true, confidence: 0.9, reason: 'Answer included' };
-    }
-
-    // Saying less is only accepted when it covers most of the answer. An
-    // unguarded substring test marked a single stray letter correct, because
-    // "e" is contained in "Beethoven".
-    if (player.length >= MIN_CONTAINMENT_LENGTH && correct.includes(player)) {
-      const coverage = player.length / correct.length;
-      if (coverage >= MIN_COVERAGE) {
-        return { isCorrect: true, confidence: 0.8, reason: 'Partial match' };
-      }
-    }
-
-    // Levenshtein distance for typos
-    const distance = this.levenshteinDistance(player, correct);
-    const maxLen = Math.max(player.length, correct.length);
-    const similarity = maxLen > 0 ? 1 - (distance / maxLen) : 0;
-
-    if (similarity >= 0.85) {
-      return { isCorrect: true, confidence: similarity, reason: 'Fuzzy match' };
-    }
-
-    return { isCorrect: false, confidence: 0, reason: 'No match found' };
-  }
-
-  // Levenshtein distance for fuzzy matching
-  levenshteinDistance(a, b) {
-    const matrix = [];
-
-    for (let i = 0; i <= b.length; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= a.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) === a.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-
-    return matrix[b.length][a.length];
+    return gradeAnswer(playerAnswer, correctAnswer);
   }
 
   // Host judges an answer
@@ -2110,14 +2082,6 @@ export class GameStateManager {
   }
 }
 
-// Shortest answer that may be matched by containment rather than in full.
-const MIN_CONTAINMENT_LENGTH = 4;
-// How much of the real answer a shorter response must cover to count.
-const MIN_COVERAGE = 0.6;
-
-// Strips everything that should not decide whether an answer is right: the
-// "What is ...?" wrapper, punctuation, casing, a leading article, and any
-// irregular spacing.
 /* What the players of a hosted room may see of a clue and of the board. The
    host judges them, so they never need the response (`question`), and the
    board's multiple-choice options are in written order, correct one first. A
@@ -2135,16 +2099,6 @@ export const playerBoard = (questions) => (Array.isArray(questions)
     })
     : column))
   : questions);
-
-export function normalizeAnswer(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .replace(/^\s*(what|who|where|when|why|how)\s+(is|are|was|were)\s+/, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/^(the|a|an)\s+/, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 // Weighted Daily Double placement. Rows are weighted toward the harder (higher
 // value) clues, and — as on the show — Double Jeopardy's two Daily Doubles
