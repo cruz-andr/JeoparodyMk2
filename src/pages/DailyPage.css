@@ -63,6 +63,13 @@
   text-align: right;
 }
 
+.sixer-winnings {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--jeopardy-gold);
+}
+
 .streak-badge {
   color: var(--jeopardy-gold);
   font-size: 0.8rem;

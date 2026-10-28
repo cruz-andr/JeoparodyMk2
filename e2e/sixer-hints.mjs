@@ -62,6 +62,7 @@ try {
   // 1. Right first time: the full value.
   await answer(b, 'What is Paris?');
   check('right first time pays the clue', (await text(b, '.typed-badge')) === 'Correct +$400', await text(b, '.typed-badge'));
+  check('and the winnings on screen go up with it', (await text(b, '.sixer-winnings')) === '$400', await text(b, '.sixer-winnings'));
   await onwards(b);
 
   // 2. A miss brings up the hint, and the response stays hidden.
@@ -69,12 +70,14 @@ try {
   check('a miss brings up the hint', (await text(b, '.typed-hint')) === 'M _ _ _   D _ _ _', await text(b, '.typed-hint'));
   check('and says the next try is for half', (await text(b, '.typed-note')).includes('$200'), await text(b, '.typed-note'));
   check('without showing the response', !(await b.evaluate("document.body.innerText.includes('Moby')")));
+  await b.shot('sixer-hint.png');
   await b.evaluate('location.reload()');
   await sleep(1500);
   await b.until("!!document.querySelector('.typed-hint')", { timeout: 15000 });
   check('a reload keeps the hint up, so the clue still pays only half', true);
   await answer(b, 'Moby Dick');
   check('right after the hint pays half', (await text(b, '.typed-badge')) === 'Correct +$200 with the hint', await text(b, '.typed-badge'));
+  check('the winnings add up as the run goes', (await text(b, '.sixer-winnings')) === '$600', await text(b, '.sixer-winnings'));
   await onwards(b);
 
   // 3. A spelling slip is a free retype, not a miss.
