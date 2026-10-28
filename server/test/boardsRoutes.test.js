@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import {
   CLUE_COUNT, POINT_VALUES, countClues, emptyBoard,
   normalizeBoard, publishProblem, validateBoardStructure,
+  categoryCountsFor, clueTarget, TOPICS,
 } from '../shared/boardFormat.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -937,6 +938,98 @@ await test('an uncompressed photograph is refused with a sentence', async () => 
 await test('somebody else cannot set a cover on my board', async () => {
   const { status } = await api(`/${published}/cover`, { method: 'PUT', token: bob, body: { cover: PIXEL } });
   assert.equal(status, 404);
+});
+
+// ============================================================ Disney: five categories
+
+/* Inside the Magic's Disney Jeopardy plays five categories, and the boards
+   made from it keep that. Only the Disney topic may; every other board is the
+   full six. */
+const fiveBoard = () => {
+  const board = fullBoard();
+  board.categories = board.categories.slice(0, 5);
+  return board;
+};
+
+await test('Disney is a topic, and the only one that may have five categories', () => {
+  assert.ok(TOPICS.includes('disney'));
+  assert.deepEqual(categoryCountsFor('disney'), [5, 6]);
+  assert.deepEqual(categoryCountsFor('film-tv'), [6]);
+  assert.deepEqual(categoryCountsFor(null), [6]);
+});
+
+await test('five categories is a board under Disney and the wrong shape anywhere else', () => {
+  assert.equal(validateBoardStructure(fiveBoard(), { topic: 'disney' }).valid, true);
+  const elsewhere = validateBoardStructure(fiveBoard(), { topic: 'film-tv' });
+  assert.equal(elsewhere.valid, false);
+  assert.match(elsewhere.errors[0], /Disney/);
+  assert.equal(validateBoardStructure(fiveBoard()).valid, false, 'no topic is not Disney');
+});
+
+await test('a five-category Disney board keeps its five, and is finished at twenty-five clues', () => {
+  const board = normalizeBoard(fiveBoard(), { topic: 'disney' });
+  assert.equal(board.categories.length, 5);
+  assert.equal(clueTarget(board), 25);
+  assert.equal(publishProblem({ title: 'Disney', board, topic: 'disney' }), null);
+  assert.equal(normalizeBoard(fullBoard(), { topic: 'disney' }).categories.length, 6, 'a six-category Disney board stays six');
+});
+
+await test('outside Disney, five categories cannot be published', () => {
+  assert.match(publishProblem({ title: 'Five', board: fiveBoard(), topic: 'film-tv' }), /Disney/);
+});
+
+let disney;
+await test('a five-category Disney board saves and publishes over the API', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Disney Jeopardy' } });
+  disney = create.data.slug;
+  const save = await api(`/${disney}`, { method: 'PUT', token: ada, body: { board: fiveBoard(), topic: 'disney' } });
+  assert.equal(save.status, 200, JSON.stringify(save.data));
+  assert.equal(save.data.clueCount, 25, 'five categories of five');
+  const { data } = await api(`/${disney}`, { token: ada });
+  assert.equal(data.board.categories.length, 5, 'and it comes back with five');
+  const pub = await api(`/${disney}/visibility`, { method: 'PUT', token: ada, body: { visibility: 'public' } });
+  assert.equal(pub.status, 200, JSON.stringify(pub.data));
+});
+
+await test('five categories under another topic is refused over the API', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'Not Disney' } });
+  const save = await api(`/${create.data.slug}`, { method: 'PUT', token: ada, body: { board: fiveBoard(), topic: 'film-tv' } });
+  assert.equal(save.status, 400);
+});
+
+await test('a five-category board cannot be moved out of Disney', async () => {
+  const move = await api(`/${disney}`, { method: 'PUT', token: ada, body: { topic: 'film-tv' } });
+  assert.equal(move.status, 400);
+  const { data } = await api(`/${disney}`, { token: ada });
+  assert.equal(data.topic, 'disney');
+});
+
+await test('a finished Disney board can be featured', async () => {
+  const PORT3 = PORT + 2;
+  const curated = spawn('node', [join(here, '..', 'index.js')], {
+    env: {
+      ...process.env,
+      SERVER_PORT: String(PORT3),
+      DATABASE_PATH: DB,
+      JWT_SECRET: 'test-secret-not-a-real-one',
+      NODE_ENV: 'test',
+      FEATURED_SLUGS: disney,
+    },
+    stdio: 'ignore',
+  });
+  try {
+    for (let i = 0; i < 100; i += 1) {
+      try {
+        if ((await fetch(`http://127.0.0.1:${PORT3}/health`)).ok) break;
+      } catch { /* not up yet */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    const data = await (await fetch(`http://127.0.0.1:${PORT3}/api/boards?row=featured`)).json();
+    assert.equal(data.curated, true);
+    assert.deepEqual(data.boards.map((b) => b.slug), [disney]);
+  } finally {
+    curated.kill('SIGKILL');
+  }
 });
 
 // ============================================================ report

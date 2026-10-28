@@ -7,7 +7,6 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/boards/BoardsChrome.css';
 import './BoardsMinePage.css';
 
-const CLUE_TOTAL = 30;
 
 const WHERE = {
   private: 'Only you',
@@ -24,10 +23,10 @@ const WHERE = {
  * the right trade here. Sending thirty boards to draw thirty thumbnails would
  * make the shelf the heaviest page in the app.
  */
-function boardFromCount(clueCount) {
+function boardFromCount(clueCount, columns = 6) {
   let left = clueCount;
   return {
-    categories: Array.from({ length: 6 }, () => ({
+    categories: Array.from({ length: columns }, () => ({
       questions: Array.from({ length: 5 }, () => {
         const written = left > 0;
         if (written) left -= 1;
@@ -140,8 +139,8 @@ export default function BoardsMinePage() {
                     onClick={() => navigate(`/boards/${board.slug}/edit`)}
                   >
                     <BoardMiniature
-                      board={boardFromCount(board.clueCount)}
-                      label={`${board.clueCount} of ${CLUE_TOTAL} clues written`}
+                      board={boardFromCount(board.clueCount, board.columns)}
+                      label={`${board.clueCount} of ${board.clueTotal ?? 30} clues written`}
                     />
                     <span className="boards-row-main">
                       <span className="boards-row-name">
@@ -152,9 +151,10 @@ export default function BoardsMinePage() {
                           leaving "plays" alone on a second line. */}
                       <span className="boards-row-note">
                         <span>
-                          {board.clueCount === CLUE_TOTAL
+                          {/* Thirty, or twenty-five on a five-category Disney board. */}
+                          {board.clueCount === (board.clueTotal ?? 30)
                             ? 'Finished'
-                            : `${board.clueCount} of ${CLUE_TOTAL} clues`}
+                            : `${board.clueCount} of ${board.clueTotal ?? 30} clues`}
                         </span>
                         <span>{WHERE[board.visibility]}</span>
                         {board.visibility === 'public' && board.plays > 0 && (

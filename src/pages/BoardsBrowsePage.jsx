@@ -13,6 +13,7 @@ const CLUE_TOTAL = 30;
 const TOPIC_NAMES = {
   history: 'History',
   'film-tv': 'Film & TV',
+  disney: 'Disney',
   music: 'Music',
   science: 'Science',
   sport: 'Sport',
@@ -33,10 +34,10 @@ const ROWS = [
    filled. A summary rather than a map of which are missing, which is the right
    trade: sending thirty boards to draw thirty thumbnails would make this the
    heaviest page in the app. */
-function shapeFrom(clueCount) {
+function shapeFrom(clueCount, columns = 6) {
   let left = clueCount;
   return {
-    categories: Array.from({ length: 6 }, () => ({
+    categories: Array.from({ length: columns }, () => ({
       questions: Array.from({ length: 5 }, () => {
         const written = left > 0;
         if (written) left -= 1;
@@ -60,7 +61,7 @@ function Card({ board, onOpen }) {
           /* No image, and the board is the image. The most on-brand thing on
              the page rather than a placeholder waiting to be replaced. */
           <span className="bb-cover-board">
-            <BoardMiniature board={shapeFrom(board.clueCount)} size="cover" label="" />
+            <BoardMiniature board={shapeFrom(board.clueCount, board.columns)} size="cover" label="" />
           </span>
         )}
         <span className="bb-band">

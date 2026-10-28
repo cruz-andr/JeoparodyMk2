@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useUserStore } from '../stores';
 import { getBoard, saveBoard } from '../services/api/boardsService';
-import { CLUE_COUNT, countClues, MAX_TITLE } from '@shared/boardFormat.js';
+import { clueTarget, countClues, MAX_TITLE } from '@shared/boardFormat.js';
 import BoardGridEditor from '../components/boards/BoardGridEditor';
 import BoardMiniature from '../components/boards/BoardMiniature';
 import '../components/boards/BoardsChrome.css';
@@ -262,7 +262,7 @@ export default function BoardEditPage() {
     'My Boards',
     <>
       <div className="board-edit-head">
-        <BoardMiniature board={board} label={`${written} of ${CLUE_COUNT} clues written`} />
+        <BoardMiniature board={board} label={`${written} of ${clueTarget(board)} clues written`} />
 
         <label className="board-edit-title">
           <span className="board-edit-label">Title</span>
@@ -274,7 +274,7 @@ export default function BoardEditPage() {
           />
         </label>
 
-        <span className="board-edit-count">{written} of {CLUE_COUNT} clues</span>
+        <span className="board-edit-count">{written} of {clueTarget(board)} clues</span>
 
         <button
           className="plain-btn board-edit-undo"

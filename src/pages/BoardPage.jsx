@@ -5,13 +5,12 @@ import { useUserStore } from '../stores';
 import {
   copyBoard, coverUrl, getBoard, reportBoard, setCover, setVisibility,
 } from '../services/api/boardsService';
-import { publishProblem, REPORT_REASONS } from '@shared/boardFormat.js';
+import { CLUE_COUNT, clueTarget, publishProblem, REPORT_REASONS } from '@shared/boardFormat.js';
 import { compressImage } from '../utils/imageCompressor';
 import BoardMiniature from '../components/boards/BoardMiniature';
 import '../components/boards/BoardsChrome.css';
 import './BoardPage.css';
 
-const CLUE_TOTAL = 30;
 
 /* The dial, in the order a board moves through it. The description is what the
    choice actually does to other people, not a restatement of its name. */
@@ -80,7 +79,9 @@ export default function BoardPage() {
         0
       )
     : board.clueCount;
-  const playable = written === CLUE_TOTAL;
+  /* Thirty, or twenty-five on a five-category Disney board. */
+  const total = board.board ? clueTarget(board.board) : (board.clueTotal ?? CLUE_COUNT);
+  const playable = written === total;
 
   const change = async (visibility) => {
     setDialError('');
@@ -165,7 +166,7 @@ export default function BoardPage() {
   };
 
   const notReady = board.isOwner
-    ? publishProblem({ title: board.title, board: board.board })
+    ? publishProblem({ title: board.title, board: board.board, topic: board.topic })
     : null;
 
   return (
@@ -188,7 +189,7 @@ export default function BoardPage() {
           <BoardMiniature
             board={board.board}
             size="large"
-            label={`${written} of ${CLUE_TOTAL} clues written`}
+            label={`${written} of ${total} clues written`}
           />
 
           <div className="board-head-text">
@@ -204,7 +205,7 @@ export default function BoardPage() {
               ) : null}
               <span>{board.author?.username ? `@${board.author.username}` : 'Unknown'}</span>
               <span className="board-by-sep" />
-              <span>{written} of {CLUE_TOTAL} clues</span>
+              <span>{written} of {total} clues</span>
               {board.visibility === 'public' && (
                 <>
                   <span className="board-by-sep" />

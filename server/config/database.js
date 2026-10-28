@@ -89,6 +89,9 @@ export async function initializeDatabase() {
        every list query parsing thirty clues of JSON to find out. Denormalised
        for the same reason clue_count is. */
     ['boards', 'category_names', 'TEXT'],
+    /* How many categories a board has: six, or five on a Disney board. A card
+       needs it to say how many clues finish the board and to draw it. */
+    ['boards', 'category_count', 'INTEGER NOT NULL DEFAULT 6'],
     // Google's profile picture, when they sign in that way.
     ['users', 'avatar_url', 'TEXT'],
     /* The archive. game_history was created as one row per room with the

@@ -220,6 +220,21 @@ test('a nonsense count still keeps one marker', () => {
   assert.deepEqual(toggleDouble([dd(2, 3)], 4, 1, 0), [dd(4, 1)]);
 });
 
+// ------------------------------------------------------------ five categories
+
+test('on a five-category board the arrows stop at the fifth column', () => {
+  assert.deepEqual(moveSelection({ kind: 'clue', c: 4, r: 0 }, 'ArrowRight', { columns: 5 }), { kind: 'clue', c: 4, r: 0 });
+  assert.deepEqual(moveSelection({ kind: 'clue', c: 4, r: 0 }, 'ArrowRight'), { kind: 'clue', c: 5, r: 0 }, 'six by default');
+});
+
+test('the next empty clue wraps within the board\'s own columns', () => {
+  const board = { categories: Array.from({ length: 5 }, () => ({ questions: Array.from({ length: 5 }, () => ({ answer: 'a', question: 'q' })) })) };
+  board.categories[0].questions[0] = { answer: '', question: '' };
+  assert.deepEqual(nextEmptyFrom(board, { kind: 'clue', c: 4, r: 4 }), { kind: 'clue', c: 0, r: 0 }, 'round from the last cell of the fifth column');
+  board.categories[0].questions[0] = { answer: 'a', question: 'q' };
+  assert.equal(nextEmptyFrom(board, { kind: 'clue', c: 0, r: 0 }), null, 'a full five-column board has nothing left');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 if (failures.length) {
   for (const f of failures) console.error(`  FAIL  ${f}`);

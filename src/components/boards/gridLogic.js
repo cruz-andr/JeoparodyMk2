@@ -67,12 +67,13 @@ const ARROWS = {
  * no seventh category and wrapping to the other end of the board is
  * disorienting in a grid you are looking at.
  */
-export function moveSelection(at, key, { hasFinal = true } = {}) {
+export function moveSelection(at, key, { hasFinal = true, columns = CATEGORIES } = {}) {
   const move = ARROWS[key];
   if (!move) return null;
 
   const [dc, dr] = move;
-  const c = clamp((at.c ?? 0) + dc, 0, CATEGORIES - 1);
+  // A Disney board may have five; every other board has six.
+  const c = clamp((at.c ?? 0) + dc, 0, columns - 1);
 
   if (at.kind === 'category') {
     return dr > 0 ? { kind: 'clue', c, r: 0 } : { kind: 'category', c };
@@ -101,9 +102,11 @@ export function moveSelection(at, key, { hasFinal = true } = {}) {
  */
 export function nextEmptyFrom(board, at) {
   const from = at.kind === 'clue' ? at.c * ROWS + at.r : (at.c ?? 0) * ROWS - 1;
+  // The board's own size: a Disney board may be five columns.
+  const cells = (board?.categories?.length || CATEGORIES) * ROWS;
 
-  for (let step = 1; step <= CLUES; step += 1) {
-    const flat = ((from + step) % CLUES + CLUES) % CLUES;
+  for (let step = 1; step <= cells; step += 1) {
+    const flat = ((from + step) % cells + cells) % cells;
     const c = Math.floor(flat / ROWS);
     const r = flat % ROWS;
     if (!isWritten(board?.categories?.[c]?.questions?.[r])) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import MediaAttachment from '../setup/MediaAttachment';
 import {
-  CLUES, POINTS,
+  POINTS,
   countWritten, emptyClue, finalState, isWritten, moveSelection, nextEmptyFrom,
 } from './gridLogic';
 import './BoardGridEditor.css';
@@ -110,6 +110,9 @@ export default function BoardGridEditor({
     return POINTS.map((fallback, r) => row[r]?.points ?? fallback);
   }, [categories]);
   const written = useMemo(() => countWritten(board), [board]);
+  // Every clue the board has: thirty, or twenty-five on a five-category Disney board.
+  const columns = board.categories.length;
+  const cells = columns * POINTS.length;
   const final = board?.finalJeopardy ?? null;
   const finalIs = finalState(board);
   const here = at.kind === 'clue' ? categories[at.c]?.questions?.[at.r] : null;
@@ -191,7 +194,7 @@ export default function BoardGridEditor({
   // ---------------------------------------------------------------- keys
 
   const onBoardKey = (event) => {
-    const moved = moveSelection(at, event.key, { hasFinal: showFinal });
+    const moved = moveSelection(at, event.key, { hasFinal: showFinal, columns });
     if (moved) {
       event.preventDefault();
       byKeyboard.current = true;
@@ -265,7 +268,7 @@ export default function BoardGridEditor({
   );
 
   const wideBoard = (
-    <div className="ge-grid" role="grid" aria-label="The board" onKeyDown={onBoardKey}>
+    <div className="ge-grid" role="grid" aria-label="The board" onKeyDown={onBoardKey} style={{ '--board-cols': columns }}>
       {/* display:contents gives a screen reader real rows without the
           six-column CSS grid noticing they are there. */}
       <div role="row" style={contents}>
@@ -583,7 +586,7 @@ export default function BoardGridEditor({
             type="button"
             className="plain-btn quiet-action ge-action"
             onClick={goNextEmpty}
-            disabled={written === CLUES}
+            disabled={written === cells}
           >
             Next empty
           </button>
@@ -617,9 +620,9 @@ export default function BoardGridEditor({
           )}
 
           <p className="ge-legend">
-            {written === CLUES
+            {written === cells
               ? 'Every clue written.'
-              : `${CLUES - written} ${CLUES - written === 1 ? 'cell is' : 'cells are'} still empty.`}
+              : `${cells - written} ${cells - written === 1 ? 'cell is' : 'cells are'} still empty.`}
             {!narrow && ' Arrow keys move, Enter writes, Escape comes back.'}
           </p>
         </div>

@@ -42,7 +42,11 @@ export default function GameBoard({
   };
 
   return (
-    <div className={`game-board ${disabled && !suggestMode ? 'disabled' : ''}`}>
+    <div
+      className={`game-board ${disabled && !suggestMode ? 'disabled' : ''}`}
+      // Six columns, or the board's own count: a Disney board may have five.
+      style={{ '--board-cols': categories.length || 6 }}
+    >
       {/* Category Headers */}
       <div className="categories-row">
         {categories.map((category, index) => (
