@@ -2,9 +2,12 @@ import { launch } from './driver.mjs';
 const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
 
-const { token } = await (await fetch(`${API}/api/auth/login`, {
+/* Its own account. It used to log into one another suite registered, which
+   held only while the two ran in that order on the same machine. */
+const STAMP = String(Date.now()).slice(-7);
+const { token } = await (await fetch(`${API}/api/auth/register`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'grid@x.com', password: 'hunter2hunter2' }),
+  body: JSON.stringify({ email: `phone-${STAMP}@x.com`, password: 'hunter2hunter2', displayName: 'Phone', username: `phone${STAMP}` }),
 })).json();
 const A = (p, o = {}) => fetch(`${API}/api/boards${p}`, {
   ...o, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...o.headers },

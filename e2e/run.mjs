@@ -30,10 +30,17 @@ const DB = join(here, 'tmp-e2e.sqlite');
    you debug one without waiting for the other sixteen. */
 const only = process.env.ONLY ?? '';
 
+/* SHARD=k/n runs every nth suite starting from the kth, so CI can split the
+   run across n machines at once and still run every suite on one of them. */
+const shard = /^(\d+)\/(\d+)$/.exec(process.env.SHARD ?? '');
+const [part, parts] = shard ? [Number(shard[1]), Number(shard[2])] : [1, 1];
+if (part < 1 || part > parts) throw new Error(`SHARD=${process.env.SHARD} is not k/n with 1 <= k <= n`);
+
 const suites = readdirSync(here)
   .filter((f) => f.endsWith('.mjs') && !['run.mjs', 'driver.mjs', 'ws.mjs'].includes(f))
   .filter((f) => !only || f.includes(only))
-  .sort();
+  .sort()
+  .filter((_, i) => i % parts === part - 1);
 
 /* The shots are the only way to look at what a suite saw, and wiping them on
    the way out means you have to re-run to see anything. KEEP_SHOTS=1 leaves
@@ -157,5 +164,5 @@ for (const suite of suites) {
 
 stop();
 wipe({ shots: !keepShots });
-console.log(`\n${suites.length - failed} of ${suites.length} suites passed\n`);
+console.log(`\n${suites.length - failed} of ${suites.length} suites passed${parts > 1 ? ` (shard ${part} of ${parts})` : ''}\n`);
 process.exit(failed ? 1 : 0);
