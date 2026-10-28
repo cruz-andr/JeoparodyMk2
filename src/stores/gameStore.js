@@ -156,6 +156,24 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
+  /* The grader got it wrong and the player says so, as on The Board: the
+     miss becomes a hit. The clue's value comes back and is won, which is
+     twice it in all, and the cell is marked right. */
+  overrideToCorrect: () => {
+    const { currentQuestion, dailyDoubleWager, phase, score } = get();
+    if (!currentQuestion) return;
+
+    const points = phase === 'dailyDouble' || dailyDoubleWager > 0
+      ? dailyDoubleWager
+      : currentQuestion.points;
+
+    get().recordOutcome(true);
+    set({
+      score: score + 2 * points,
+      questionsCorrect: get().questionsCorrect + 1,
+    });
+  },
+
   closeQuestion: () => {
     const { questions } = get();
 

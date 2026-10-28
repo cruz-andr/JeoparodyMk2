@@ -19,6 +19,8 @@ import { countPlay } from '../services/api/boardsService';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { finishGame } from '../services/api/gamesService';
 import { canPlayFinalJeopardy as scoreQualifiesForFinal } from '../utils/wagers';
+import { checkAnswer } from '../services/answerChecker';
+import { judgeTyped, CLOSE_NOTE } from '../utils/typedClue';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
@@ -36,7 +38,6 @@ export default function SinglePlayerPage() {
     categories,
     questions,
     currentQuestion,
-    showAnswer,
     dailyDoubleWager,
     score,
     currentRound,
@@ -50,9 +51,9 @@ export default function SinglePlayerPage() {
     setLoading,
     setError,
     selectQuestion,
-    revealAnswer,
     markCorrect,
     markIncorrect,
+    overrideToCorrect,
     closeQuestion,
     resetGame,
     startRound2,
@@ -180,6 +181,53 @@ export default function SinglePlayerPage() {
 
   const handleCloseQuestion = () => {
     closeQuestion();
+  };
+
+  /* Typed and graded for you, the way The Board does it: one free retry on a
+     close spelling, the verdict and the correct response, then Continue. The
+     clue's `question` is the correct response and `answer` is the clue. */
+  const [typedResult, setTypedResult] = useState(null);
+  const [typedNote, setTypedNote] = useState(null);
+  const closeUsed = useRef(false);
+  useEffect(() => {
+    setTypedResult(null);
+    setTypedNote(null);
+    closeUsed.current = false;
+  }, [currentQuestion]);
+
+  const submitTyped = (given) => {
+    if (!currentQuestion || typedResult) return;
+    const judged = judgeTyped(checkAnswer, given, currentQuestion.question, { closeUsed: closeUsed.current });
+    if (judged.retry) {
+      closeUsed.current = true;
+      setTypedNote(CLOSE_NOTE);
+      return;
+    }
+    setTypedNote(null);
+    handleAnswerResult(judged.correct);
+    setTypedResult({ correct: judged.correct, playerAnswer: given });
+  };
+
+  // The grader is fuzzy, so the player has the last word, as on The Board.
+  const overrideTyped = () => {
+    overrideToCorrect();
+    playCorrect();
+    setTypedResult((r) => (r ? { ...r, correct: true } : r));
+  };
+
+  /* A pass shows the response before moving on, because not knowing it is
+     why you passed. Nothing is scored, and the cell reads as passed. */
+  const passTyped = () => setTypedResult({ correct: false, passed: true, playerAnswer: '' });
+
+  // Out of time: nothing either way, except a Daily Double's wager.
+  const timeUpTyped = () => {
+    if (typedResult) return;
+    if (dailyDoubleWager > 0) {
+      playWrong();
+      markIncorrect();
+    }
+    setTypedNote(null);
+    setTypedResult({ correct: false, timedOut: true, playerAnswer: '' });
   };
 
   const handleNextRound = async () => {
@@ -497,17 +545,16 @@ export default function SinglePlayerPage() {
             // A confirmed Daily Double wager replaces the board value as the stake.
             points={dailyDoubleWager > 0 ? dailyDoubleWager : currentQuestion.points}
             isDailyDouble={dailyDoubleWager > 0}
-            showAnswer={showAnswer}
-            onRevealAnswer={revealAnswer}
-            onCorrect={() => {
-              handleAnswerResult(true);
-              handleCloseQuestion();
-            }}
-            onIncorrect={() => {
-              handleAnswerResult(false);
-              handleCloseQuestion();
-            }}
-            onClose={handleCloseQuestion}
+            typed
+            timed
+            result={typedResult}
+            note={typedNote}
+            onSubmitAnswer={submitTyped}
+            onOverride={overrideTyped}
+            onContinue={handleCloseQuestion}
+            onTimeUp={timeUpTyped}
+            closeLabel="Pass"
+            onClose={passTyped}
           />
         )}
       </AnimatePresence>
