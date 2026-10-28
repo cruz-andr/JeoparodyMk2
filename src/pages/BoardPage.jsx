@@ -249,6 +249,17 @@ export default function BoardPage() {
           >
             Play it solo
           </button>
+          {/* A private room plays it together. Not a private board: everyone
+              in the room would be sent its clues. */}
+          {board.visibility !== 'private' && (
+            <button
+              className="plain-btn quiet-action board-action board-play-friends"
+              disabled={!playable}
+              onClick={() => navigate('/multiplayer', { state: { board: { slug, title: board.title } } })}
+            >
+              Play with friends
+            </button>
+          )}
           <button
             className="plain-btn quiet-action board-action"
             disabled={!playable}

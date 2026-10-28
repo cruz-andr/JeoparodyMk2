@@ -64,6 +64,8 @@ export default function JoinPage() {
         setPlayers(result.players);
       }
       // Sync room settings from host
+      // The board the host chose, if they chose one, before anyone arrived.
+      useRoomStore.getState().setBoard(result.board);
       if (result.settings) {
         useRoomStore.getState().updateSettings(result.settings);
       }

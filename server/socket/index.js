@@ -4,6 +4,7 @@ import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager, playerBoard } from './GameStateManager.js';
 import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
+import { roomBoards, roomGrid } from '../services/roomBoards.js';
 import { createSessionClaims } from './sessionClaims.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
 
@@ -30,7 +31,7 @@ export function quickplayOptions(env = process.env) {
   };
 }
 
-export function initializeSocketHandlers(io, { env = process.env } = {}) {
+export function initializeSocketHandlers(io, { env = process.env, boards = roomBoards } = {}) {
   const knobs = quickplayOptions(env);
   const gameManager = new GameStateManager({
     fillWithBots: knobs.fillWithBots,
@@ -354,6 +355,47 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
       io.to(roomCode).emit('game:setup-started');
     });
 
+    /* A community board for a private room, chosen in the lobby. The server
+       reads it rather than taking a grid from the host's page, so somebody
+       else's clues reach the room as they wrote them. Null puts the room back
+       to questions written for it. */
+    on('room:set-board', ({ roomCode, slug }, callback = () => {}) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (!room || room.type !== 'multiplayer' || !isRoomController(roomCode, socket.sessionId)) {
+        return callback({ success: false, error: 'Only the host of a private room can choose its board.' });
+      }
+      if (room.status !== 'waiting') {
+        return callback({ success: false, error: 'The game has already started.' });
+      }
+      let found = null;
+      if (slug) {
+        try {
+          found = boards.find(slug);
+        } catch (err) {
+          logError('Could not read a board for a room', { roomCode, slug, error: err.message });
+        }
+        if (!found) return callback({ success: false, error: 'That board cannot be played in a room.' });
+      }
+      const board = gameManager.setRoomBoard(roomCode, found);
+      callback({ success: true, board });
+      socket.to(roomCode).emit('room:board-set', { board });
+    });
+
+    // The room's board, dealt: its clues, one round, its own Final at the end.
+    on('game:start-board', ({ roomCode }) => {
+      const room = gameManager.rooms.get(roomCode);
+      if (!room?.board || room.status !== 'waiting' || !isRoomController(roomCode, socket.sessionId)) return;
+      const { categories, questions } = roomGrid(room.board.board);
+      actions.setQuestions(roomCode, {
+        questions, categories, firstPickerId: gameManager.getRandomPlayer(room), dailyDoubles: null,
+      });
+      try {
+        boards.counted(room.board.slug);
+      } catch (err) {
+        logError('Could not count a room play', { roomCode, slug: room.board.slug, error: err.message });
+      }
+    });
+
     // Host sets categories
     on('game:set-categories', ({ roomCode, categories }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
@@ -441,6 +483,8 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Round 1 ended - transition to Double Jeopardy
     on('game:round-end', ({ roomCode, round }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
+      // A community board is the one round its author wrote.
+      if (gameManager.rooms.get(roomCode)?.board) return;
       console.log(`Round ${round} ended for room ${roomCode}`);
       actions.roundEnd(roomCode, round);
     });
@@ -448,6 +492,7 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Start Round 2 (Double Jeopardy)
     on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
+      if (gameManager.rooms.get(roomCode)?.board) return;
       console.log(`Starting Round 2 for room ${roomCode}`);
       actions.startRound2(roomCode, { questions, categories, firstPickerId, dailyDoubles });
     });
@@ -455,8 +500,12 @@ export function initializeSocketHandlers(io, { env = process.env } = {}) {
     // Start Final Jeopardy
     on('game:start-final-jeopardy', ({ roomCode, finalJeopardy }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
+      /* A community board's own Final, whatever the page sent; and none at
+         all when it has none, rather than a stock clue in its author's name. */
+      const lent = gameManager.rooms.get(roomCode)?.board;
+      if (lent && !lent.finalJeopardy) return;
       console.log(`Starting Final Jeopardy for room ${roomCode}`);
-      const fjData = actions.startFinalJeopardy(roomCode, finalJeopardy);
+      const fjData = actions.startFinalJeopardy(roomCode, lent ? lent.finalJeopardy : finalJeopardy);
       if (fjData?.eligibleCount === 0) {
         console.log(`No eligible players for Final Jeopardy in ${roomCode}, ending game`);
       }

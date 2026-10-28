@@ -31,6 +31,9 @@ export default function Lobby({
   canStart,
   waitingFor,
   isHostMode = false,
+  // A community board lent to the room, and the host's way to take it back.
+  board = null,
+  onClearBoard = null,
 }) {
   const quickplay = roomType === 'quickplay';
   const seats = quickplay ? 3 : Math.max(players.length, 2);
@@ -64,6 +67,18 @@ export default function Lobby({
               <CodeCells code={roomCode || ''} />
               <span className="st-hint">Read it out, or send the link. No O, 0, I or 1.</span>
             </div>
+            {board && (
+              <div className="st-field lobby-board">
+                <span className="st-field-label">The board</span>
+                <span className="lobby-board-title">{board.title}</span>
+                <span className="st-hint">{board.categories.join(' \u00b7 ')}</span>
+                {onClearBoard && (
+                  <button type="button" className="plain-btn quiet-action lobby-board-clear" onClick={onClearBoard}>
+                    Write questions for the room instead
+                  </button>
+                )}
+              </div>
+            )}
             {canEditSettings ? (
               <div className="st-rules">
                 <Rule name="Clue clock" what="How long everyone gets to ring in">
@@ -74,25 +89,31 @@ export default function Lobby({
                     options={QUESTION_TIME_LIMITS.map((o) => ({ value: o.value, label: o.value ? `${o.value / 1000}s` : 'Off' }))}
                   />
                 </Rule>
-                <Rule name="Double Jeopardy" what="A second board at twice the money">
-                  <Toggle
-                    ariaLabel="Double Jeopardy"
-                    on={Boolean(settings?.enableDoubleJeopardy)}
-                    onChange={(v) => onSettingsChange({ enableDoubleJeopardy: v })}
-                  />
-                </Rule>
-                <Rule name="Final Jeopardy" what="Wager it all on one last clue">
-                  <Toggle
-                    ariaLabel="Final Jeopardy"
-                    on={Boolean(settings?.enableFinalJeopardy)}
-                    onChange={(v) => onSettingsChange({ enableFinalJeopardy: v })}
-                  />
-                </Rule>
+                {/* A board is the one round its author wrote, and its own
+                    Final or none, so neither is the room's to add. */}
+                {!board && (
+                  <Rule name="Double Jeopardy" what="A second board at twice the money">
+                    <Toggle
+                      ariaLabel="Double Jeopardy"
+                      on={Boolean(settings?.enableDoubleJeopardy)}
+                      onChange={(v) => onSettingsChange({ enableDoubleJeopardy: v })}
+                    />
+                  </Rule>
+                )}
+                {(!board || board.hasFinal) && (
+                  <Rule name="Final Jeopardy" what={board ? "The board's own last clue" : 'Wager it all on one last clue'}>
+                    <Toggle
+                      ariaLabel="Final Jeopardy"
+                      on={Boolean(settings?.enableFinalJeopardy)}
+                      onChange={(v) => onSettingsChange({ enableFinalJeopardy: v })}
+                    />
+                  </Rule>
+                )}
               </div>
             ) : (
               <p className="st-note">
-                The host sets the rules. {settings?.enableDoubleJeopardy ? 'Two rounds' : 'One round'}
-                {settings?.enableFinalJeopardy ? ', Final Jeopardy' : ''}
+                The host sets the rules. {settings?.enableDoubleJeopardy && !board ? 'Two rounds' : 'One round'}
+                {settings?.enableFinalJeopardy && (!board || board.hasFinal) ? ', Final Jeopardy' : ''}
                 {settings?.questionTimeLimit ? `, ${settings.questionTimeLimit / 1000} second clock` : ', no clock'}.
               </p>
             )}
