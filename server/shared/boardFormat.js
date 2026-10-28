@@ -27,8 +27,29 @@ export const VISIBILITIES = ['private', 'unlisted', 'public'];
    "history" within a week and the filter stops working. */
 export const TOPICS = [
   'history', 'film-tv', 'music', 'science', 'sport',
-  'geography', 'wordplay', 'food-drink', 'games', 'everything-else',
+  'geography', 'wordplay', 'food-drink', 'games', 'disney', 'everything-else',
 ];
+
+/* Disney boards follow the show they come from: Inside the Magic's Disney
+   Jeopardy plays five categories, and a board made from an episode keeps its
+   shape rather than gaining a category nobody played. Only that topic may;
+   every other board is the full six, so the rest of Community Boards still
+   reads as a Jeopardy board. */
+const FIVE_CATEGORY_TOPICS = ['disney'];
+
+/** How many categories a board of this topic may have. */
+export function categoryCountsFor(topic) {
+  return FIVE_CATEGORY_TOPICS.includes(topic) ? [5, CATEGORY_COUNT] : [CATEGORY_COUNT];
+}
+
+/** How many clues finish this board: its own categories, five rows each. */
+export function clueTarget(board) {
+  return (board?.categories?.length || CATEGORY_COUNT) * ROW_COUNT;
+}
+
+const wrongCount = (count) => (count === 5
+  ? 'Only Disney boards have five categories'
+  : `A board has ${CATEGORY_COUNT} categories, not ${count}`);
 
 /* Why somebody is reporting. Fixed, because a free-text-only report is a
    sentence to read rather than a thing to sort by, and the whole point of a
@@ -75,10 +96,10 @@ export function countClues(board) {
 }
 
 /** True when every category has been named. Empty names are legal in a draft. */
-export function allCategoriesNamed(board) {
+export function allCategoriesNamed(board, { topic = null } = {}) {
   return (
     Array.isArray(board?.categories) &&
-    board.categories.length === CATEGORY_COUNT &&
+    categoryCountsFor(topic).includes(board.categories.length) &&
     board.categories.every((c) => typeof c?.name === 'string' && c.name.trim())
   );
 }
@@ -98,11 +119,11 @@ function blankQuestion(points) {
   };
 }
 
-/** A new draft: the full 6x5, every cell empty. */
-export function emptyBoard() {
+/** A new draft: the full 6x5 unless asked otherwise, every cell empty. */
+export function emptyBoard(categoryCount = CATEGORY_COUNT) {
   return {
     version: 1,
-    categories: Array.from({ length: CATEGORY_COUNT }, () => ({
+    categories: Array.from({ length: categoryCount }, () => ({
       name: '',
       questions: POINT_VALUES.map(blankQuestion),
     })),
@@ -119,7 +140,7 @@ export function emptyBoard() {
  * questions are deliberately separate: saving a half-written board must always
  * work, or people lose work.
  */
-export function validateBoardStructure(data) {
+export function validateBoardStructure(data, { topic = null } = {}) {
   const errors = [];
 
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -131,8 +152,8 @@ export function validateBoardStructure(data) {
   if (!Array.isArray(data.categories)) {
     return { valid: false, errors: ['A board must have a categories array'] };
   }
-  if (data.categories.length !== CATEGORY_COUNT) {
-    errors.push(`A board has ${CATEGORY_COUNT} categories, not ${data.categories.length}`);
+  if (!categoryCountsFor(topic).includes(data.categories.length)) {
+    errors.push(wrongCount(data.categories.length));
   }
 
   data.categories.forEach((category, c) => {
@@ -227,8 +248,12 @@ function buildOptions(_clue, response, options) {
   return [response, ...distractors];
 }
 
-export function normalizeBoard(data) {
-  const categories = Array.from({ length: CATEGORY_COUNT }, (_, c) => {
+export function normalizeBoard(data, { topic = null } = {}) {
+  /* As many categories as the board brought, when its topic allows that
+     many; otherwise the full six. */
+  const brought = data?.categories?.length;
+  const count = categoryCountsFor(topic).includes(brought) ? brought : CATEGORY_COUNT;
+  const categories = Array.from({ length: count }, (_, c) => {
     const incoming = data?.categories?.[c] ?? {};
     const rows = Array.isArray(incoming.questions) ? incoming.questions : [];
 
@@ -299,11 +324,14 @@ export function finalJeopardyState(board) {
   return parts.every(Boolean) ? 'complete' : 'partial';
 }
 
-export function publishProblem({ title, board }) {
+export function publishProblem({ title, board, topic = null }) {
   if (!title || !title.trim()) return 'Give the board a title first.';
   if (title.trim().length > MAX_TITLE) return `Titles are ${MAX_TITLE} characters or fewer.`;
 
-  if (!allCategoriesNamed(board)) {
+  const count = board?.categories?.length ?? 0;
+  if (!categoryCountsFor(topic).includes(count)) return `${wrongCount(count)}.`;
+
+  if (!allCategoriesNamed(board, { topic })) {
     const unnamed = (board?.categories ?? []).filter((c) => !c?.name?.trim()).length;
     return unnamed === 1
       ? 'One category still needs a name.'
@@ -311,8 +339,9 @@ export function publishProblem({ title, board }) {
   }
 
   const written = countClues(board);
-  if (written < CLUE_COUNT) {
-    const left = CLUE_COUNT - written;
+  const target = clueTarget(board);
+  if (written < target) {
+    const left = target - written;
     return left === 1
       ? 'One clue is still empty. It is marked on your board.'
       : `${left} clues are still empty. They are marked on your board.`;

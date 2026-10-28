@@ -13,7 +13,7 @@
      columns past a 360px phone by 26px on the Linux runner, where the font is
      not the condensed one this Mac has installed. A column may be narrower
      than its longest word; the word wraps instead. */
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--board-cols, 6), minmax(0, 1fr));
   gap: var(--cell-gap);
   margin-bottom: var(--cell-gap);
 }
@@ -51,7 +51,7 @@
      columns past a 360px phone by 26px on the Linux runner, where the font is
      not the condensed one this Mac has installed. A column may be narrower
      than its longest word; the word wraps instead. */
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--board-cols, 6), minmax(0, 1fr));
   gap: var(--cell-gap);
 }
 

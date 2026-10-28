@@ -23,7 +23,9 @@ import { authenticateToken, optionalAuth } from '../middleware/auth.js';
 import { clientAddress } from '../middleware/rateLimit.js';
 import { AppError } from '../middleware/errorHandler.js';
 import {
+  CATEGORY_COUNT,
   CLUE_COUNT,
+  ROW_COUNT,
   MAX_DESCRIPTION,
   MAX_TITLE,
   MAX_REPORT_NOTE,
@@ -43,7 +45,7 @@ const router = Router();
    twenty serialised boards and twenty cover images with it. */
 const CARD_COLUMNS = `
   b.id, b.slug, b.owner_id, b.title, b.description, b.topic,
-  b.visibility, b.clue_count, b.plays, b.copied_from, b.category_names,
+  b.visibility, b.clue_count, b.plays, b.copied_from, b.category_names, b.category_count,
   b.created_at, b.updated_at, b.published_at,
   b.cover_image IS NOT NULL AS has_cover
 `;
@@ -87,6 +89,10 @@ function cardFromRow(row) {
     topic: row.topic,
     visibility: row.visibility,
     clueCount: row.clue_count,
+    /* What finishes it, which is not always thirty: a Disney board may have
+       five categories. */
+    columns: row.category_count ?? CATEGORY_COUNT,
+    clueTotal: (row.category_count ?? CATEGORY_COUNT) * ROW_COUNT,
     /* Only the named ones. A half-built board should show the three categories
        it has rather than three blanks pretending to be categories. */
     categories: (row.category_names ?? '').split('\u0000').filter(Boolean),
@@ -213,7 +219,9 @@ function featuredSlugs() {
 const ROWS = {
   /* Featured falls back to the most played finished boards when nothing is
      picked, so the row is never an empty shelf next to two full ones. */
-  featured: `AND b.clue_count = ${CLUE_COUNT} ORDER BY b.plays DESC, b.published_at DESC`,
+  /* A finished board: the full thirty, or a five-category Disney board's
+     twenty-five. */
+  featured: `AND (b.clue_count = ${CLUE_COUNT} OR (b.topic = 'disney' AND b.clue_count = ${CLUE_COUNT - ROW_COUNT})) ORDER BY b.plays DESC, b.published_at DESC`,
   popular: 'ORDER BY b.plays DESC, b.published_at DESC',
   new: 'ORDER BY b.published_at DESC',
 };
@@ -323,23 +331,33 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
       throw err;
     }
 
-    let board = null;
-    let clueCount = existing.clue_count;
-
-    if (incoming.board !== undefined) {
-      const check = validateBoardStructure(incoming.board);
-      if (!check.valid) {
-        throw new AppError(check.errors[0], 400, 'INVALID_BOARD');
-      }
-      board = normalizeBoard(incoming.board);
-      clueCount = countClues(board);
-    }
-
+    /* The topic first: it decides how many categories the board may have,
+       for the board being saved and for one already saved whose topic is
+       being changed. */
     const topic =
       incoming.topic === undefined ? existing.topic
       : incoming.topic === null ? null
       : TOPICS.includes(incoming.topic) ? incoming.topic
       : (() => { throw new AppError('Unknown topic.', 400, 'INVALID_TOPIC'); })();
+
+    let board = null;
+    let clueCount = existing.clue_count;
+
+    if (incoming.board !== undefined) {
+      const check = validateBoardStructure(incoming.board, { topic });
+      if (!check.valid) {
+        throw new AppError(check.errors[0], 400, 'INVALID_BOARD');
+      }
+      board = normalizeBoard(incoming.board, { topic });
+      clueCount = countClues(board);
+    } else if (topic !== existing.topic) {
+      // A five-category Disney board moved to another topic would be the
+      // wrong shape there.
+      const check = validateBoardStructure(parseBoard(existing), { topic });
+      if (!check.valid) {
+        throw new AppError(check.errors[0], 400, 'INVALID_BOARD');
+      }
+    }
 
     const title = incoming.title === undefined
       ? existing.title
@@ -353,7 +371,7 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
        already has it rather than breaking it outright. */
     let visibility = existing.visibility;
     let publishedAt = existing.published_at;
-    if (visibility === 'public' && publishProblem({ title, board: board ?? parseBoard(existing) })) {
+    if (visibility === 'public' && publishProblem({ title, board: board ?? parseBoard(existing), topic })) {
       visibility = 'unlisted';
       publishedAt = null;
     }
@@ -370,6 +388,7 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
       SET title = ?, description = ?, topic = ?,
           data = COALESCE(?, data), clue_count = ?,
           category_names = COALESCE(?, category_names),
+          category_count = COALESCE(?, category_count),
           visibility = ?, published_at = ?,
           version = version + 1,
           updated_at = datetime('now')
@@ -378,6 +397,7 @@ router.put('/:slug', authenticateToken, (req, res, next) => {
       title, description, topic,
       board ? JSON.stringify(board) : null, clueCount,
       names,
+      board ? board.categories.length : null,
       visibility, publishedAt, existing.id
     );
 
@@ -405,7 +425,7 @@ router.put('/:slug/visibility', authenticateToken, (req, res, next) => {
     }
 
     if (wanted === 'public') {
-      const problem = publishProblem({ title: existing.title, board: parseBoard(existing) });
+      const problem = publishProblem({ title: existing.title, board: parseBoard(existing), topic: existing.topic });
       if (problem) throw new AppError(problem, 400, 'NOT_READY');
     }
 
@@ -447,11 +467,11 @@ router.post('/:slug/copy', authenticateToken, (req, res, next) => {
 
     db.prepare(`
       INSERT INTO boards (id, slug, owner_id, title, description, topic,
-                          data, clue_count, category_names, visibility, copied_from)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'private', ?)
+                          data, clue_count, category_names, category_count, visibility, copied_from)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'private', ?)
     `).run(
       uuidv4(), slug, ownerId, title, source.description, source.topic,
-      source.data, source.clue_count, source.category_names,
+      source.data, source.clue_count, source.category_names, source.category_count ?? CATEGORY_COUNT,
       /* Credit the original author, not the person you copied from. Otherwise
          a copy of a copy quietly reassigns the work to the middleman. */
       source.copied_from ?? source.id

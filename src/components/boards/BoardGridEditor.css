@@ -20,7 +20,8 @@
 
 .ge-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  /* Six columns, or the board's own count: a Disney board may have five. */
+  grid-template-columns: repeat(var(--board-cols, 6), minmax(0, 1fr));
   gap: 5px;
   background: #05081c;
 }
