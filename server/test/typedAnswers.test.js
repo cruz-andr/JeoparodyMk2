@@ -267,6 +267,27 @@ test('answering a Daily Double in time stops its clock', () => {
   assert.equal(t.room.players.get('p0').score, 1600);
 });
 
+test('a clip plays before anyone can ring in, and the room is told when the buzzer opens', () => {
+  const t = mkTable({ type: 'multiplayer' });
+  Object.assign(t.room.gameState.questions[0][0], { mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 895, youtubeEnd: 905 });
+  t.actions.selectQuestion('p0', t.code, 0, 0);
+  assert.equal(t.actions.buzz('p1', t.code, 0), false, 'shut while the clip plays');
+  t.clock.advance(11000);
+  assert.equal(t.sent(t.toPlayers, 'game:buzzer-opened').length, 0, 'ten seconds of clip and a moment to load');
+  t.clock.advance(600);
+  const [opened] = t.sent(t.toPlayers, 'game:buzzer-opened');
+  assert.deepEqual(opened.payload, { categoryIndex: 0, pointIndex: 0 });
+  assert.equal(t.actions.buzz('p1', t.code, 0), true, 'and open after');
+});
+
+test('a clue without a clip opens the buzzer straight away, and says nothing', () => {
+  const t = mkTable({ type: 'multiplayer' });
+  t.actions.selectQuestion('p0', t.code, 0, 0);
+  assert.equal(t.actions.buzz('p1', t.code, 0), true);
+  t.clock.advance(60000);
+  assert.equal(t.sent(t.toPlayers, 'game:buzzer-opened').length, 0);
+});
+
 test("a hosted room's host still judges: no grading there", () => {
   const t = mkTable({ type: 'host' });
   t.actions.selectQuestion('p0', t.code, 0, 0);

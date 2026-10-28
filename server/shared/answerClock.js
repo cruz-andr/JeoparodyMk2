@@ -15,3 +15,17 @@ export const DAILY_DOUBLE_READ_MS = 10000;
 export function answerWindowFor(roomType, settingMs) {
   return roomType === 'multiplayer' ? Math.max(settingMs, TYPING_ANSWER_MS) : settingMs;
 }
+
+/* A clip is part of its clue, so nobody rings in on it, and no clock runs,
+   until it has played: its length, and a moment for it to load. Capped, so
+   a long clip cannot hold a room for minutes. A clip with no end set is of
+   no known length, and waits for nothing. */
+export const CLIP_LOAD_MS = 1500;
+export const CLIP_WAIT_CAP_MS = 30000;
+
+export function clipWaitMs(clue) {
+  if (clue?.mediaType !== 'youtube' || !clue.mediaData) return 0;
+  if (clue.youtubeStart == null || clue.youtubeEnd == null) return 0;
+  const ms = (clue.youtubeEnd - clue.youtubeStart) * 1000 + CLIP_LOAD_MS;
+  return Math.min(Math.max(ms, 0), CLIP_WAIT_CAP_MS);
+}

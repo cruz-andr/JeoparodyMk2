@@ -15,7 +15,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import { TypedAnswerForm, TypedVerdict } from '../components/game/TypedAnswer';
 import { CLOSE_NOTE } from '../utils/typedClue';
-import { answerWindowFor, DAILY_DOUBLE_READ_MS } from '@shared/answerClock.js';
+import { answerWindowFor, clipWaitMs, DAILY_DOUBLE_READ_MS } from '@shared/answerClock.js';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
 import HostLiveScreen from '../components/host/HostLiveScreen';
@@ -115,6 +115,8 @@ export default function GamePage() {
   const [answerClose, setAnswerClose] = useState(0); // close verdicts this turn
   const [saidNote, setSaidNote] = useState(null); // { playerId, said, correct, timeout, points }
   const [ddTimerKey, setDdTimerKey] = useState(0);
+  // A clip is playing, and the buzzer opens when it has.
+  const [buzzWaiting, setBuzzWaiting] = useState(false);
   const hasAlreadyBuzzedRef = useRef(false);
 
   // Category re-roll state
@@ -416,13 +418,27 @@ export default function GamePage() {
         // the clue can be read aloud first. Arming it here let a player buzz
         // early: the server rejected the buzz, but the client had already
         // marked them as having used their turn, locking them out of the clue.
-        if (!isHostModeRef.current) {
+        /* And in any room, a clip plays before anyone rings in: the server
+           holds the buzzer shut until it has, and says when it opens. */
+        if (!isHostModeRef.current && clipWaitMs({ ...localQuestion, ...question })) {
+          setCanBuzz(false);
+          setBuzzWaiting(true);
+        } else if (!isHostModeRef.current) {
+          setBuzzWaiting(false);
           setSignalArrivedTime(Date.now());
           setCanBuzz(true);
         } else {
           setCanBuzz(false);
         }
       }
+    });
+
+    // The clip has played: the buzzer is open, and its clock starts now.
+    const unsubBuzzerOpened = subscribe('game:buzzer-opened', () => {
+      setBuzzWaiting(false);
+      setSignalArrivedTime(Date.now());
+      setCanBuzz(!hasAlreadyBuzzedRef.current);
+      setBuzzTimerKey((k) => k + 1);
     });
 
     // Someone buzzed first
@@ -811,6 +827,7 @@ export default function GamePage() {
       unsubPlayerReconnected();
       unsubSetupStarted();
       unsubBoardSet();
+      unsubBuzzerOpened();
       unsubGenreSelected();
       unsubCategoriesSet();
       unsubCategoryEdited();
@@ -1196,8 +1213,13 @@ export default function GamePage() {
 
       // In host mode, host controls buzzer via control panel, not auto-buzz
       if (!isHostMode) {
-        setSignalArrivedTime(Date.now());
-        setCanBuzz(true);
+        // Not while its clip plays: the server says when the buzzer opens.
+        const clipFirst = Boolean(clipWaitMs(question));
+        setBuzzWaiting(clipFirst);
+        if (!clipFirst) {
+          setSignalArrivedTime(Date.now());
+          setCanBuzz(true);
+        }
         setBuzzerWinnerId(null);
         setBuzzTimedOut(false);
         setBuzzTimerKey(prev => prev + 1);
@@ -1812,6 +1834,10 @@ export default function GamePage() {
                         <p className="skip-status">Skipped — waiting for others...</p>
                       )}
                     </div>
+                  )}
+
+                  {buzzWaiting && !buzzerWinnerId && (
+                    <p className="waiting-for-answer">Buzzers open when the clip ends</p>
                   )}
 
                   {/* Already buzzed and got wrong — just wait */}

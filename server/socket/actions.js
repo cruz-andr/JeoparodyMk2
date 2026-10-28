@@ -15,7 +15,7 @@
  */
 
 import { playerBoard, playerClue } from './GameStateManager.js';
-import { answerWindowFor, DAILY_DOUBLE_READ_MS } from '../shared/answerClock.js';
+import { answerWindowFor, clipWaitMs, DAILY_DOUBLE_READ_MS } from '../shared/answerClock.js';
 
 // On the show a contestant gets about five seconds to answer once they have
 // buzzed in. Reusing the full clue timer here gave them the whole 30 seconds
@@ -259,6 +259,19 @@ export function createGameActions({
         return result;
       }
 
+      /* A clip plays before anyone rings in. The room is told when the
+         buzzer opens, because until then it is shut. */
+      const wait = clipWaitMs(result.question);
+      if (wait) {
+        const { categoryIndex: c, pointIndex: r } = result;
+        schedule(() => {
+          const current = rooms.get(roomCode)?.gameState?.currentQuestion;
+          if (!current || current.categoryIndex !== c || current.pointIndex !== r) return;
+          openBuzzWindow(roomCode);
+          emitRoom(roomCode, 'game:buzzer-opened', { categoryIndex: c, pointIndex: r });
+        }, wait);
+        return result;
+      }
       openBuzzWindow(roomCode);
       return result;
     },

@@ -30,6 +30,8 @@ const board = {
     questions: POINTS.map((points, r) => ({
       points, answer: `${name} clue ${points}`, question: `What is ${name}?`,
       ...(c === 0 && r === 0 ? { mediaType: 'image', mediaData: PIXEL, altText: 'A blue square' } : {}),
+      // A two second clip: the clue's clock waits for it.
+      ...(c === 2 && r === 0 ? { mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 895, youtubeEnd: 897 } : {}),
     })),
   })),
   finalJeopardy: {
@@ -116,6 +118,15 @@ try {
 
   await cell(1, 0); await open();
   check('a clue with no media has no media column', await d.evaluate("!document.querySelector('.clue-screen.has-media') && !!document.querySelector('.clue-screen .clue-text')"));
+  check('and its clock starts straight away', await d.evaluate("!!document.querySelector('.question-timer')"));
+  await answer(false);
+
+  // A clip is part of the clue: no clock until it has played.
+  await cell(2, 0); await open();
+  await sleep(800);
+  check('a clip clue shows no clock while the clip plays', !(await d.evaluate("!!document.querySelector('.question-timer')")));
+  await d.until("!!document.querySelector('.question-timer')", { timeout: 9000 });
+  check('and starts it once the clip has played', true);
   await answer(false);
 
   for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {

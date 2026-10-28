@@ -15,6 +15,8 @@ export default function MediaClueDisplay({
   compact = false,
   // Fill the column it is given at 16:9, rather than a fixed 300px.
   fill = false,
+  // Told when a clip has played to its end, so the clue's clock can start.
+  onMediaDone = null,
 }) {
   const playerRef = useRef(null);
 
@@ -76,6 +78,7 @@ export default function MediaClueDisplay({
             audioOnly={question.audioOnly || false}
             interactive={hostControls}
             fill={fill && !question.audioOnly}
+            onEnd={onMediaDone}
             height={question.audioOnly ? 0 : 300}
           />
 
