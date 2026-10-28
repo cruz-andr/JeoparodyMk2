@@ -9,7 +9,8 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "node scripts/test-all.mjs",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs",
+    "video-board": "node scripts/video-board/cli.mjs"
   },
   "dependencies": {
     "framer-motion": "^12.23.26",

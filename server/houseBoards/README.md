@@ -12,3 +12,18 @@ the server log. `featured: true` puts it in the Featured row.
 Change a file and deploy, and the board on the site changes with it. Plays
 are kept. A slug that already belongs to somebody's own board is never
 touched.
+
+## From an episode video
+
+A new episode of the show is a board in a few minutes, on a Mac:
+
+    npm run video-board -- ~/Downloads/episode-41.mp4 --youtube <its YouTube link>
+
+That reads the video (about a minute) and writes a draft `board.json` and a
+`review.md` beside it: what it could not be sure of, with the time to find
+each in the video. Fix those, then
+
+    npm run video-board -- publish ~/Downloads/episode-41-board/board.json
+
+writes the board here, with every check the server makes, and it goes up on
+the next deploy. See `scripts/video-board/cli.mjs` for the options.
