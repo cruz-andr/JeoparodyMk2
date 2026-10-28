@@ -40,8 +40,8 @@ try {
 
     check('the title is set in board type',
       (await b.evaluate("document.querySelector('.st-title')?.textContent")) === screen.title);
-    check('the way back is a word, the way host mode writes it',
-      (await b.evaluate("document.querySelector('.st-back')?.textContent.trim() ?? ''")).includes('Back'));
+    check('the way back says where it goes, for a screen reader',
+      (await b.evaluate("document.querySelector('.st-back')?.getAttribute('aria-label') ?? ''")).includes('Back'));
     /* One app, one theme. The archive is flat #05081c with hairline rules and
        no gradients anywhere, and these screens are the same surface. */
     check('the page is flat, with no gradient anywhere on it',

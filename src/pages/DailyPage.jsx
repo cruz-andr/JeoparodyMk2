@@ -371,8 +371,8 @@ export default function DailyPage() {
       {/* The clue fills the screen, so this rides above it: without it there is
           no way out of a run until the sixth clue is answered. */}
       <header className="daily-header">
-        <button onClick={handleBackToMenu} className="btn-back">
-          &larr; Menu
+        <button onClick={handleBackToMenu} className="btn-back back-chevron" aria-label="Back to menu" title="Back to menu">
+          &lsaquo;
         </button>
         <div className="daily-title">
           <h1>The Sixer</h1>

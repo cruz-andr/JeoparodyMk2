@@ -53,7 +53,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <header className="profile-top">
-        <button className="plain-btn profile-back" onClick={() => navigate('/menu')}>&lsaquo; Menu</button>
+        <button className="plain-btn profile-back back-chevron" onClick={() => navigate('/menu')} aria-label="Back to menu" title="Back to menu">&lsaquo;</button>
         <span className="profile-top-title">You</span>
         <span className="profile-top-spacer" />
       </header>

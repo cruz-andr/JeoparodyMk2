@@ -332,3 +332,52 @@ input:focus, textarea:focus, select:focus {
     font-size: 1.25rem;
   }
 }
+
+/* The way back, everywhere: a plain chevron, no box and no word, with what it
+   does in its label for a screen reader. Each page's own class still places
+   it; this decides how it looks. Doubled up so it outranks those classes and
+   the global button hover, whichever stylesheet loads last. */
+:is(button, a).back-chevron.back-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 6px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  /* The glyph in the markup is a fallback; the chevron is drawn below, so
+     it is the same size and weight whatever font the page is in. */
+  font-size: 0;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+  color: rgba(242, 236, 224, 0.7);
+  cursor: pointer;
+}
+
+:is(button, a).back-chevron.back-chevron::before {
+  content: '';
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  border-left: 2.5px solid currentColor;
+  border-bottom: 2.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+:is(button, a).back-chevron.back-chevron:hover:not(:disabled) {
+  background: none;
+  color: #f2ece0;
+  transform: none;
+  text-decoration: none;
+}
+
+:is(button, a).back-chevron.back-chevron:focus-visible {
+  outline: 2px solid var(--jeopardy-gold-light);
+  outline-offset: 2px;
+}

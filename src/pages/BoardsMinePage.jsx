@@ -93,8 +93,8 @@ export default function BoardsMinePage() {
   return (
     <div className="boards-page">
       <header className="boards-top">
-        <button className="plain-btn boards-back" onClick={() => navigate('/profile')}>
-          &lsaquo; Profile
+        <button className="plain-btn boards-back back-chevron" onClick={() => navigate('/profile')} aria-label="Back to your profile" title="Back to your profile">
+          &lsaquo;
         </button>
         <span className="boards-top-title">My Boards</span>
         <span className="boards-top-spacer" />

@@ -17,8 +17,8 @@ export default function SettingsPage() {
   return (
     <div className="settings-page">
       <header className="settings-page-head">
-        <button className="plain-btn settings-back" onClick={() => navigate(-1)}>
-          &lsaquo; Back
+        <button className="plain-btn settings-back back-chevron" onClick={() => navigate(-1)} aria-label="Back" title="Back">
+          &lsaquo;
         </button>
         <h1>Settings</h1>
         <span className="settings-head-spacer" />

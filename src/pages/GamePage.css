@@ -210,84 +210,26 @@
 }
 
 /* Multiplayer Game */
+/* The same page The Board is played on: its dark, its margins, its header
+   over the board (components/game/BoardChrome). */
+.game-page:has(.multiplayer-game) {
+  background: #05081c;
+  padding: 20px 24px 40px;
+  align-items: stretch;
+}
+
 .multiplayer-game {
   width: 100%;
-  max-width: 1200px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: 22px;
 }
 
-/* Scoreboard */
-/* Header Scoreboard (compact player chips) */
-.multiplayer-game .game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: var(--board-max-width);
-  margin: 0 auto 20px;
-  padding: 0 10px;
+@media (max-width: 680px) {
+  .game-page:has(.multiplayer-game) { padding: 14px 12px 28px; }
 }
 
-.multiplayer-game .game-header h1 {
-  color: var(--jeopardy-gold);
-  font-family: var(--font-display);
-  font-size: 2rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  text-shadow: var(--shadow-text);
-  margin: 0;
-}
 
-.header-scoreboard {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.player-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: var(--radius-full);
-  font-size: 0.9rem;
-  transition: all 0.2s;
-}
-
-.player-chip.current-picker {
-  background: var(--jeopardy-blue);
-  border: 2px solid var(--jeopardy-gold);
-}
-
-.player-chip .chip-name {
-  color: var(--text-secondary);
-}
-
-.player-chip .chip-score {
-  font-weight: bold;
-  font-family: var(--font-display);
-}
-
-.player-chip .chip-score.positive {
-  color: var(--jeopardy-gold);
-}
-
-.player-chip .chip-score.negative {
-  color: var(--color-error);
-}
-
-/* Turn Indicator (subtle) */
-.turn-indicator-subtle {
-  text-align: center;
-  padding: var(--spacing-sm) 0;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  max-width: var(--board-max-width);
-  margin: 0 auto;
-}
 
 /* Full-Screen Question Overlay (matches single player QuestionModal) */
 .mp-question-overlay {
@@ -302,6 +244,8 @@
   align-items: center;
   z-index: var(--z-modal);
   padding: 20px;
+  /* As solo's: the end of the clue does not hand the scroll to the board. */
+  overscroll-behavior: contain;
 }
 
 .mp-question-content {
@@ -345,11 +289,17 @@
   margin-bottom: 40px;
 }
 
+/* Sized the way solo's clue is: to the window, topping out at the size it is
+   read at everywhere, in short balanced lines. A fixed 2.5rem ran a short
+   clue onto three huge lines on a phone. */
 .mp-question-content .clue-text {
-  font-size: 2.5rem;
+  font-size: clamp(1.4rem, min(3.4vw, 5vh), 2.5rem);
   line-height: 1.4;
   text-transform: uppercase;
   font-family: var(--font-jeopardy);
+  max-width: 34ch;
+  margin-inline: auto;
+  text-wrap: balance;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -757,17 +707,23 @@
   gap: var(--spacing-md);
 }
 
+/* Pass, set as solo's is: quiet, but a full-size tap target. */
 .skip-link {
-  color: var(--text-secondary);
-  opacity: 0.5;
+  min-height: 44px;
+  padding: 10px 24px;
+  background: none;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: color var(--transition-fast);
 }
 
 .skip-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+  background: none;
+  color: var(--text-primary);
 }
 
 .skip-status {
@@ -1091,3 +1047,27 @@
 .lobby-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .lobby-out { display: flex; justify-content: center; }
+
+
+/* The clue on a phone, as solo lays it out: anchored to the top so the
+   keyboard does not cover the box, tighter padding, the clue sized down, and
+   the category over its value. */
+@media (max-width: 768px) {
+  .mp-question-overlay {
+    align-items: flex-start;
+    padding-top: 18px;
+    overflow-y: auto;
+  }
+
+  .mp-question-content { padding: 30px 20px; }
+  .mp-question-content .clue-text { font-size: 1.8rem; }
+}
+
+@media (max-width: 480px) {
+  .mp-question-content .clue-text { font-size: 1.4rem; }
+
+  .mp-question-content .question-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

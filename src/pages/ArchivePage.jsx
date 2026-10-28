@@ -63,8 +63,8 @@ export default function ArchivePage() {
   return (
     <div className="archive-page">
       <header className="archive-top">
-        <button className="plain-btn archive-back" onClick={() => navigate('/menu')}>
-          &lsaquo; Menu
+        <button className="plain-btn archive-back back-chevron" onClick={() => navigate('/menu')} aria-label="Back to menu" title="Back to menu">
+          &lsaquo;
         </button>
         <span className="archive-top-title">Archive</span>
         <span className="archive-top-spacer" />
