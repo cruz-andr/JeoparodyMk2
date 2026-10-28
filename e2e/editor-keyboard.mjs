@@ -48,6 +48,8 @@ try {
     JSON.stringify({ state: { token, isAuthenticated: true, isGuest: false }, version: 0 })
   )});`);
   await b.goto(`${APP}/boards/${slug}/edit`);
+  // The board arrives after the page does; on a slow runner it was not there yet.
+  await b.until("!!document.querySelector('.ge-cell.is-on')", { timeout: 15000 });
 
   // Focus goes on the selected CELL now, not on the grid container: that is
   // the roving tabindex, and it is why Tab leaves the grid in one press
