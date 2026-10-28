@@ -21,6 +21,7 @@ import BoardWheel from '../components/game/BoardWheel';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useAudio } from '../hooks';
 import QuestionModal from '../components/game/QuestionModal';
+import { BoardHeader, BoardTag, Money, WheelHeader, WheelPodium, PodiumScore } from '../components/game/BoardChrome';
 import DailyResults from '../components/daily/DailyResults';
 import { useUserStore } from '../stores';
 import { canPlayDate } from '@shared/archiveWindow.js';
@@ -362,15 +363,10 @@ export default function DailyBoardPage() {
   if (isPhone) {
     return (
       <div className="daily-board-page phone">
-        <div className="wheel-header">
-          <span className="wheel-state">
-            {playedCount} of {questions.length} &middot;{' '}
-            <span className="wheel-clock">{onTheClock}</span>
-          </span>
-          <button className="wheel-close" onClick={backToMenu} aria-label="Back to menu">
-            &times;
-          </button>
-        </div>
+        <WheelHeader
+          state={<>{playedCount} of {questions.length} &middot; <span className="wheel-clock">{onTheClock}</span></>}
+          onClose={backToMenu}
+        />
 
         <BoardWheel
           categories={board.categories ?? []}
@@ -379,17 +375,9 @@ export default function DailyBoardPage() {
           onSelect={handleSelect}
         />
 
-        <div className="wheel-podium">
-          <div className="wheel-podium-meta">
-            <span>The Board</span>
-            {streak > 0 && <span>{streak} day streak</span>}
-          </div>
-          <div className="wheel-podium-score">
-            <span className={score < 0 ? 'negative' : ''}>
-              {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
-            </span>
-          </div>
-        </div>
+        <WheelPodium meta={<><span>The Board</span>{streak > 0 && <span>{streak} day streak</span>}</>}>
+          <PodiumScore value={score} />
+        </WheelPodium>
 
         {clueModal}
       </div>
@@ -397,29 +385,16 @@ export default function DailyBoardPage() {
   }
 
   return (
-    <div className="daily-board-page">
-      <header className="daily-board-header">
-        <button onClick={backToMenu} className="btn-back">&larr; Menu</button>
-        <div className="daily-board-title">
-          <h1>The Board</h1>
-          <p className="daily-board-date">
-            {date} &middot; <span className="daily-board-clock">{onTheClock}</span>
-          </p>
-        </div>
-        <div className="daily-board-score">
-          <span className={score < 0 ? 'negative' : ''}>
-            {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
-          </span>
-          {weekBest !== null && (
-            <span className="daily-board-target">
-              Beat ${weekBest.toLocaleString()}
-            </span>
-          )}
-          {streak > 0 && (
-            <span className="daily-board-streak">{streak} day streak</span>
-          )}
-        </div>
-      </header>
+    <div className="board-play-page daily-board-page">
+      <BoardHeader
+        title="The Board"
+        sub={<>{date} &middot; <span className="board-clock">{onTheClock}</span></>}
+        onBack={backToMenu}
+      >
+        <Money value={score} />
+        {weekBest !== null && <BoardTag quiet>Beat ${weekBest.toLocaleString()}</BoardTag>}
+        {streak > 0 && <BoardTag>{streak} day streak</BoardTag>}
+      </BoardHeader>
 
       <GameBoard
         categories={board.categories ?? []}

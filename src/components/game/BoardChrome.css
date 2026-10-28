@@ -1,0 +1,277 @@
+/* What sits around a board in play: The Board's header and podium, for every
+   mode. These were DailyBoardPage.css's; they moved here, unchanged, so solo
+   play and a room are drawn from the same rules rather than near copies. */
+
+/* ── The page a board is played on ───────────────────────── */
+
+/* div. so it outranks the page's own one-class rule, whichever loads last. */
+div.board-play-page {
+  min-height: 100vh;
+  background: #05081c;
+  padding: 20px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ── Desktop header ─────────────────────────────────────── */
+
+.board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+}
+
+.board-header-title {
+  text-align: center;
+  min-width: 0;
+}
+
+.board-header-title h1 {
+  margin: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--jeopardy-gold);
+  line-height: 1;
+}
+
+.board-header-sub {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+/* The money. Cream, and red only when it is below zero: being up is not a
+   colour on The Board. */
+.board-header-score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-board);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #f2ece0;
+  min-width: 150px;
+  justify-content: flex-end;
+}
+
+.board-header-score .negative {
+  color: var(--color-error);
+}
+
+.board-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--jeopardy-gold);
+  border: 1px solid rgba(214, 159, 76, 0.4);
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+
+/* This week's best: shown as the number to chase while playing. */
+.board-tag.is-quiet {
+  color: rgba(242, 236, 224, 0.5);
+  border-color: rgba(242, 236, 224, 0.2);
+}
+
+/* The way back is the plain chevron every page uses (globals.css); here it
+   only holds its side of the header, so the title stays in the middle. */
+.board-back { min-width: 110px; }
+
+/* Holds the title in the middle when there is no way back to show. */
+.board-back-spacer { min-width: 110px; }
+
+@media (max-width: 680px) {
+  div.board-play-page {
+    padding: 14px 12px 28px;
+  }
+
+  .board-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .board-header-title h1 {
+    font-size: 1.6rem;
+  }
+
+  .board-back,
+  .board-back-spacer,
+  .board-header-score {
+    min-width: 0;
+  }
+}
+
+/* ── Phone: around the wheel ───────────────────────────── */
+
+.wheel-clock,
+.board-clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--jeopardy-gold-light);
+}
+
+/* label and close share a row, so they share a vertical centre */
+.wheel-header {
+  flex-shrink: 0;
+  height: 66px;
+  padding: 0 14px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wheel-state {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.wheel-close {
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-board);
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(242, 236, 224, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wheel-close:hover { color: #f2ece0; }
+
+.wheel-close:focus-visible {
+  outline: 3px solid var(--jeopardy-gold-light);
+  outline-offset: 2px;
+}
+
+/* Scores where the contestants stand on the show, and where the thumb is. */
+.wheel-podium {
+  flex-shrink: 0;
+  padding: 0 12px 20px;
+}
+
+.wheel-podium-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 7px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: rgba(242, 236, 224, 0.4);
+}
+
+.wheel-podium-row {
+  display: flex;
+  gap: 8px;
+}
+
+.wheel-podium-score {
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(180deg, #e8b35a 0%, #c98f3c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 -3px 22px rgba(232, 179, 90, 0.35);
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-board);
+  font-size: 2.13rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #14100a;
+}
+
+.wheel-podium-score .negative { color: #7a1f28; }
+
+/* A room's podiums: each player's name over their score, smaller to fit
+   three abreast, and whoever has the pick lit while the rest dim. */
+.wheel-podium-score.has-name {
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 4px;
+  font-size: 1.35rem;
+}
+
+.wheel-podium-name {
+  font-size: 0.6rem;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(20, 16, 10, 0.7);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wheel-podium-name img {
+  height: 18px;
+  width: auto;
+  display: block;
+}
+
+.wheel-podium-score.is-dim {
+  filter: saturate(0.55) brightness(0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.wheel-podium-score.is-active {
+  outline: 2px solid #f2ece0;
+  outline-offset: 2px;
+}
+
+/* ── A room's scores on desktop, beside the title ─────────── */
+
+.board-header-score .player-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 4px;
+  border-bottom: 2px solid transparent;
+}
+
+/* Whoever has the pick, underlined in gold. */
+.board-header-score .player-chip.current-picker {
+  border-bottom-color: var(--jeopardy-gold);
+}
+
+.board-header-score .player-chip .player-signature {
+  height: 26px;
+  width: auto;
+}
+
+.board-header-score .player-chip .chip-name {
+  font-size: 0.85rem;
+  color: rgba(242, 236, 224, 0.65);
+}
+
+/* A drawn name inside a line of small caps, sized to the line. */
+.board-header-sub .player-signature,
+.wheel-state .player-signature {
+  height: 16px;
+  width: auto;
+  vertical-align: middle;
+}

@@ -430,8 +430,8 @@ export default function HostPage() {
   return (
     <div className="host-page">
       <header className="host-top">
-        <button className="plain-btn host-back" onClick={() => navigate('/menu')}>
-          &lsaquo; Menu
+        <button className="plain-btn host-back back-chevron" onClick={() => navigate('/menu')} aria-label="Back to menu" title="Back to menu">
+          &lsaquo;
         </button>
         <span className="host-title">Host a game</span>
         <div className="host-right">

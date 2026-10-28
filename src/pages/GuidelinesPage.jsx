@@ -18,8 +18,8 @@ export default function GuidelinesPage() {
   return (
     <div className="boards-page">
       <header className="boards-top">
-        <button className="plain-btn boards-back" onClick={() => navigate('/boards')}>
-          &lsaquo; Community Boards
+        <button className="plain-btn boards-back back-chevron" onClick={() => navigate('/boards')} aria-label="Back to Community Boards" title="Back to Community Boards">
+          &lsaquo;
         </button>
         <span className="boards-top-title">Guidelines</span>
         <span className="boards-top-spacer" />

@@ -21,6 +21,7 @@ import { finishGame } from '../services/api/gamesService';
 import { canPlayFinalJeopardy as scoreQualifiesForFinal } from '../utils/wagers';
 import { checkAnswer } from '../services/answerChecker';
 import { judgeTyped, CLOSE_NOTE } from '../utils/typedClue';
+import { BoardHeader, Money, WheelHeader, WheelPodium, PodiumScore } from '../components/game/BoardChrome';
 import './SinglePlayerPage.css';
 
 export default function SinglePlayerPage() {
@@ -94,7 +95,7 @@ export default function SinglePlayerPage() {
     if (handed) {
       const { categories: names, questions: grid } = boardToHost(handed);
       boardFinal.current = handed.finalJeopardy ?? null;
-      setGenre(handed.title || 'Community board');
+      setGenre(location.state?.title || handed.title || 'Community board');
       setCategories(names);
       setQuestions(grid, enableDailyDouble);
       setPhase('playing');
@@ -440,26 +441,35 @@ export default function SinglePlayerPage() {
     );
   }
 
+  /* Around the board, as The Board draws it: its name, how far in, and the
+     money, cream until it goes below zero. */
+  const title = location.state?.title || (currentRound === 2 ? 'Double Jeopardy!' : 'Jeoparody!');
+  const clues = questions.flat();
+  const progress = `${clues.filter((q) => q.revealed).length} of ${clues.length}`;
+  const playing = phase === 'playing';
+
   return (
-    <div className="single-player-page">
+    <div className={`single-player-page${playing ? ' board-play-page' : ''}`}>
       {loadingOverlay}
 
-      {/* Header */}
-      <header className="game-header">
-        <h1>{currentRound === 2 ? 'Double Jeopardy!' : 'Jeoparody!'}</h1>
-        {phase === 'playing' && (
-          <div className="score-display">
-            Score: <span className={score >= 0 ? 'positive' : 'negative'}>${score.toLocaleString()}</span>
-          </div>
-        )}
-      </header>
+      {/* Header. In play it is The Board's; the wheel brings its own. */}
+      {playing ? (
+        !isPhone && (
+          <BoardHeader title={title} sub={progress} onBack={handleBackToMenu}>
+            <Money value={score} />
+          </BoardHeader>
+        )
+      ) : (
+        <header className="game-header">
+          <h1>{currentRound === 2 ? 'Double Jeopardy!' : 'Jeoparody!'}</h1>
+        </header>
+      )}
 
       {/* Game Board */}
-      {phase === 'playing' && (isPhone ? (
-        /* The same wheel the daily board uses. Community boards used to come
-           through here and get the desktop grid squeezed onto a phone, because
-           this page never had the phone branch the daily board got. */
-        <div className="wheel-stage sp-wheel">
+      {playing && (isPhone ? (
+        /* The same wheel, header and podium the daily board uses. */
+        <div className="wheel-stage">
+          <WheelHeader state={progress} onClose={handleBackToMenu} />
           <BoardWheel
             categories={categories}
             answers={questions.flatMap((category) => category.map((q) => ({
@@ -470,6 +480,9 @@ export default function SinglePlayerPage() {
             pointValues={getPointValues()}
             onSelect={handleQuestionSelect}
           />
+          <WheelPodium meta={<span>{title}</span>}>
+            <PodiumScore value={score} />
+          </WheelPodium>
         </div>
       ) : (
         <GameBoard
@@ -477,7 +490,6 @@ export default function SinglePlayerPage() {
           questions={questions}
           pointValues={getPointValues()}
           onQuestionSelect={handleQuestionSelect}
-          onNewGame={handleBackToMenu}
         />
       ))}
 

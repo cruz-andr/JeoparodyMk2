@@ -41,7 +41,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const b = await launch({ width: 1280, height: 800, dpr: 1 });
 const text = (sel) => b.evaluate(`document.querySelector(${JSON.stringify(sel)})?.textContent.trim() ?? null`);
-const score = () => b.evaluate("document.querySelector('.score-display span')?.textContent");
+const score = () => b.evaluate("document.querySelector('.board-header-score span')?.textContent");
 const press = (scope, re) => b.evaluate(`(() => { const x = [...document.querySelectorAll('${scope} button')].find((e) => ${re}.test(e.textContent) && !e.disabled); if (x) { x.click(); return true; } return false; })()`);
 const cell = (c, r) => b.evaluate(`(() => {
   const el = document.querySelectorAll('.questions-grid .question-row')[${r}]?.querySelectorAll('.question-cell')[${c}];

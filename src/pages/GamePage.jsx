@@ -9,6 +9,9 @@ import * as aiService from '../services/api/aiService';
 import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameBoard from '../components/game/GameBoard';
+import BoardWheel from '../components/game/BoardWheel';
+import { BoardHeader, Money, WheelHeader, WheelPodium, PodiumScore } from '../components/game/BoardChrome';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
 import { TypedAnswerForm, TypedVerdict } from '../components/game/TypedAnswer';
 import { CLOSE_NOTE } from '../utils/typedClue';
@@ -88,6 +91,8 @@ export default function GamePage() {
   // Game state (shared)
   const [currentPickerId, setCurrentPickerId] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
+  // A phone plays on the wheel, as solo and the daily board do.
+  const isPhone = useMediaQuery('(max-width: 768px)');
   // What the clue was worth, for the verdict the socket handlers draw.
   const currentQuestionRef = useRef(null);
   currentQuestionRef.current = currentQuestion;
@@ -1339,6 +1344,32 @@ export default function GamePage() {
     return <span className={className}>{player?.displayName || player?.name}</span>;
   };
 
+  /* What the board's header and podium show: the board's name, where the
+     game is (the room, and whose pick it is), and everyone's money. */
+  const boardTitle = roomBoard?.title || (currentRound === 2 ? 'Double Jeoparody!' : 'Jeoparody!');
+  const scorePlayers = isHostMode
+    ? [...players].filter((p) => !p.isHost).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
+    : players;
+  const roomLine = (
+    <>
+      {roomType !== 'quickplay' && <>Room {roomCode}</>}
+      {roomType !== 'quickplay' && !currentQuestion && <> &middot; </>}
+      {!currentQuestion && (
+        <span className="turn-indicator-subtle">
+          {isHostMode ? (
+            isHost ? 'Select a question' : 'Waiting for the host'
+          ) : currentPicker ? (
+            isMyTurn ? 'Your turn to pick' : <>{renderPlayerName(currentPicker)}&rsquo;s turn to pick</>
+          ) : 'Waiting'}
+        </span>
+      )}
+    </>
+  );
+  // Leaving mid-game is one tap from the header, so it asks first.
+  const confirmLeave = () => {
+    if (window.confirm('Leave the game? You can come back with the room code.')) handleLeave();
+  };
+
   // Projector Mode: non-host players get controller-only UI
   if (isHostMode && projectorMode && !isHost) {
     const myPlayer = players.find(p => p.id === currentPlayerId);
@@ -1434,7 +1465,10 @@ export default function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
+      {/* Header. During play the room's own header is the one row, as solo's
+          is: the wordmark, the scores and the code, then the board. Two
+          headers stacked pushed the board's bottom rows off the screen. */}
+      {phase !== 'playing' && (
       <header className="game-header">
         <h1>
           {phase === 'playing' || phase === 'roundEnd'
@@ -1449,6 +1483,7 @@ export default function GamePage() {
           </div>
         )}
       </header>
+      )}
 
       {/* THE ROOM BEFORE THE GAME. A private room shows its code and waits on
           the people the host invited; a quickplay game was filled by the
@@ -1575,35 +1610,52 @@ export default function GamePage() {
       {/* PLAYING PHASE */}
       {phase === 'playing' && (
         <div className="multiplayer-game">
-          {/* Header with scores */}
-          <header className="game-header">
-            <div className="header-scoreboard">
-              {(isHostMode
-                ? [...players].filter(p => !p.isHost).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
-                : players
-              ).map((player) => (
+          {/* Around the board, as The Board draws it: the way out on the
+              left, the title and where the game is under it, and the money,
+              cream until it goes below zero, with whoever has the pick
+              underlined in gold. */}
+          {!(isPhone && !isHostMode) && (
+            <BoardHeader title={boardTitle} sub={roomLine} onBack={confirmLeave} backLabel="Leave the game">
+              {scorePlayers.map((player) => (
                 <div key={player.id} className={`player-chip ${player.id === currentPickerId ? 'current-picker' : ''}`}>
                   {renderPlayerName(player, 'chip-name')}
-                  <span className={`chip-score ${(player.score || 0) >= 0 ? 'positive' : 'negative'}`}>
-                    ${(player.score || 0).toLocaleString()}
-                  </span>
+                  <span className="chip-score"><Money value={player.score || 0} /></span>
                 </div>
               ))}
-            </div>
-          </header>
-
-          {/* Turn Indicator - subtle text above board */}
-          {!currentQuestion && (
-            <div className="turn-indicator-subtle">
-              {isHostMode ? (
-                isHost ? 'Select a question' : 'Waiting for host...'
-              ) : currentPicker ? (
-                isMyTurn ? "Your turn! Pick a question." : <>{renderPlayerName(currentPicker)}'s turn to pick</>
-              ) : 'Waiting...'}
-            </div>
+            </BoardHeader>
           )}
 
-          {/* Game Board - always visible, question overlays on top */}
+          {/* Game Board - always visible, question overlays on top. On a
+              phone, the wheel solo plays on, rather than the desktop grid
+              squeezed to fit. A played clue reads as played: the room's
+              board does not keep who got which, so it is not marked right or
+              wrong. */}
+          {isPhone && !isHostMode ? (
+            <div className="wheel-stage room-wheel">
+              <WheelHeader state={roomLine} onClose={confirmLeave} closeLabel="Leave the game" />
+              <BoardWheel
+                categories={categories}
+                answers={questions.flatMap((category, c) => category.map((_, r) => {
+                  const played = revealedQuestions.has(`${c}-${r}`);
+                  return { revealed: played, passed: played, correct: false };
+                }))}
+                pointValues={currentRound === 1 ? [200, 400, 600, 800, 1000] : [400, 800, 1200, 1600, 2000]}
+                onSelect={handleQuestionSelect}
+              />
+              {/* A podium each, as on the show, with whoever has the pick lit. */}
+              <WheelPodium meta={<span>{boardTitle}</span>}>
+                {scorePlayers.map((player) => (
+                  <PodiumScore
+                    key={player.id}
+                    name={renderPlayerName(player, 'chip-name')}
+                    value={player.score || 0}
+                    active={player.id === currentPickerId}
+                    dim={player.id !== currentPickerId}
+                  />
+                ))}
+              </WheelPodium>
+            </div>
+          ) : (
           <GameBoard
             categories={categories}
             questions={questions}
@@ -1616,6 +1668,7 @@ export default function GamePage() {
             players={players}
             suggestMode={!isMyTurn && !isHostMode}
           />
+          )}
 
           {/* Daily Double - Wager Phase (overlay) */}
           {isDailyDouble && dailyDoublePhase === 'wager' && currentQuestion && (
@@ -1729,7 +1782,7 @@ export default function GamePage() {
 
                   <div className="question-header">
                     <span className="question-category">{currentQuestion.category}</span>
-                    <span className="question-points">${currentQuestion.points}</span>
+                    <span className="question-points">${Number(currentQuestion.points).toLocaleString()}</span>
                   </div>
 
                   <div className="question-content">
@@ -1752,7 +1805,8 @@ export default function GamePage() {
                             BUZZ IN!
                           </motion.button>
                           <span className="keyboard-hint">Press SPACE to buzz</span>
-                          <span className="skip-link" onClick={handleSkipQuestion}>Skip</span>
+                          {/* Pass, as solo and The Board call it. */}
+                          <button type="button" className="skip-link" onClick={handleSkipQuestion}>Pass</button>
                         </>
                       ) : (
                         <p className="skip-status">Skipped — waiting for others...</p>
@@ -1847,7 +1901,7 @@ export default function GamePage() {
               >
                 <div className="question-header">
                   <span className="question-category">{currentQuestion.category}</span>
-                  <span className="question-points">${currentQuestion.points}</span>
+                  <span className="question-points">${Number(currentQuestion.points).toLocaleString()}</span>
                 </div>
 
                 <div className="question-content">

@@ -18,8 +18,8 @@ export default function Studio({ title, back = '/menu', right = null, children, 
   return (
     <div className={`st ${className}`}>
       <header className="st-top">
-        <button type="button" className="st-back" onClick={() => navigate(back)}>
-          &larr; Back
+        <button type="button" className="st-back back-chevron" onClick={() => navigate(back)} aria-label="Back" title="Back">
+          &lsaquo;
         </button>
         <h1 className="st-title">{title}</h1>
         <div className="st-you">{right}</div>

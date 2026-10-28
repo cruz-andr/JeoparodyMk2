@@ -18,7 +18,7 @@ export default function PrivacyPage() {
   return (
     <div className="legal-page">
       <div className="legal-inner">
-        <Link to="/menu" className="legal-back">&larr; Back to Jeoparody</Link>
+        <Link to="/menu" className="legal-back back-chevron" aria-label="Back to Jeoparody" title="Back to Jeoparody">&lsaquo;</Link>
 
         <h1>Privacy Policy</h1>
         <p className="legal-updated">Last updated {UPDATED}</p>

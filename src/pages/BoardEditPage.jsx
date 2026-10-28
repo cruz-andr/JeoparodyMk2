@@ -236,8 +236,8 @@ export default function BoardEditPage() {
     <div className="boards-page board-edit">
       <header className="boards-top">
         {backTo ? (
-          <button className="plain-btn boards-back" onClick={() => leave(backTo)}>
-            &lsaquo; {backLabel}
+          <button className="plain-btn boards-back back-chevron" onClick={() => leave(backTo)} aria-label={`Back to ${backLabel}`} title={`Back to ${backLabel}`}>
+            &lsaquo;
           </button>
         ) : <span className="boards-back" />}
         <span className="boards-top-title">Edit</span>

@@ -176,8 +176,8 @@ export default function BoardsBrowsePage() {
   return (
     <div className="boards-page">
       <header className="boards-top">
-        <button className="plain-btn boards-back" onClick={() => navigate('/menu')}>
-          &lsaquo; Menu
+        <button className="plain-btn boards-back back-chevron" onClick={() => navigate('/menu')} aria-label="Back to menu" title="Back to menu">
+          &lsaquo;
         </button>
         <span className="boards-top-title">Community Boards</span>
         <span className="boards-top-spacer" />

@@ -50,8 +50,8 @@ export default function BoardPage() {
     return (
       <div className="board-page">
         <header className="boards-top">
-          <button className="plain-btn boards-back" onClick={() => navigate('/menu')}>
-            &lsaquo; Menu
+          <button className="plain-btn boards-back back-chevron" onClick={() => navigate('/menu')} aria-label="Back to menu" title="Back to menu">
+            &lsaquo;
           </button>
           <span className="boards-top-title">Board</span>
           <span className="boards-top-spacer" />
@@ -175,10 +175,12 @@ export default function BoardPage() {
         {/* A fixed destination, not history. Someone arriving from a shared
             link has nothing behind them to go back to. */}
         <button
-          className="plain-btn boards-back"
+          className="plain-btn boards-back back-chevron"
           onClick={() => navigate(board.isOwner ? '/boards/mine' : '/menu')}
+          aria-label={board.isOwner ? 'Back to My Boards' : 'Back to menu'}
+          title={board.isOwner ? 'Back to My Boards' : 'Back to menu'}
         >
-          &lsaquo; {board.isOwner ? 'My Boards' : 'Menu'}
+          &lsaquo;
         </button>
         <span className="boards-top-title">Board</span>
         <span className="boards-top-spacer" />
@@ -250,7 +252,7 @@ export default function BoardPage() {
           <button
             className="btn-primary"
             disabled={!playable}
-            onClick={() => navigate('/singleplayer', { state: { board: board.board, boardSlug: slug } })}
+            onClick={() => navigate('/singleplayer', { state: { board: board.board, boardSlug: slug, title: board.title } })}
           >
             Play it solo
           </button>
