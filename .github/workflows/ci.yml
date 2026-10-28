@@ -1,8 +1,16 @@
 # Nothing reaches main untested, and the two halves deploy together.
 #
-# One job proves the tree: lint, build, every plain node suite, then the
-# browser suites against a real Chrome. On a push to main a second job deploys
-# the server to Fly, and only after the first job is green.
+# A pull request is proved in full: lint, build and every plain node suite in
+# one job, and the browser suites against a real Chrome split across four
+# machines at once, so the whole run takes the time of a quarter of it.
+#
+# A push to main runs the fast job again and then deploys the server to Fly.
+# It does not run the browser suites a second time: the pull request already
+# ran them, against main with the branch merged in. That was ten of the
+# twelve minutes between a merge and a deploy, spent re-proving a tree that
+# had just been proved. What it can miss is main moving between a PR's run
+# and its merge, which "Require branches to be up to date before merging"
+# closes, in the branch protection for main.
 #
 # The frontend is not deployed from here. Vercel's own git integration builds
 # it from the same push. Vercel's build is a few minutes of its own, and this
@@ -21,20 +29,20 @@ on:
     branches: [main]
 
 # A newer push to a pull request cancels the older run: nobody needs the
-# result of a commit that is no longer the branch tip. A push to main is never
-# cancelled, because this run may be mid deploy, and killing flyctl halfway
-# through a rolling update leaves the Fly app half rolled until the next push
-# gets a green test job of its own. The job level group on deploy-server only
-# serialises deploys against each other; it cannot stop a cancel from here.
+# result of a commit that is no longer the branch tip. Each push to main is
+# its own group, so one merge never waits for the last merge's tests to
+# finish. None of them is cancelled, because a run may be mid deploy, and
+# killing flyctl halfway through a rolling update leaves the Fly app half
+# rolled. Deploys are kept in order by the deploy job itself, below.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     name: Lint, build, test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -66,29 +74,59 @@ jobs:
       - name: Unit tests
         run: npm test
 
+  browser:
+    name: Browser suites (${{ matrix.shard }} of 4)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      # One red shard does not stop the others: the whole list of what broke
+      # is worth more than the first item on it.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
       - name: Install Chrome
         id: chrome
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
 
-      # The browser suites start their own API on 3995 and Vite on 5000 with a
-      # throwaway database, so nothing here needs a secret or a network.
-      # e2e/driver.mjs reads CHROME for the binary; without it, it looks in
-      # the usual places for the platform. e2e/run.mjs deletes e2e/shots/ on
-      # the way out, failure or not, unless KEEP_SHOTS=1: without it the
-      # upload step below would find nothing to keep.
+      # The browser suites start their own API on 3995 and Vite on 5100 with a
+      # throwaway database, so nothing here needs a secret or a network. Each
+      # machine runs every fourth suite (SHARD in e2e/run.mjs), so together
+      # they run all of them. e2e/driver.mjs reads CHROME for the binary.
+      # e2e/run.mjs deletes e2e/shots/ on the way out unless KEEP_SHOTS=1:
+      # without it the upload step below would find nothing to keep.
       - name: Browser suites
         run: npm run e2e
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
           KEEP_SHOTS: '1'
+          SHARD: ${{ matrix.shard }}/4
 
       - name: Keep the screenshots of a failed run
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-shots
+          name: e2e-shots-${{ matrix.shard }}
           path: e2e/shots/
           if-no-files-found: ignore
 
@@ -98,20 +136,37 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # One deploy at a time. Not being cancelled halfway is the workflow level
-    # concurrency's job, above: this group only queues deploys behind each other.
+    # One deploy at a time, never cancelled halfway. A deploy waiting here is
+    # replaced by a newer one that arrives behind it, which is what is wanted:
+    # only the latest main needs to reach Fly.
     concurrency:
       group: deploy-server
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
+      # Runs on main no longer wait for each other, so an older merge's tests
+      # can finish after a newer one's. Only the commit main is on now goes
+      # out; anything older would put the server back a version.
+      - name: Still the latest main?
+        id: latest
+        run: |
+          head=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "deploy=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "main has moved on to $head; that run deploys it, so this one does not."
+            echo "deploy=no" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.latest.outputs.deploy == 'yes'
 
       # FLY_API_TOKEN is a repository secret: a deploy token from
       # `fly tokens create deploy -x 999999h` in server/, added under
       # Settings, Secrets and variables, Actions.
       - name: Deploy
+        if: steps.latest.outputs.deploy == 'yes'
         run: flyctl deploy --remote-only
         working-directory: server
         env:
