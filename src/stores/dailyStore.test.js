@@ -41,6 +41,10 @@ test('a Sixer shares what it won, with the hint shown as its own square', () => 
   const [, grid, tally] = useDailyStore.getState().getShareText('sixer').split('\n');
   assert.equal(grid, '\u{1F7E9}\u{1F7E8}\u{1F7E5}\u{2B1C}\u{1F7E9}\u{1F7E8}');
   assert.equal(tally, '$2,400 · 4/6');
+  const [, , ranked] = useDailyStore.getState().getShareText('sixer', { betterThan: 64 }).split('\n');
+  assert.equal(ranked, '$2,400 · 4/6 · better than 64%', 'and where it stood, once the day is in');
+  const [, , about] = useDailyStore.getState().getShareText('sixer', { betterThan: 64, estimated: true }).split('\n');
+  assert.equal(about, '$2,400 · 4/6 · better than ~64%', 'marked as about while it is estimated');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

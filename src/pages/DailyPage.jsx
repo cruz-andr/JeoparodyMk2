@@ -380,6 +380,11 @@ export default function DailyPage() {
           {todayDate && <p className="daily-week-note">{weekNote(todayDate)}. Easy to hard.</p>}
         </div>
         <div className="daily-stats-mini">
+          {/* What the run has won so far, as the show keeps a contestant's
+              total in front of them the whole game. */}
+          <span className="sixer-winnings" aria-live="polite" aria-label={`Winnings: $${sixerScore(answers, questions).toLocaleString()}`}>
+            ${sixerScore(answers, questions).toLocaleString()}
+          </span>
           {liveStreak(formatStats, toDateString()) > 0 && (
             <span className="streak-badge" title="Current streak">
               {liveStreak(formatStats, toDateString())} day streak
@@ -388,7 +393,7 @@ export default function DailyPage() {
         </div>
       </header>
 
-      {/* Where you are in the six, without keeping score. */}
+      {/* Where you are in the six. The money is kept in the header. */}
       <ol
         className="sixer-pips"
         role="img"

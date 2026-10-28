@@ -123,6 +123,12 @@ export const useDailyStore = create(
         });
       },
 
+      /* The finished run has reached the server, so it is not sent twice. */
+      markRecorded: (slot) => {
+        if (!isSlot(slot)) return;
+        set((state) => ({ [slot]: { ...state[slot], recorded: true } }));
+      },
+
       /* A Sixer clue missed once: the hint is up and the clue now pays half.
          Kept with the run so a reload does not hand back the full value. */
       showHint: (slot, index) => {
@@ -309,7 +315,9 @@ export const useDailyStore = create(
         return Object.keys(get().archiveResults[format] ?? {});
       },
 
-      getShareText: (slot) => {
+      /* `betterThan`, when the day's spread is in, rides on the Sixer's tally;
+         `estimated` marks it as about, while it rests on the estimate. */
+      getShareText: (slot, { betterThan = null, estimated = false } = {}) => {
         if (!isSlot(slot)) return '';
         const run = get()[slot];
         // The archive slot carries the daily it is standing in for.
@@ -346,9 +354,12 @@ export const useDailyStore = create(
         /* The Sixer is played for dollars, and the money is what is worth
            bragging about; the count rides beside it. */
         const won = format === 'sixer' ? `$${sixerScore(run.answers, run.questions).toLocaleString('en-US')} · ` : '';
+        const standing = format === 'sixer' && betterThan !== null
+          ? ` · better than ${estimated ? '~' : ''}${betterThan}%`
+          : '';
         const tally = took
           ? `${correctCount}/${run.questions.length} in ${took}`
-          : `${won}${correctCount}/${run.questions.length}`;
+          : `${won}${correctCount}/${run.questions.length}${standing}`;
 
         /* Built from wherever the player is rather than from a domain written
            into the source. The old hardcoded URL survived a domain change and
@@ -361,9 +372,9 @@ export const useDailyStore = create(
         return `Jeoparody ${label} ${dateStr}\n${emoji}\n${tally}\n${origin}${path}${query}`;
       },
 
-      shareResults: async (slot) => {
+      shareResults: async (slot, options) => {
         try {
-          await navigator.clipboard.writeText(get().getShareText(slot));
+          await navigator.clipboard.writeText(get().getShareText(slot, options));
           return true;
         } catch {
           return false;

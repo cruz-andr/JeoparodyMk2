@@ -475,3 +475,228 @@
 @media (max-width: 520px) {
   .emoji-row { gap: 5px; }
 }
+
+/* ------------------------------------------------------------ the Sixer's summary
+
+   Where a player landed among the day's players, in the manner of the daily
+   games people share: the money, the curve with them marked on it, and the
+   climb clue by clue. Labels are small spaced capitals so the numbers carry
+   the page. */
+.sixer-summary {
+  /* A set width, not one borrowed from whichever line of text is longest:
+     the page is laid out to fit its content, and without the longest line
+     the whole summary shrank. */
+  width: 600px;
+  max-width: 100%;
+  margin: 0 auto 8px;
+}
+
+.sixer-summary-head {
+  margin: 0 0 18px;
+  font-family: var(--font-board);
+  font-size: 0.8rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--jeopardy-gold);
+}
+
+.sixer-summary .results-score .score-number { color: var(--jeopardy-gold); }
+
+/* The curve, drawn the way the daily dive draws it but in the game's own
+   colours: gold over a soft fill on the navy, a thin axis of even ticks in
+   small spaced monospace, and the player in white. */
+.sixer-curve {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 18px 0 0;
+  overflow: visible;
+}
+
+.sixer-curve-line {
+  fill: none;
+  stroke: var(--jeopardy-gold-light);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sixer-curve-axis { stroke: rgba(214, 159, 76, 0.45); stroke-width: 1.5; }
+.sixer-curve-tick { stroke: rgba(214, 159, 76, 0.45); stroke-width: 1; }
+.sixer-curve-label,
+.sixer-curve-you-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+.sixer-curve-label { fill: rgba(214, 159, 76, 0.7); }
+/* The player in white: it is the one thing on the chart that is not gold. */
+.sixer-curve-you { stroke: #fff; stroke-width: 2.5; }
+.sixer-curve-dot { fill: #fff; stroke: var(--jeopardy-blue); stroke-width: 2; }
+.sixer-curve-you-label { fill: #fff; font-weight: 700; }
+
+.sixer-standing {
+  /* Under the axis, from its left end, as the line reads on the daily dive. */
+  text-align: left;
+  margin: 10px 0 26px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--jeopardy-gold);
+}
+
+.sixer-curve-note {
+  margin: 0 0 26px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* The climb, as the daily dive lists its catch: no boxes, thin rules, small
+   spaced monospace for the labels, the response large, the money in cyan. */
+.clue-log {
+  margin: 0 0 24px;
+  padding-top: 18px;
+  text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.clue-log-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--jeopardy-gold);
+}
+
+/* The heading is the divider between the two halves of the page: the title
+   with a long gentle wave either side of it. */
+.clue-log-head::before,
+.clue-log-head::after {
+  content: '';
+  flex: 1;
+  height: 8px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='8' viewBox='0 0 26 8'%3E%3Cpath d='M0 4 C 4.33 0.6, 8.67 0.6, 13 4 S 21.67 7.4, 26 4' fill='none' stroke='%23D69F4C' stroke-opacity='0.7' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") left center / 26px 8px repeat-x;
+}
+
+.clue-log-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clue-line { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+
+/* One clue: its category over it, then the number, the mark, the response,
+   what it paid, then how many got it under the response. */
+button.clue-line-main,
+button.clue-line-main:hover:not(:disabled),
+button.clue-line-main:active {
+  display: grid;
+  grid-template-columns: 26px 26px 1fr auto;
+  grid-template-areas:
+    ". . category category"
+    "n sign answer paid"
+    ". . share share";
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 6px;
+  width: 100%;
+  padding: 18px 4px 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button.clue-line-main:hover:not(:disabled) { background: rgba(255, 255, 255, 0.025); }
+button.clue-line-main:focus-visible { outline: 2px solid var(--jeopardy-gold); outline-offset: -2px; }
+
+.clue-line-category {
+  grid-area: category;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clue-line-n { grid-area: n; font-size: 0.8rem; color: rgba(255, 255, 255, 0.3); }
+
+.clue-line-sign { grid-area: sign; font-weight: 700; font-size: 1.05rem; text-align: center; }
+/* Green for right, yellow for right with the hint, red for a miss, grey for
+   a pass. */
+.clue-line.correct .clue-line-sign { color: var(--color-success); }
+.clue-line.hinted .clue-line-sign { color: #E2C044; }
+.clue-line.wrong .clue-line-sign { color: var(--color-error); }
+.clue-line.passed .clue-line-sign { color: rgba(255, 255, 255, 0.4); }
+
+.clue-line-answer {
+  grid-area: answer;
+  font-size: 1.1rem;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clue-line.wrong .clue-line-answer,
+.clue-line.passed .clue-line-answer { color: rgba(255, 255, 255, 0.6); }
+
+.clue-line-paid { grid-area: paid; font-size: 0.95rem; color: var(--color-success); }
+.clue-line.hinted .clue-line-paid { color: #E2C044; }
+.clue-line.wrong .clue-line-paid { color: var(--color-error); }
+.clue-line.passed .clue-line-paid { color: rgba(255, 255, 255, 0.4); }
+
+.clue-line-share { grid-area: share; font-size: 0.78rem; color: rgba(255, 255, 255, 0.4); }
+.clue-line-share b { font-weight: 400; color: var(--jeopardy-gold); }
+
+/* The opened clue starts at the row's left edge, in line with its number,
+   set apart from the row by a little room. */
+.clue-line-detail {
+  padding: 12px 4px 18px;
+  text-align: left;
+}
+/* The opened clue in the board's clue face at reading size, then what was
+   said in the list's own voice. */
+.clue-line-clue {
+  margin: 0 0 10px;
+  padding: 0;
+  font-family: var(--font-jeopardy);
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.clue-line-said {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+}
+.clue-line-said-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+.clue-line-said b { font-weight: 400; color: #fff; }
+.clue-line-said-note { font-size: 0.75rem; color: rgba(255, 255, 255, 0.4); }
+
+@media (max-width: 480px) {
+  button.clue-line-main { grid-template-columns: 18px 22px 1fr auto; column-gap: 6px; }
+  .sixer-standing { font-size: 0.8rem; letter-spacing: 0.1em; }
+}

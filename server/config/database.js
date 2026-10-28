@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { SIXER_RESULTS_SQL } from '../services/sixerResults.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
@@ -260,6 +261,9 @@ export async function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now')),
       PRIMARY KEY (board_id, reporter_id)
     ) WITHOUT ROWID;
+
+    -- How everyone did on the Sixer: see services/sixerResults.js
+    ${SIXER_RESULTS_SQL}
 
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
