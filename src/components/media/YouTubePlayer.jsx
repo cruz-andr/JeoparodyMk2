@@ -52,6 +52,10 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [needsInteraction, setNeedsInteraction] = useState(false);
+  /* Playing, but muted, because the browser would not let it start with
+     sound: the picture goes on and a tap brings the sound back. */
+  const [mutedFallback, setMutedFallback] = useState(false);
+  const playedRef = useRef(false);
 
   // Expose play/pause/replay to parent
   useImperativeHandle(ref, () => ({
@@ -67,6 +71,9 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
     },
     replay: () => {
       if (playerRef.current?.seekTo) {
+        // A tap, so the sound is allowed back.
+        playerRef.current.unMute?.();
+        setMutedFallback(false);
         playerRef.current.seekTo(startTime || 0, true);
         playerRef.current.playVideo();
         startEndTimeLoop();
@@ -83,13 +90,13 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
       const currentTime = playerRef.current.getCurrentTime();
       if (currentTime >= endTime) {
         playerRef.current.pauseVideo();
-        onEnd?.();
+        setupRef.current.onEnd?.();
         return;
       }
       rafRef.current = requestAnimationFrame(check);
     };
     rafRef.current = requestAnimationFrame(check);
-  }, [endTime, onEnd]);
+  }, [endTime]);
 
   // Listen for synced host media controls via custom DOM event
   useEffect(() => {
@@ -113,7 +120,7 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
   // read once at construction, so they live in a ref rather than the dep list.
   const setupRef = useRef(null);
   setupRef.current = {
-    width, height, fill, autoPlay, startTime, interactive, onReady, onError, startEndTimeLoop,
+    width, height, fill, autoPlay, audioOnly, startTime, interactive, onReady, onError, onEnd, startEndTimeLoop,
   };
 
   useEffect(() => {
@@ -121,8 +128,9 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
 
     let destroyed = false;
     const {
-      width, height, fill, autoPlay, startTime, interactive, onReady, onError, startEndTimeLoop,
+      width, height, fill, autoPlay, audioOnly, startTime, interactive, onReady, onError, startEndTimeLoop,
     } = setupRef.current;
+    playedRef.current = false;
 
     loadYouTubeApi().then(() => {
       if (destroyed || !containerRef.current) return;
@@ -152,24 +160,42 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
               event.target.playVideo();
               startEndTimeLoop();
 
-              // Detect autoplay blocked (mobile)
+              /* A browser that will not start a clip with sound (Safari, a
+                 phone, a tab nobody has tapped) leaves it sitting buffering
+                 or paused, not "unstarted", so a single look at the state a
+                 second in missed it and the clip sat still until Replay.
+                 Whether it ever reached playing is what counts. Not yet, so
+                 play it muted, which every browser allows; and only if even
+                 that will not go, ask for a tap. A sound clue has nothing to
+                 show muted, so it asks straight away. */
               setTimeout(() => {
-                if (destroyed) return;
-                const state = event.target.getPlayerState();
-                // -1 = unstarted, 5 = cued
-                if (state === -1 || state === 5) {
+                if (destroyed || playedRef.current) return;
+                if (audioOnly) {
                   setNeedsInteraction(true);
+                  return;
                 }
-              }, 1000);
+                event.target.mute();
+                event.target.seekTo(startTime || 0, true);
+                event.target.playVideo();
+                setMutedFallback(true);
+                setTimeout(() => {
+                  if (destroyed || playedRef.current) return;
+                  setMutedFallback(false);
+                  setNeedsInteraction(true);
+                }, 1500);
+              }, 2000);
             }
           },
           onStateChange: (event) => {
             if (destroyed) return;
             // YT.PlayerState.PLAYING = 1
             if (event.data === 1) {
+              playedRef.current = true;
               setNeedsInteraction(false);
               setupRef.current.startEndTimeLoop();
             }
+            // A clip with no end of its own ends with the video.
+            if (event.data === 0) setupRef.current.onEnd?.();
           },
           onError: (event) => {
             if (destroyed) return;
@@ -192,11 +218,23 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
 
   const handleClickToPlay = () => {
     if (playerRef.current?.seekTo) {
+      playerRef.current.unMute?.();
       playerRef.current.seekTo(startTime || 0, true);
       playerRef.current.playVideo();
       setNeedsInteraction(false);
+      setMutedFallback(false);
       startEndTimeLoop();
     }
+  };
+
+  // The sound back, from the start of the clip, now there has been a tap.
+  const handleUnmute = () => {
+    if (!playerRef.current) return;
+    playerRef.current.unMute?.();
+    playerRef.current.seekTo?.(startTime || 0, true);
+    playerRef.current.playVideo?.();
+    setMutedFallback(false);
+    startEndTimeLoop();
   };
 
   if (hasError) {
@@ -232,6 +270,12 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
           <span className="yt-audio-icon">&#9835;</span>
           <span>Audio Clue</span>
         </div>
+      )}
+
+      {mutedFallback && !needsInteraction && (
+        <button type="button" className="yt-unmute" onClick={handleUnmute}>
+          Tap for sound
+        </button>
       )}
 
       {/* Click-to-play overlay for mobile autoplay block */}

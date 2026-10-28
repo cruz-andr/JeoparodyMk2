@@ -6,7 +6,7 @@ import './ClueScreen.css';
    board puts a video clue on one side and its text on the other, rather than
    stacked above the clue like an attachment. On a phone the two stack. */
 export default function ClueScreen({
-  clue, text, hostControls = false, roomCode = null,
+  clue, text, hostControls = false, roomCode = null, onMediaDone = null,
   // Final Jeopardy sets its clue in its own face.
   textClassName = 'clue-text',
 }) {
@@ -15,7 +15,7 @@ export default function ClueScreen({
     <div className={`clue-screen${media ? ' has-media' : ''}`}>
       {media && (
         <div className="clue-screen-media">
-          <MediaClueDisplay question={clue} fill hostControls={hostControls} roomCode={roomCode} />
+          <MediaClueDisplay question={clue} fill hostControls={hostControls} roomCode={roomCode} onMediaDone={onMediaDone} />
         </div>
       )}
       <p className={textClassName}>{text}</p>

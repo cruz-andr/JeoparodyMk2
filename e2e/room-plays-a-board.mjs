@@ -42,6 +42,8 @@ const board = {
     questions: POINTS.map((points, r) => ({
       points, answer: `${name} clue ${points}`, question: `What is ${name}?`,
       ...(c === 2 && r === 0 ? { mediaType: 'image', mediaData: PIXEL, altText: 'Two grannies' } : {}),
+      // A three second clip, which nobody rings in on until it has played.
+      ...(c === 0 && r === 4 ? { mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 895, youtubeEnd: 898 } : {}),
     })),
   })),
   finalJeopardy: { category: 'NO-SHAVE NOVEMBER', answer: 'This moustache', question: "Who is Tarzan's dad?" },
@@ -150,6 +152,20 @@ try {
   check('and so does the host', /said: bluey$/.test(theirs.said ?? '') && !/^You/.test(theirs.said ?? ''), theirs.said);
   check('with the correct response, now the clue is over', /What is BLUEY\?/i.test(mine.truth ?? '') && /What is BLUEY\?/i.test(theirs.truth ?? ''));
   await h.shot('room-board-verdict.png');
+
+  // ---------- a clip clue: the buzzer waits for it, for everyone ----------
+  await h.until("!document.querySelector('.mp-question-overlay')", { timeout: 10000 });
+  await g.until("!document.querySelector('.mp-question-overlay')", { timeout: 10000 });
+  for (const b of [h, g]) {
+    await b.evaluate("document.querySelectorAll('.questions-grid .question-row')[4]?.querySelectorAll('.question-cell')[0]?.click()");
+  }
+  await g.until("!!document.querySelector('.mp-question-overlay')", { timeout: 10000 });
+  await h.until("!!document.querySelector('.mp-question-overlay')", { timeout: 10000 });
+  const waiting = async (b) => b.evaluate("document.body.innerText.includes('Buzzers open when the clip ends') && !document.querySelector('.buzzer-button')");
+  check('while the clip plays, nobody can ring in, and both are told why', (await waiting(g)) && (await waiting(h)));
+  await g.until("!!document.querySelector('.buzzer-button')", { timeout: 10000 });
+  await h.until("!!document.querySelector('.buzzer-button')", { timeout: 5000 });
+  check('then the buzzer opens for everyone', true);
 } catch (err) {
   bad++;
   console.log(' THREW', err.message);

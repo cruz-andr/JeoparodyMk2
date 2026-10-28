@@ -55,10 +55,27 @@ export default function QuestionModal({
      still on offer. */
   const [timedOut, setTimedOut] = useState(false);
 
-  // A new clue starts with the clock running again.
+  /* The clock starts once the clue has been seen, as on the show, where it
+     runs after the clue is read. A clip is part of the clue, so its clock
+     waits for the clip to finish: it used to run underneath it, and an
+     eleven second clip took eleven seconds off the answer. In case the clip
+     never plays, it starts anyway once the clip would have ended. */
+  const clip = question?.mediaType === 'youtube' && question?.mediaData;
+  const clipWaitMs = clip
+    ? (question.youtubeEnd != null && question.youtubeStart != null
+      ? (question.youtubeEnd - question.youtubeStart) * 1000 + 3000
+      : 30000)
+    : 0;
+  const [clockStarted, setClockStarted] = useState(!clip);
+
+  // A new clue starts with the clock running again, or waiting for its clip.
   useEffect(() => {
     setTimedOut(false);
-  }, [question]);
+    setClockStarted(!clip);
+    if (!clip) return undefined;
+    const fallback = setTimeout(() => setClockStarted(true), clipWaitMs);
+    return () => clearTimeout(fallback);
+  }, [question, clip, clipWaitMs]);
 
   const handleTimeUp = () => {
     if (onTimeUp) {
@@ -125,7 +142,7 @@ export default function QuestionModal({
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       >
         {/* Timer */}
-        {hasTimer && !showAnswer && !result && (
+        {hasTimer && clockStarted && !showAnswer && !result && (
           <div className="question-timer">
             <Timer
               duration={questionTimeLimit}
@@ -144,7 +161,7 @@ export default function QuestionModal({
         </div>
 
         <div className="question-content">
-          <ClueScreen clue={question} text={question.answer} />
+          <ClueScreen clue={question} text={question.answer} onMediaDone={() => setClockStarted(true)} />
         </div>
 
         {typed ? (
