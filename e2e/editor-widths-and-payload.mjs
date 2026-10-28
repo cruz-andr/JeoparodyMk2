@@ -1,9 +1,12 @@
 import { launch } from './driver.mjs';
 const APP = 'http://localhost:5100';
 const API = 'http://127.0.0.1:3995';
-const { token } = await (await fetch(`${API}/api/auth/login`, {
+/* Its own account. It used to log into one another suite registered, which
+   held only while the two ran in that order on the same machine. */
+const STAMP = String(Date.now()).slice(-7);
+const { token } = await (await fetch(`${API}/api/auth/register`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'fix@x.com', password: 'hunter2hunter2' }),
+  body: JSON.stringify({ email: `widths-${STAMP}@x.com`, password: 'hunter2hunter2', displayName: 'Widths', username: `widths${STAMP}` }),
 })).json();
 
 const POINTS = [200,400,600,800,1000];
