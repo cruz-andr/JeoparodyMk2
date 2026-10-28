@@ -51,6 +51,27 @@ test('a clue that leaves others on the board goes back to the board', () => {
 
 // --- report --------------------------------------------------------------
 
+test('"I was right" turns a graded miss into a hit', () => {
+  const questions = [[{ category: 'A', points: 400, revealed: true }]];
+  useGameStore.setState({ questions, score: 1000, phase: 'questionActive', currentQuestion: { ...questions[0][0], categoryIndex: 0, pointIndex: 0 } });
+  useGameStore.getState().markIncorrect();
+  assert.equal(useGameStore.getState().score, 600);
+  useGameStore.getState().overrideToCorrect();
+  const s = useGameStore.getState();
+  assert.equal(s.score, 1400, 'the 400 back, and 400 won');
+  assert.equal(s.questionsCorrect, 1);
+  assert.equal(s.questionsAttempted, 1, 'still one clue answered');
+  assert.equal(s.questions[0][0].correct, true, 'and the cell is marked right');
+});
+
+test('on a Daily Double it is the wager that comes back and is won', () => {
+  const questions = [[{ category: 'A', points: 400, revealed: true }]];
+  useGameStore.setState({ questions, score: 1000, dailyDoubleWager: 900, phase: 'questionActive', currentQuestion: { ...questions[0][0], categoryIndex: 0, pointIndex: 0 } });
+  useGameStore.getState().markIncorrect();
+  useGameStore.getState().overrideToCorrect();
+  assert.equal(useGameStore.getState().score, 1900);
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 for (const { name, err } of failures) {
   console.log(`  FAIL  ${name}`);

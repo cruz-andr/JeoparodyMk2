@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
@@ -15,6 +15,7 @@ import {
 } from '../stores/dailyLogic';
 import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
+import { judgeTyped, CLOSE_NOTE } from '../utils/typedClue';
 import GameBoard from '../components/game/GameBoard';
 import BoardWheel from '../components/game/BoardWheel';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -51,6 +52,9 @@ export default function DailyBoardPage() {
   const [openCell, setOpenCell] = useState(null); // { categoryIndex, pointIndex }
   // Null while the player is still typing; set once the answer has been graded.
   const [result, setResult] = useState(null);
+  // A close spelling's one free retry, per clue, as everywhere a clue is typed.
+  const [note, setNote] = useState(null);
+  const closeUsed = useRef(false);
   // The two boards are different components, not one restyled, so this cannot
   // be a media query in CSS.
   const isPhone = useMediaQuery('(max-width: 768px)');
@@ -218,6 +222,8 @@ export default function DailyBoardPage() {
   const handleSelect = useCallback((categoryIndex, pointIndex) => {
     setOpenCell({ categoryIndex, pointIndex });
     setResult(null);
+    setNote(null);
+    closeUsed.current = false;
   }, []);
 
   /* Typed and graded for you, as on the Sixer. The board's own question shape
@@ -227,7 +233,14 @@ export default function DailyBoardPage() {
     (given) => {
       if (!openCell || !openQuestion) return;
       const index = flatIndex(openCell.categoryIndex, openCell.pointIndex);
-      const { isCorrect } = checkAnswer(given, openQuestion.question);
+      const judged = judgeTyped(checkAnswer, given, openQuestion.question, { closeUsed: closeUsed.current });
+      if (judged.retry) {
+        closeUsed.current = true;
+        setNote(CLOSE_NOTE);
+        return;
+      }
+      setNote(null);
+      const isCorrect = judged.correct;
       revealAnswer(SLOT, index, isCorrect, given);
       setResult({ correct: isCorrect, playerAnswer: given });
       if (isCorrect) playCorrect();
@@ -334,6 +347,7 @@ export default function DailyBoardPage() {
           points={POINT_VALUES[openCell.pointIndex]}
           typed
           result={result}
+          note={note}
           onSubmitAnswer={submitAnswer}
           onOverride={override}
           onContinue={continueOn}

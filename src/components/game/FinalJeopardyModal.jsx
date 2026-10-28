@@ -4,6 +4,7 @@ import Timer from '../common/Timer';
 import ClueScreen from './ClueScreen';
 import { useAudio } from '../../hooks';
 import { finalWagerLimit, clampFinalWager } from '../../utils/wagers';
+import { checkAnswer } from '../../services/answerChecker';
 import './FinalJeopardyModal.css';
 
 const WAGER_TIME = 30000; // 30 seconds for wager
@@ -76,47 +77,48 @@ export default function FinalJeopardyModal({
     setShowTimer(true);
   };
 
+  /* Graded the moment the answer is locked in, by the same grader as every
+     typed clue. Final Jeopardy has no second go at the spelling: the answer
+     is written once, against the clock, as it is in a room. */
+  const grade = () => {
+    const given = playerAnswer.trim();
+    const isCorrect = given ? checkAnswer(given, correctAnswer).isCorrect : false;
+    if (isCorrect) playCorrect();
+    else playWrong();
+    const pointsChange = isCorrect ? wager : -wager;
+    setResult({ isCorrect, pointsChange, newScore: currentScore + pointsChange });
+  };
+
   const handleAnswerSubmit = () => {
     setShowTimer(false);
     setPhase('reveal');
+    grade();
   };
 
   const handleAnswerTimeUp = () => {
     setShowTimer(false);
     setPhase('reveal');
+    grade();
   };
 
-  const handleJudgment = (isCorrect) => {
-    /* One verdict. A double click on it used to run all of this twice, and
-       onComplete with it, which files the game: the same game, recorded
-       twice. A ref, because the second click lands before a re-render. */
-    if (judged.current) return;
+  // The grader is fuzzy, so the player has the last word, as on every clue.
+  const handleOverride = () => {
+    playCorrect();
+    setResult({ isCorrect: true, pointsChange: wager, newScore: currentScore + wager });
+  };
+
+  const handleFinish = () => {
+    /* One finish. A double click used to file the same game twice; a ref,
+       because the second click lands before a re-render. */
+    if (judged.current || !result) return;
     judged.current = true;
-    const pointsChange = isCorrect ? wager : -wager;
-    const newScore = currentScore + pointsChange;
-
-    if (isCorrect) {
-      playCorrect();
-    } else {
-      playWrong();
-    }
-
-    setResult({
-      isCorrect,
-      pointsChange,
-      newScore,
+    onComplete({
+      isCorrect: result.isCorrect,
+      wager,
+      playerAnswer,
+      pointsChange: result.pointsChange,
+      finalScore: result.newScore,
     });
-
-    // Auto-complete after showing result
-    setTimeout(() => {
-      onComplete({
-        isCorrect,
-        wager,
-        playerAnswer,
-        pointsChange,
-        finalScore: newScore,
-      });
-    }, 3000);
   };
 
   return (
@@ -286,47 +288,6 @@ export default function FinalJeopardyModal({
             </motion.div>
           )}
 
-          {/* Reveal Phase */}
-          {phase === 'reveal' && !result && (
-            <motion.div
-              key="reveal"
-              className="fj-phase fj-reveal-phase"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <p className="fj-category-display">{category}</p>
-
-              <div className="fj-answers-compare">
-                <div className="fj-answer-box fj-player-answer">
-                  <h4>Your Answer</h4>
-                  <p>{playerAnswer || '(No answer given)'}</p>
-                </div>
-
-                <div className="fj-answer-box fj-correct-answer">
-                  <h4>Correct Answer</h4>
-                  <p>{correctAnswer}</p>
-                </div>
-              </div>
-
-              <h3>Were you correct?</h3>
-              <div className="fj-judgment-buttons">
-                <button
-                  className="fj-correct-btn"
-                  onClick={() => handleJudgment(true)}
-                >
-                  Correct (+${wager.toLocaleString()})
-                </button>
-                <button
-                  className="fj-incorrect-btn"
-                  onClick={() => handleJudgment(false)}
-                >
-                  Incorrect (-${wager.toLocaleString()})
-                </button>
-              </div>
-            </motion.div>
-          )}
-
           {/* Result Phase */}
           {result && (
             <motion.div
@@ -350,11 +311,33 @@ export default function FinalJeopardyModal({
                 </span>
               </div>
 
+              <div className="fj-answers-compare">
+                <div className="fj-answer-box fj-player-answer">
+                  <h4>You said</h4>
+                  <p>{playerAnswer.trim() || '(No answer given)'}</p>
+                </div>
+                <div className="fj-answer-box fj-correct-answer">
+                  <h4>Correct response</h4>
+                  <p>{correctAnswer}</p>
+                </div>
+              </div>
+
               <div className="fj-final-score">
                 <h3>Final Score</h3>
                 <span className={result.newScore >= 0 ? 'positive' : 'negative'}>
                   ${result.newScore.toLocaleString()}
                 </span>
+              </div>
+
+              <div className="fj-judgment-buttons">
+                {!result.isCorrect && playerAnswer.trim() && (
+                  <button type="button" className="typed-override" onClick={handleOverride}>
+                    I was right
+                  </button>
+                )}
+                <button type="button" className="fj-submit-btn" onClick={handleFinish}>
+                  Continue
+                </button>
               </div>
             </motion.div>
           )}

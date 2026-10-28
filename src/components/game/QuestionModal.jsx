@@ -36,6 +36,10 @@ export default function QuestionModal({
   hint = null,
   onClaim = null,
   earned,
+  /* Solo play keeps its per-clue clock when it types, because the clock is a
+     setting there; The Board does not ask for one. Out of time, onTimeUp says
+     what happened. */
+  timed = false,
 }) {
   const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
   // Settings offers a Show timer switch that nothing was reading.
@@ -43,7 +47,7 @@ export default function QuestionModal({
   /* No per clue countdown in typed mode. The board that uses it is timed as a
      whole, the way a crossword is, so a second clock ticking on each clue
      would be measuring the same thing twice and rushing the typing besides. */
-  const hasTimer = questionTimeLimit !== null && showTimerSetting && !typed;
+  const hasTimer = questionTimeLimit !== null && showTimerSetting && (!typed || timed);
   const [entry, setEntry] = useState('');
   /* Autofocus is a desktop convenience. On a phone it throws the keyboard up
      over the clue the moment it appears, so the clue is read around it. */
@@ -131,7 +135,7 @@ export default function QuestionModal({
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       >
         {/* Timer */}
-        {hasTimer && !showAnswer && (
+        {hasTimer && !showAnswer && !result && (
           <div className="question-timer">
             <Timer
               duration={questionTimeLimit}
@@ -163,14 +167,20 @@ export default function QuestionModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
+              {/* Out of time is a pass with a clock on it, except on a Daily
+                  Double, where the wager was already down and is lost. */}
               <div
                 className={`typed-badge ${
-                  result.passed ? 'passed' : result.correct ? 'correct' : 'incorrect'
+                  result.passed || (result.timedOut && !isDailyDouble)
+                    ? 'passed'
+                    : result.correct ? 'correct' : 'incorrect'
                 }`}
               >
                 {result.passed
                   ? 'Passed'
-                  : earned !== undefined
+                  : result.timedOut && !isDailyDouble
+                    ? "Time's up"
+                    : earned !== undefined
                     ? (result.correct
                       ? `Correct +$${earned.toLocaleString()}${result.hinted ? ' with the hint' : ''}`
                       : 'Incorrect')
@@ -182,7 +192,9 @@ export default function QuestionModal({
               <p className="typed-said">
                 {result.passed
                   ? (earned !== undefined ? 'Nothing won or lost.' : 'No points either way.')
-                  : result.playerAnswer
+                  : result.timedOut
+                    ? (isDailyDouble ? 'Time ran out before you answered.' : 'Time ran out. No points either way.')
+                    : result.playerAnswer
                     ? <>You said: <span>{result.playerAnswer}</span></>
                     : 'You did not answer.'}
               </p>
@@ -191,7 +203,7 @@ export default function QuestionModal({
               </p>
 
               <div className="typed-after">
-                {!result.correct && !result.passed && onOverride && (
+                {!result.correct && !result.passed && !result.timedOut && onOverride && (
                   <button type="button" className="typed-override" onClick={onOverride}>
                     I was right
                   </button>

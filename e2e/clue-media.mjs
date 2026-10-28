@@ -82,10 +82,22 @@ try {
     }
     throw new Error('no clue opened');
   };
+  /* Typed and graded, as every clue is now. Right is the category's name,
+     which is what each clue's response asks for; wrong is a pass, or on a
+     Daily Double, which cannot be passed, a wrong answer. */
   const answer = async (right) => {
-    if (right || !(await clickText(d, '.question-modal', '/^\\s*skip\\s*$/i'))) {
-      await clickText(d, '.question-modal', '/reveal/i'); await sleep(400);
-      await clickText(d, '.question-modal', right ? '/right/i' : '/wrong/i');
+    if (right || !(await clickText(d, '.question-modal', '/^\\s*pass\\s*$/i'))) {
+      const name = right ? await d.evaluate("document.querySelector('.question-category').textContent.trim()") : 'not it';
+      // Once the box is there and settled: text sent while a clue animates in lands nowhere.
+      await d.until("!!document.querySelector('.typed-input')", { timeout: 8000 });
+      await sleep(300);
+      await d.type('.typed-input', name);
+      if (!(await d.evaluate(`document.querySelector('.typed-input').value === ${JSON.stringify(name)}`))) {
+        await sleep(400);
+        await d.type('.typed-input', name);
+      }
+      await d.click('.typed-submit');
+      await d.until("!!document.querySelector('.typed-result')", { timeout: 8000 });
     }
     await sleep(300);
     await clickText(d, '.question-modal', '/continue/i');
