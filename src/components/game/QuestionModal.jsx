@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Timer from '../common/Timer';
 import ClueScreen from './ClueScreen';
+import { TypedAnswerForm, TypedVerdict } from './TypedAnswer';
 import { useSettingsStore } from '../../stores';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import './QuestionModal.css';
 
 export default function QuestionModal({
@@ -48,10 +48,6 @@ export default function QuestionModal({
      whole, the way a crossword is, so a second clock ticking on each clue
      would be measuring the same thing twice and rushing the typing besides. */
   const hasTimer = questionTimeLimit !== null && showTimerSetting && (!typed || timed);
-  const [entry, setEntry] = useState('');
-  /* Autofocus is a desktop convenience. On a phone it throws the keyboard up
-     over the clue the moment it appears, so the clue is read around it. */
-  const isPhone = useMediaQuery('(max-width: 768px)');
 
   /* Time ran out before the player answered. As on the show, a clue nobody
      answered moves the score neither way, and a Daily Double not answered in
@@ -59,16 +55,10 @@ export default function QuestionModal({
      still on offer. */
   const [timedOut, setTimedOut] = useState(false);
 
-  // A new clue starts with an empty box, not the last one's text.
+  // A new clue starts with the clock running again.
   useEffect(() => {
-    setEntry('');
     setTimedOut(false);
   }, [question]);
-
-  // The hint is a fresh try, so it starts from an empty box too.
-  useEffect(() => {
-    if (hint) setEntry('');
-  }, [hint]);
 
   const handleTimeUp = () => {
     if (onTimeUp) {
@@ -159,99 +149,55 @@ export default function QuestionModal({
 
         {typed ? (
           result ? (
-            <motion.div
-              className="typed-result"
-              /* The verdict replaces the input in place; without this it is
-                 announced to nobody. */
-              aria-live="polite"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              {/* Out of time is a pass with a clock on it, except on a Daily
-                  Double, where the wager was already down and is lost. */}
-              <div
-                className={`typed-badge ${
-                  result.passed || (result.timedOut && !isDailyDouble)
-                    ? 'passed'
-                    : result.correct ? 'correct' : 'incorrect'
-                }`}
-              >
-                {result.passed
-                  ? 'Passed'
-                  : result.timedOut && !isDailyDouble
-                    ? "Time's up"
-                    : earned !== undefined
+            /* Out of time is a pass with a clock on it, except on a Daily
+               Double, where the wager was already down and is lost. */
+            <TypedVerdict
+              tone={result.passed || (result.timedOut && !isDailyDouble)
+                ? 'passed'
+                : result.correct ? 'correct' : 'incorrect'}
+              label={result.passed
+                ? 'Passed'
+                : result.timedOut && !isDailyDouble
+                  ? "Time's up"
+                  : earned !== undefined
                     ? (result.correct
                       ? `Correct +$${earned.toLocaleString()}${result.hinted ? ' with the hint' : ''}`
                       : 'Incorrect')
                     : result.correct
                       ? `Correct +$${points.toLocaleString()}`
                       : `Incorrect -$${points.toLocaleString()}`}
-              </div>
-
-              <p className="typed-said">
-                {result.passed
-                  ? (earned !== undefined ? 'Nothing won or lost.' : 'No points either way.')
-                  : result.timedOut
-                    ? (isDailyDouble ? 'Time ran out before you answered.' : 'Time ran out. No points either way.')
-                    : result.playerAnswer
+              said={result.passed
+                ? (earned !== undefined ? 'Nothing won or lost.' : 'No points either way.')
+                : result.timedOut
+                  ? (isDailyDouble ? 'Time ran out before you answered.' : 'Time ran out. No points either way.')
+                  : result.playerAnswer
                     ? <>You said: <span>{result.playerAnswer}</span></>
                     : 'You did not answer.'}
-              </p>
-              <p className="typed-truth">
-                Correct response: <span>{question.question}</span>
-              </p>
-
-              <div className="typed-after">
-                {!result.correct && !result.passed && !result.timedOut && onOverride && (
-                  <button type="button" className="typed-override" onClick={onOverride}>
-                    I was right
-                  </button>
-                )}
-                <button type="button" className="typed-continue" onClick={onContinue}>
-                  Continue
+              truth={question.question}
+            >
+              {!result.correct && !result.passed && !result.timedOut && onOverride && (
+                <button type="button" className="typed-override" onClick={onOverride}>
+                  I was right
                 </button>
-              </div>
-            </motion.div>
+              )}
+              <button type="button" className="typed-continue" onClick={onContinue}>
+                Continue
+              </button>
+            </TypedVerdict>
           ) : (
             <>
-            {note && <p className="typed-note" role="status">{note}</p>}
-            {hint && (
-              <p className="typed-hint" aria-label={`Hint: ${hint.replace(/_/g, 'blank')}`}>
-                {hint}
-              </p>
-            )}
-            <form
-              className="typed-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const given = entry.trim();
-                if (given) onSubmitAnswer?.(given);
-              }}
-            >
-              <input
-                type="text"
-                className="typed-input"
-                value={entry}
-                onChange={(e) => setEntry(e.target.value)}
-                placeholder="What is…"
-                aria-label="Your response"
-                autoFocus={!isPhone}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck="false"
-                enterKeyHint="done"
+              {/* A new clue, or the hint, is a fresh box. */}
+              <TypedAnswerForm
+                key={`${question.answer}|${hint ? 'hint' : ''}`}
+                onSubmit={onSubmitAnswer}
+                note={note}
+                hint={hint}
               />
-              <button type="submit" className="typed-submit" disabled={!entry.trim()}>
-                Submit
-              </button>
-            </form>
-            {onClaim && (
-              <button type="button" className="typed-claim" onClick={onClaim}>
-                I was right
-              </button>
-            )}
+              {onClaim && (
+                <button type="button" className="typed-claim" onClick={onClaim}>
+                  I was right
+                </button>
+              )}
             </>
           )
         ) : showAnswer ? (

@@ -84,10 +84,11 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
 
   const actions = createGameActions({ gameManager, emitRoom, emitSplit, emitPlayer, archiveRoom });
 
-  /* Quickplay players type their response and the server grades it; their
-     own word on whether they were right is not taken. The house players
-     move through actions directly, so this only shuts the socket door. */
-  const selfJudged = (roomCode) => gameManager.rooms.get(roomCode)?.type !== 'quickplay';
+  /* Quickplay and private rooms type their response and the server grades
+     it; a player's own word on whether they were right is not taken. The
+     house players move through actions directly, so this only shuts the
+     socket door. */
+  const selfJudged = (roomCode) => !gameManager.gradesTyped(gameManager.rooms.get(roomCode));
 
   const boardSource = createBoardSource({ mode: knobs.boardMode, log: (m) => logInfo({ msg: m }) });
   director = createQuickplayDirector({

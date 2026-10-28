@@ -232,7 +232,7 @@ async function run() {
     assert.equal(payload.playerName, 'Guest');
   });
 
-  await test('a client cannot inflate its own score', async (open) => {
+  await test('a client cannot score itself: only a typed response, graded here, scores', async (open) => {
     const { host, guest, roomCode, guestId } = await startGame();
     open.push(host, guest);
 
@@ -241,11 +241,16 @@ async function run() {
     guest.emit('game:buzz-in', { roomCode, reactionTime: 100 });
     await once(guest, 'game:buzzer-winner');
 
-    const result = once(host, 'game:answer-result');
+    // Its own word that it was right, with a fat number attached: ignored.
     guest.emit('game:submit-answer', { roomCode, correct: true, points: 1000000 });
+    assert.ok(await notEmitted(host, 'game:answer-result'), 'a private room is graded now, not self-judged');
 
+    const result = once(host, 'game:answer-result');
+    guest.emit('game:submit-response', { roomCode, answer: 'answer 0-1' });
     const payload = await result;
     assert.equal(payload.playerId, guestId);
+    assert.equal(payload.correct, true);
+    assert.equal(payload.said, 'answer 0-1');
     assert.equal(payload.newScore, 400, 'the board decides the value, not the client');
   });
 
@@ -263,7 +268,7 @@ async function run() {
     await once(guest, 'game:buzzer-winner');
 
     const wrong = once(guest, 'game:answer-result');
-    guest.emit('game:submit-answer', { roomCode, correct: false });
+    guest.emit('game:submit-response', { roomCode, answer: 'not even close' });
     assert.equal((await wrong).canBuzzAgain, true, 'the host has not buzzed yet');
 
     // The guest, already out, hammers the buzzer again.
@@ -296,23 +301,9 @@ async function run() {
     );
   });
 
-  await test('the answer clock is shorter than the buzz clock', async (open) => {
-    const { host, guest, roomCode } = await startGame({ buzzMs: 5000, answerMs: 400 });
-    open.push(host, guest);
-
-    host.emit('game:select-question', { roomCode, categoryIndex: 0, pointIndex: 0 });
-    await once(guest, 'game:question-selected');
-    guest.emit('game:buzz-in', { roomCode, reactionTime: 50 });
-    await once(guest, 'game:buzzer-winner');
-
-    // No answer submitted: the short answer clock should expire well before the
-    // 5s buzz clock would have.
-    const started = Date.now();
-    const result = await once(host, 'game:answer-result', 3000);
-    assert.equal(result.timeout, true);
-    assert.equal(result.correct, false);
-    assert.ok(Date.now() - started < 3000, 'answer clock, not the buzz clock');
-  });
+  /* The answer clock running out is checked in typedAnswers.test.js, on a
+     fake clock: a private room now gives at least twelve seconds to type,
+     which is too long to wait for here. */
 
   await test('a player who reconnects keeps their score', async (open) => {
     const { host, guest, roomCode, guestId } = await startGame();
@@ -323,7 +314,7 @@ async function run() {
     guest.emit('game:buzz-in', { roomCode, reactionTime: 60 });
     await once(guest, 'game:buzzer-winner');
     const scored = once(host, 'game:answer-result');
-    guest.emit('game:submit-answer', { roomCode, correct: true });
+    guest.emit('game:submit-response', { roomCode, answer: 'answer 0-1' });
     assert.equal((await scored).newScore, 400);
 
     // Same session id, brand new socket — a page reload.

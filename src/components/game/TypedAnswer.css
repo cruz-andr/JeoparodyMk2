@@ -1,0 +1,136 @@
+/* The typed answer box and the verdict card: one look wherever a response is
+   typed, on The Board, in solo play and in a room. */
+.typed-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.typed-input {
+  width: 100%;
+  max-width: 520px;
+  padding: 15px 20px;
+  font-size: 1.15rem;
+  text-align: center;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-md);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.typed-input::placeholder { color: var(--text-muted); }
+
+.typed-input:focus {
+  outline: none;
+  border-color: var(--jeopardy-gold);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.typed-submit {
+  min-width: 200px;
+  padding: 13px 30px;
+  background-color: var(--jeopardy-gold);
+  color: var(--jeopardy-black);
+}
+
+.typed-submit:disabled {
+  background-color: transparent;
+  color: rgba(214, 159, 76, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(214, 159, 76, 0.3);
+}
+
+/* The Sixer's second chance: what happened, then the shape of the answer. */
+.typed-note {
+  margin: 0 0 10px;
+  color: var(--jeopardy-gold);
+  font-weight: 700;
+}
+
+.typed-hint {
+  margin: 0 0 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  letter-spacing: 0.08em;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+}
+
+.typed-claim {
+  margin-top: 10px;
+  min-height: 44px;
+  background: none;
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.typed-result { margin-top: 8px; }
+
+.typed-badge {
+  display: block;
+  padding: 0;
+  margin-bottom: 18px;
+  /* The verdict is set in the body font at the size it is live. Weight is
+     stated because Arial needs telling; Impact was bold on its own. */
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.typed-badge.correct { color: var(--color-success); }
+
+/* A pass is neither, so it wears neither colour. */
+.typed-badge.passed { color: var(--text-secondary); }
+
+.typed-badge.incorrect { color: var(--color-error); }
+
+.typed-said { margin-bottom: 6px; color: var(--text-secondary); }
+.typed-said span { color: var(--text-primary); font-weight: 600; }
+
+.typed-truth {
+  margin-bottom: 20px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* The response is not the clue, so it does not borrow the clue's face. It is
+   set in the body font, as it is everywhere the answer is read out. */
+.typed-truth span {
+  color: var(--jeopardy-gold);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
+  line-height: 1.2;
+}
+
+.typed-after {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.typed-override {
+  background: transparent;
+  border: 1px solid rgba(242, 236, 224, 0.4);
+  color: var(--text-secondary);
+  padding: 12px 22px;
+}
+
+.typed-continue {
+  min-width: 180px;
+  padding: 12px 30px;
+  background-color: var(--jeopardy-gold);
+  color: var(--jeopardy-black);
+}
+
+@media (max-width: 768px) {
+  .typed-input { font-size: 1.05rem; }
+  .typed-submit,
+  .typed-continue { width: 100%; }
+}

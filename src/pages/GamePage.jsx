@@ -10,7 +10,9 @@ import GenreSelector from '../components/setup/GenreSelector';
 import CategoryEditor from '../components/setup/CategoryEditor';
 import GameBoard from '../components/game/GameBoard';
 import DailyDoubleModal from '../components/game/DailyDoubleModal';
-import TypedResponse from '../components/game/TypedResponse';
+import { TypedAnswerForm, TypedVerdict } from '../components/game/TypedAnswer';
+import { CLOSE_NOTE } from '../utils/typedClue';
+import { answerWindowFor, DAILY_DOUBLE_READ_MS } from '@shared/answerClock.js';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
 import HostLiveScreen from '../components/host/HostLiveScreen';
@@ -86,6 +88,9 @@ export default function GamePage() {
   // Game state (shared)
   const [currentPickerId, setCurrentPickerId] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
+  // What the clue was worth, for the verdict the socket handlers draw.
+  const currentQuestionRef = useRef(null);
+  currentQuestionRef.current = currentQuestion;
   const [showAnswer, setShowAnswer] = useState(false);
   const [canBuzz, setCanBuzz] = useState(false);
   const [signalArrivedTime, setSignalArrivedTime] = useState(null);
@@ -102,8 +107,9 @@ export default function GamePage() {
   const [hasAlreadyBuzzed, setHasAlreadyBuzzed] = useState(false); // Player already buzzed (wrong answer) this question
   /* A typed response the server called close: one more go. And the last
      response typed, which the room is shown with its verdict. */
-  const [answerClose, setAnswerClose] = useState(false);
-  const [saidNote, setSaidNote] = useState(null); // { playerId, said }
+  const [answerClose, setAnswerClose] = useState(0); // close verdicts this turn
+  const [saidNote, setSaidNote] = useState(null); // { playerId, said, correct, timeout, points }
+  const [ddTimerKey, setDdTimerKey] = useState(0);
   const hasAlreadyBuzzedRef = useRef(false);
 
   // Category re-roll state
@@ -218,9 +224,6 @@ export default function GamePage() {
   }, [cancelReveal]);
 
   const isHostMode = roomType === 'host';
-  /* Quickplay seats strangers, so their responses are typed and graded by the
-     server rather than self-judged against a response on their own screen. */
-  const typedAnswers = roomType === 'quickplay';
   // Read inside the socket effect, which deliberately does not re-subscribe on
   // every render.
   const isHostModeRef = useRef(isHostMode);
@@ -373,7 +376,7 @@ export default function GamePage() {
       // The last clue's response is done with: its timer must not clear this one.
       cancelReveal();
       setCorrectAnswerReveal(null);
-      setAnswerClose(false);
+      setAnswerClose(0);
       setSaidNote(null);
       setCurrentQuestion({ ...localQuestion, ...question, categoryIndex, pointIndex });
       setRevealedQuestions(prev => new Set([...prev, `${categoryIndex}-${pointIndex}`]));
@@ -419,7 +422,7 @@ export default function GamePage() {
 
     // Someone buzzed first
     const unsubBuzzerWinner = subscribe('game:buzzer-winner', ({ playerId, reactionTime }) => {
-      setAnswerClose(false);
+      setAnswerClose(0);
       setSaidNote(null);
       setBuzzerWinnerId(playerId);
       setBuzzerWinnerReactionTime(reactionTime);  // Store reaction time to display
@@ -430,9 +433,15 @@ export default function GamePage() {
     });
 
     // Answer result
-    const unsubAnswerResult = subscribe('game:answer-result', ({ playerId, correct, newScore, nextPickerId, canBuzzAgain, correctAnswer, said }) => {
-      // What a typed response said, shown with its verdict.
-      if (said !== undefined) setSaidNote({ playerId, said });
+    const unsubAnswerResult = subscribe('game:answer-result', ({ playerId, correct, newScore, nextPickerId, canBuzzAgain, correctAnswer, said, timeout }) => {
+      /* The verdict, for everyone in the room at once: who, what they said
+         (or that the clock ran out), and what it was worth. */
+      if (said !== undefined || timeout) {
+        setSaidNote({
+          playerId, said: said ?? '', correct, timeout: Boolean(timeout),
+          points: currentQuestionRef.current?.points ?? 0,
+        });
+      }
       // Update player score in room store
       if (playerId) {
         useRoomStore.getState().updatePlayerScore(playerId, newScore);
@@ -486,8 +495,11 @@ export default function GamePage() {
     });
 
     // The typed response was nearly right: one more go.
+    // With a fresh clock for the second go, which the server set too.
     const unsubAnswerClose = subscribe('game:answer-close', () => {
-      setAnswerClose(true);
+      setAnswerClose((n) => n + 1);
+      setAnswerTimerKey((k) => k + 1);
+      setDdTimerKey((k) => k + 1);
     });
 
     /* The pick moved because whoever held it left, or dropped and did not
@@ -539,7 +551,7 @@ export default function GamePage() {
     });
 
     // Daily Double result - update scores and reset
-    const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, newScore, nextPickerId, correctAnswer, said }) => {
+    const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, newScore, nextPickerId, correctAnswer, said, wager, timeout }) => {
       if (correct) {
         audioRef.current.playCorrect();
       } else {
@@ -552,7 +564,9 @@ export default function GamePage() {
          player with the Daily Double saw it otherwise, and in quickplay not
          even they did. A hosted room's host judges aloud and moves on. */
       if (correctAnswer && !isHostModeRef.current) {
-        if (said !== undefined) setSaidNote({ playerId, said });
+        if (said !== undefined || timeout) {
+          setSaidNote({ playerId, said: said ?? '', correct, timeout: Boolean(timeout), points: wager ?? 0 });
+        }
         setIsDailyDouble(false);
         setDailyDoublePhase(null);
         setDailyDoubleWager(0);
@@ -1250,26 +1264,12 @@ export default function GamePage() {
     setShowAnswer(false);
   }, []);
 
-  // Reveal answer - broadcasts to all players so everyone sees
-  const handleRevealAnswer = useCallback(() => {
-    socketClient.emit('game:reveal-answer', { roomCode });
-  }, [roomCode]);
-
   // Daily Double wager confirmed
   const handleDailyDoubleWager = useCallback((wager) => {
     socketClient.emit('game:daily-double-wager', {
       roomCode,
       wager,
     });
-  }, [roomCode]);
-
-  // Daily Double answer submitted
-  const handleDailyDoubleAnswer = useCallback((correct) => {
-    socketClient.emit('game:daily-double-answer', {
-      roomCode,
-      correct,
-    });
-    setShowAnswer(false);
   }, [roomCode]);
 
   // Final Jeopardy wager submitted
@@ -1319,18 +1319,8 @@ export default function GamePage() {
 
   // A typed response, for the server to grade
   const handleSubmitResponse = (answer) => {
-    setAnswerClose(false);
+    setAnswerClose(0);
     socketClient.emit('game:submit-response', { roomCode, answer });
-  };
-
-  // Buzzer winner submits answer
-  const handleAnswerResult = (correct) => {
-    socketClient.emit('game:submit-answer', {
-      roomCode,
-      correct,
-      points: currentQuestion.points,
-    });
-    setShowAnswer(false);
   };
 
   const allPlayersReady = players.length >= 2 &&
@@ -1665,29 +1655,27 @@ export default function GamePage() {
                 </div>
                 <ClueScreen clue={currentQuestion} text={currentQuestion.answer} />
 
-                {isMyTurn && typedAnswers && (
-                  <TypedResponse onSubmit={handleSubmitResponse} close={answerClose} />
-                )}
-
-                {isMyTurn && !typedAnswers && !showAnswer && (
-                  <button className="btn-primary reveal-button" onClick={() => setShowAnswer(true)}>
-                    Reveal Answer
-                  </button>
-                )}
-
-                {isMyTurn && !typedAnswers && showAnswer && (
-                  <div className="answer-section">
-                    <p className="answer-label">Correct Response:</p>
-                    <p className="answer-text">{currentQuestion.question}</p>
-                    <div className="scoring-buttons">
-                      <button className="btn-correct" onClick={() => handleDailyDoubleAnswer(true)}>
-                        I Got It Right (+${dailyDoubleWager.toLocaleString()})
-                      </button>
-                      <button className="btn-incorrect" onClick={() => handleDailyDoubleAnswer(false)}>
-                        I Got It Wrong (-${dailyDoubleWager.toLocaleString()})
-                      </button>
-                    </div>
+                {/* The same clock the server runs: reading, then typing. */}
+                {isMyTurn && settings?.answerTimeLimit && (
+                  <div className="question-timer answer-timer">
+                    <Timer
+                      key={`dd-${ddTimerKey}`}
+                      duration={answerClose
+                        ? answerWindowFor(roomType, settings.answerTimeLimit)
+                        : DAILY_DOUBLE_READ_MS + answerWindowFor(roomType, settings.answerTimeLimit)}
+                      autoStart={true}
+                      size="small"
+                    />
                   </div>
+                )}
+
+                {isMyTurn && (
+                  <TypedAnswerForm
+                    onSubmit={handleSubmitResponse}
+                    awaiting
+                    note={answerClose ? CLOSE_NOTE : null}
+                    retry={answerClose}
+                  />
                 )}
 
                 {!isMyTurn && (
@@ -1731,7 +1719,7 @@ export default function GamePage() {
                     <div className="question-timer answer-timer">
                       <Timer
                         key={`answer-${answerTimerKey}`}
-                        duration={settings.answerTimeLimit}
+                        duration={answerWindowFor(roomType, settings.answerTimeLimit)}
                         onTimeUp={handleAnswerTimeUp}
                         autoStart={true}
                         size="small"
@@ -1784,38 +1772,13 @@ export default function GamePage() {
                         {iAmBuzzerWinner ? 'You buzzed first!' : <>{renderPlayerName(buzzerWinner)} buzzed first!</>}
                       </p>
 
-                      {iAmBuzzerWinner && typedAnswers && (
-                        <TypedResponse onSubmit={handleSubmitResponse} close={answerClose} />
-                      )}
-
-                      {iAmBuzzerWinner && !typedAnswers && !showAnswer && (
-                        <motion.button
-                          className="reveal-button"
-                          onClick={handleRevealAnswer}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          Reveal Answer
-                        </motion.button>
-                      )}
-
-                      {iAmBuzzerWinner && !typedAnswers && showAnswer && (
-                        <motion.div
-                          className="answer-section"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                        >
-                          <p className="answer-label">Correct Response:</p>
-                          <p className="answer-text">{currentQuestion.question}</p>
-                          <div className="scoring-buttons">
-                            <motion.button className="btn-correct" onClick={() => handleAnswerResult(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                              I Got It Right
-                            </motion.button>
-                            <motion.button className="btn-incorrect" onClick={() => handleAnswerResult(false)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                              I Got It Wrong
-                            </motion.button>
-                          </div>
-                        </motion.div>
+                      {iAmBuzzerWinner && (
+                        <TypedAnswerForm
+                          onSubmit={handleSubmitResponse}
+                          awaiting
+                          note={answerClose ? CLOSE_NOTE : null}
+                          retry={answerClose}
+                        />
                       )}
 
                       {!iAmBuzzerWinner && (
@@ -1824,45 +1787,43 @@ export default function GamePage() {
                     </div>
                   )}
 
-                  {/* What the last typed response said */}
-                  {saidNote && !buzzerWinnerId && (
-                    <p className="said-note">
-                      {saidNote.playerId === currentPlayerId ? 'You' : renderPlayerName(players.find((p) => p.id === saidNote.playerId))}
-                      {' said '}<q>{saidNote.said || '(nothing)'}</q>
-                    </p>
-                  )}
-
-                  {/* Correct Answer Reveal */}
-                  {correctAnswerReveal && (
-                    <motion.div
-                      className="correct-answer-reveal"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onClick={() => {
-                        setCorrectAnswerReveal(null);
-                        setCurrentQuestion(null);
-                      }}
-                    >
-                      <p className="answer-label">Correct Response:</p>
-                      <p className="answer-text">{correctAnswerReveal}</p>
-                      <span className="dismiss-hint">Click to dismiss</span>
-                    </motion.div>
-                  )}
-
-                  {/* Timeout */}
-                  {buzzTimedOut && (
-                    <div className="timeout-display">
-                      <p className="timeout-message">Time's Up! No one buzzed in.</p>
-                      <div className="answer-section">
-                        <p className="answer-label">Correct Response:</p>
-                        <p className="answer-text">{currentQuestion.question}</p>
-                      </div>
-                      {!hasContinued ? (
-                        <button className="btn-primary" onClick={handleTimeoutContinue}>Continue</button>
-                      ) : (
-                        <p className="waiting-text">Waiting for other players...</p>
+                  {/* The verdict, the same card as The Board's, on every screen in
+                      the room at once: who answered, what they said, what it
+                      was worth, and the response once the clue is over. */}
+                  {(saidNote || correctAnswerReveal) && !buzzerWinnerId && !buzzTimedOut && (
+                    <TypedVerdict
+                      tone={saidNote ? (saidNote.correct ? 'correct' : 'incorrect') : 'passed'}
+                      label={saidNote
+                        ? (saidNote.correct
+                          ? `Correct +$${saidNote.points.toLocaleString()}`
+                          : `Incorrect -$${saidNote.points.toLocaleString()}`)
+                        : 'Nobody got it'}
+                      said={saidNote && (
+                        <>
+                          {saidNote.playerId === currentPlayerId ? 'You' : renderPlayerName(players.find((p) => p.id === saidNote.playerId))}
+                          {saidNote.timeout
+                            ? ' ran out of time.'
+                            : <>{' said: '}<span>{saidNote.said || 'nothing'}</span></>}
+                        </>
                       )}
-                    </div>
+                      truth={correctAnswerReveal}
+                    />
+                  )}
+
+                  {/* Nobody rang in: the response, then everyone moves on together. */}
+                  {buzzTimedOut && (
+                    <TypedVerdict
+                      tone="passed"
+                      label="Time's up"
+                      said="Nobody rang in. No points either way."
+                      truth={currentQuestion.question}
+                    >
+                      {!hasContinued ? (
+                        <button type="button" className="typed-continue" onClick={handleTimeoutContinue}>Continue</button>
+                      ) : (
+                        <p className="waiting-text">Waiting for the others&hellip;</p>
+                      )}
+                    </TypedVerdict>
                   )}
                 </motion.div>
               </motion.div>

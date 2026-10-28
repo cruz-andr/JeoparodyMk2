@@ -15,6 +15,7 @@
  */
 
 import { playerBoard, playerClue } from './GameStateManager.js';
+import { answerWindowFor, DAILY_DOUBLE_READ_MS } from '../shared/answerClock.js';
 
 // On the show a contestant gets about five seconds to answer once they have
 // buzzed in. Reusing the full clue timer here gave them the whole 30 seconds
@@ -24,7 +25,12 @@ export const DEFAULT_ANSWER_MS = 7000;
 export const DEFAULT_BUZZ_MS = 30000;
 
 export const buzzWindowMs = (room) => room?.settings?.questionTimeLimit || DEFAULT_BUZZ_MS;
-export const answerWindowMs = (room) => room?.settings?.answerTimeLimit || DEFAULT_ANSWER_MS;
+export const answerWindowMs = (room) =>
+  answerWindowFor(room?.type, room?.settings?.answerTimeLimit || DEFAULT_ANSWER_MS);
+
+/* Without a clock on it, a player holding a Daily Double could keep the
+   room waiting for as long as they liked. */
+export const dailyDoubleWindowMs = (room) => DAILY_DOUBLE_READ_MS + answerWindowMs(room);
 
 /* Half a second is long enough for the clue to be skipped, answered, or the
    room to be torn down, so everything after a buzz re-reads the live room. */
@@ -50,8 +56,41 @@ export function createGameActions({
      them as written. Self-judged rooms reveal the response to whoever buzzed,
      so everyone there is sent it as it is. */
   function emitToTable(roomCode, event, payload, forPlayers) {
-    if (gameManager.answersAreTyped(rooms.get(roomCode))) emitSplit(roomCode, event, payload, forPlayers(payload));
+    const room = rooms.get(roomCode);
+    /* In a private room the one who opened it is a player like the rest, so
+       nobody there is sent the responses. Only a hosted room's host is. */
+    if (room?.type === 'multiplayer') emitRoom(roomCode, event, forPlayers(payload));
+    else if (gameManager.answersAreTyped(room)) emitSplit(roomCode, event, payload, forPlayers(payload));
     else emitRoom(roomCode, event, payload);
+  }
+
+  /* The clock on the player who holds the buzz. On expiry their silence is a
+     wrong answer, as it is on the show. */
+  /* A clock that has been replaced, by a retry's fresh one or by an answer,
+     does nothing when it goes off: only the room's current clock counts. */
+  function armAnswerTimeout(roomCode, playerId) {
+    const room = rooms.get(roomCode);
+    if (!room) return;
+    gameManager.clearAnswerTimeout(roomCode);
+    const clock = schedule(() => {
+      if (rooms.get(roomCode)?.answerTimeout !== clock) return;
+      const result = gameManager.handleAnswer(roomCode, playerId, false);
+      if (result) settleAnswer(roomCode, result, { timeout: true });
+    }, answerWindowMs(room));
+    room.answerTimeout = clock;
+  }
+
+  // And on whoever holds a Daily Double, in a room the server grades.
+  function armDailyDoubleTimeout(roomCode, playerId, ms) {
+    const room = rooms.get(roomCode);
+    if (!room) return;
+    gameManager.clearAnswerTimeout(roomCode);
+    const clock = schedule(() => {
+      if (rooms.get(roomCode)?.answerTimeout !== clock) return;
+      const result = gameManager.handleDailyDoubleAnswer(roomCode, playerId, false);
+      if (result) emitRoom(roomCode, 'game:daily-double-result', { ...result, timeout: true });
+    }, ms);
+    room.answerTimeout = clock;
   }
   const clueForPlayers = (payload) => ({ ...payload, question: playerClue(payload.question) });
   const boardForPlayers = (payload) => ({ ...payload, questions: playerBoard(payload.questions) });
@@ -259,11 +298,7 @@ export function createGameActions({
         // the host's judge buttons.
         if (current.type === 'host') return;
 
-        gameManager.clearAnswerTimeout(roomCode);
-        current.answerTimeout = schedule(() => {
-          const result = gameManager.handleAnswer(roomCode, winner.playerId, false);
-          if (result) settleAnswer(roomCode, result, { timeout: true });
-        }, answerWindowMs(current));
+        armAnswerTimeout(roomCode, winner.playerId);
       }, BUZZ_COLLECT_MS);
       return true;
     },
@@ -309,7 +344,12 @@ export function createGameActions({
     dailyDoubleWager(sessionId, roomCode, wager) {
       const result = gameManager.handleDailyDoubleWager(roomCode, sessionId, wager);
       // The confirmed wager carries the clue, and in a typed room not its response.
-      if (result) emitToTable(roomCode, 'game:daily-double-wager-confirmed', result, clueForPlayers);
+      if (result) {
+        emitToTable(roomCode, 'game:daily-double-wager-confirmed', result, clueForPlayers);
+        if (gameManager.gradesTyped(rooms.get(roomCode))) {
+          armDailyDoubleTimeout(roomCode, sessionId, dailyDoubleWindowMs(rooms.get(roomCode)));
+        }
+      }
       return result;
     },
 
@@ -329,24 +369,30 @@ export function createGameActions({
     submitResponse(sessionId, roomCode, text) {
       const room = rooms.get(roomCode);
       const gs = room?.gameState;
-      if (room?.type !== 'quickplay' || !gs?.currentQuestion) return null;
+      if (!gameManager.gradesTyped(room) || !gs?.currentQuestion) return null;
       const dailyDouble = gs.isDailyDouble && gs.phase === 'dailyDoubleQuestion' && gs.currentPickerId === sessionId;
       if (!dailyDouble && gs.buzzedPlayerId !== sessionId) return null;
 
       const said = String(text ?? '').trim().slice(0, 200);
       const verdict = gameManager.gradeResponse(roomCode, sessionId, said);
       if (verdict === 'close') {
-        emitPlayer(roomCode, sessionId, 'game:answer-close', {});
+        /* The retry is a fresh go, so it gets a fresh clock: it used to eat
+           into what was left of the first, and the spelling was fixed against
+           a clock that had nearly run out. The page is told how long. */
+        const ms = answerWindowMs(room);
+        if (dailyDouble) armDailyDoubleTimeout(roomCode, sessionId, ms);
+        else armAnswerTimeout(roomCode, sessionId);
+        emitPlayer(roomCode, sessionId, 'game:answer-close', { ms });
         return { verdict };
       }
 
       const correct = verdict === 'correct';
+      gameManager.clearAnswerTimeout(roomCode);
       if (dailyDouble) {
         const result = gameManager.handleDailyDoubleAnswer(roomCode, sessionId, correct);
         if (result) emitRoom(roomCode, 'game:daily-double-result', { ...result, said });
         return result;
       }
-      gameManager.clearAnswerTimeout(roomCode);
       const result = gameManager.handleAnswer(roomCode, sessionId, correct);
       if (result) settleAnswer(roomCode, result, { said });
       return result;
