@@ -12,6 +12,7 @@ import { finalState, toggleDouble } from '../components/boards/gridLogic';
 import BoardGridEditor from '../components/boards/BoardGridEditor';
 import HostSettingsSheet from '../components/host/HostSettingsSheet';
 import HostFillPanel from '../components/host/HostFillPanel';
+import MediaAttachment from '../components/setup/MediaAttachment';
 import Icon from '../components/common/Icon';
 import { usePageTitle } from '../hooks/usePageTitle';
 import './HostPage.css';
@@ -493,6 +494,17 @@ export default function HostPage() {
                 onChange={editFinal('question')}
               />
             </label>
+            <MediaAttachment
+              mediaType={final?.mediaType ?? null}
+              mediaData={final?.mediaData ?? null}
+              youtubeStart={final?.youtubeStart ?? null}
+              youtubeEnd={final?.youtubeEnd ?? null}
+              audioOnly={final?.audioOnly ?? false}
+              altText={final?.altText ?? null}
+              onChange={(updates) => setFinal((f) => ({
+                category: '', answer: '', question: '', ...(f ?? {}), ...updates,
+              }))}
+            />
             {finalIs !== 'none' && (
               <button className="plain-btn quiet-action host-clear-final" onClick={() => setFinal(null)}>
                 Clear Final Jeopardy

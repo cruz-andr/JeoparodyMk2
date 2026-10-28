@@ -444,7 +444,9 @@ export default function SinglePlayerPage() {
           <p className="round-score">
             Current Score: <span>${score.toLocaleString()}</span>
           </p>
-          {currentRound === 1 && enableDoubleJeopardy ? (
+          {/* Nor a second round: a board somebody else wrote is the one
+              round they wrote, and its own Final Jeopardy after it. */}
+          {currentRound === 1 && enableDoubleJeopardy && !playingSomeoneElsesBoard ? (
             <button onClick={handleNextRound} className="btn-primary">
               Continue to Double Jeopardy
             </button>
@@ -532,6 +534,7 @@ export default function SinglePlayerPage() {
             category={finalJeopardyData.category}
             clue={finalJeopardyData.answer}
             correctAnswer={finalJeopardyData.question}
+            media={finalJeopardyData.mediaType ? finalJeopardyData : null}
             currentScore={score}
             onComplete={handleFinalJeopardyComplete}
           />

@@ -459,6 +459,17 @@ export default function BoardGridEditor({
           onChange={(e) => editFinal({ question: e.target.value })}
         />
 
+        {/* The same picture or clip any other clue can have. */}
+        <MediaAttachment
+          mediaType={final?.mediaType ?? null}
+          mediaData={final?.mediaData ?? null}
+          youtubeStart={final?.youtubeStart ?? null}
+          youtubeEnd={final?.youtubeEnd ?? null}
+          audioOnly={final?.audioOnly ?? false}
+          altText={final?.altText ?? null}
+          onChange={(updates) => editFinal(updates)}
+        />
+
         <p className={`ge-hint ${finalIs === 'partial' ? 'is-warn' : ''}`}>
           {finalIs === 'partial'
             ? 'All three are needed, or clear it. A half-written round stops a game dead.'

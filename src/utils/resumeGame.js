@@ -49,6 +49,8 @@ function finalJeopardyView(fj, you) {
       category: fj.category,
       clue: clueUp ? (fj.clue ?? null) : null,
       answer: scored ? (fj.answer ?? null) : null,
+      // A picture or a clip goes up with the clue, never before it.
+      media: clueUp ? (fj.media ?? null) : null,
     },
     phase: scored ? 'reveal' : clueUp ? 'clue' : 'wager',
     wager: mine?.wager ?? 0,

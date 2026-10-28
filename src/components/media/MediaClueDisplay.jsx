@@ -13,6 +13,8 @@ export default function MediaClueDisplay({
   hostControls = false,
   roomCode = null,
   compact = false,
+  // Fill the column it is given at 16:9, rather than a fixed 300px.
+  fill = false,
 }) {
   const playerRef = useRef(null);
 
@@ -54,7 +56,7 @@ export default function MediaClueDisplay({
   }
 
   return (
-    <div className="media-clue-display">
+    <div className={`media-clue-display${fill ? ' is-fill' : ''}`}>
       {question.mediaType === 'image' && question.mediaData && (
         <img
           src={question.mediaData}
@@ -73,6 +75,7 @@ export default function MediaClueDisplay({
             autoPlay={true}
             audioOnly={question.audioOnly || false}
             interactive={hostControls}
+            fill={fill && !question.audioOnly}
             height={question.audioOnly ? 0 : 300}
           />
 

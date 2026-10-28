@@ -45,7 +45,8 @@ export function countWritten(board) {
 export function finalState(board) {
   const fj = board?.finalJeopardy;
   const parts = [fj?.category, fj?.answer, fj?.question].map((v) => Boolean(v && String(v).trim()));
-  if (parts.every((p) => !p)) return 'none';
+  // A picture with no words yet is half a Final Jeopardy, not none.
+  if (parts.every((p) => !p) && !fj?.mediaType) return 'none';
   return parts.every(Boolean) ? 'complete' : 'partial';
 }
 

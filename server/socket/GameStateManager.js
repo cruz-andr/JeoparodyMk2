@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { seatBots } from './bots.js';
 import { gradeAnswer } from '../shared/answerMatch.js';
+import { clueMedia } from '../shared/boardFormat.js';
 
 /* How long the matchmaker holds out for a full table before the house fills
    the empty seats.
@@ -960,6 +961,8 @@ export class GameStateManager {
           category: String(written.category).trim(),
           clue: String(written.answer).trim(),
           answer: String(written.question).trim(),
+          // A picture or a clip, shown with the clue and held back with it.
+          media: clueMedia(written),
         }
       : fjCategories[Math.floor(Math.random() * fjCategories.length)];
 
@@ -969,6 +972,7 @@ export class GameStateManager {
       category: randomFJ.category,
       clue: randomFJ.clue,
       answer: randomFJ.answer,
+      media: randomFJ.media ?? null,
       wagers: new Map(),
       answers: new Map(),
       eligiblePlayers: new Set(),
@@ -988,6 +992,7 @@ export class GameStateManager {
       category: randomFJ.category,
       clue: randomFJ.clue,
       answer: randomFJ.answer,
+      media: randomFJ.media ?? null,
       // Zero means nobody can play, and the round must be skipped rather than
       // left waiting on wagers that can never arrive.
       eligibleCount: room.gameState.finalJeopardy.eligiblePlayers.size,
@@ -1460,7 +1465,7 @@ export class GameStateManager {
     if (fj) {
       shown.finalJeopardy = {
         category: fj.category,
-        ...(fj.clueShown ? { clue: fj.clue } : {}),
+        ...(fj.clueShown ? { clue: fj.clue, media: fj.media ?? null } : {}),
         ...(fj.results ? { answer: fj.answer, results: fj.results } : {}),
       };
     }

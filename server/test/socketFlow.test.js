@@ -607,8 +607,9 @@ async function run() {
     const shown = once(guest, 'game:fj-show-clue');
     host.emit('game:fj-wager', { roomCode, wager: 100 });
     guest.emit('game:fj-wager', { roomCode, wager: 100 });
-    const { clue } = await shown;
+    const { clue, media } = await shown;
     assert.equal(clue, room.gameState.finalJeopardy.clue);
+    assert.equal(media, null, 'the stock clue has no picture, and says so');
 
     const revealed = once(guest, 'game:fj-reveal');
     host.emit('game:fj-answer', { roomCode, answer: 'x' });

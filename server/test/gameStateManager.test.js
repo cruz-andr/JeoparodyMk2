@@ -659,6 +659,33 @@ test('Final Jeopardy plays the clue the host wrote', () => {
   assert.match(fj.clue, /1968/);
 });
 
+test("the host's Final Jeopardy picture or clip plays with it, and only once the clue is shown", () => {
+  const { gm, room, code, sockets } = mkGame({ type: 'host', count: 2 });
+  for (const player of room.players.values()) player.score = 1000;
+
+  const fj = gm.startFinalJeopardy(code, {
+    category: 'NO-SHAVE NOVEMBER', answer: 'This moustache', question: "Who is Tarzan's dad?",
+    mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 1067, youtubeEnd: 1090, audioOnly: false, altText: null,
+  });
+  assert.deepEqual(fj.media, {
+    mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 1067, youtubeEnd: 1090, audioOnly: false, altText: null,
+  });
+
+  // A player coming back before the wagers are in sees neither the clue nor its picture.
+  const player = [...room.players.keys()].find((id) => id !== room.hostId) ?? sockets[1].sessionId;
+  assert.equal(gm.publicGameState(room, player).finalJeopardy.media, undefined);
+  room.gameState.finalJeopardy.clueShown = true;
+  assert.equal(gm.publicGameState(room, player).finalJeopardy.media.mediaData, 'u4YFjksxPg0');
+});
+
+test('a Final Jeopardy without media has none', () => {
+  const { gm, room, code } = mkGame({ type: 'host' });
+  for (const player of room.players.values()) player.score = 1000;
+  const fj = gm.startFinalJeopardy(code, { category: 'RIVERS', answer: 'The longest', question: 'What is the Nile?' });
+  assert.equal(fj.media, null);
+  assert.equal(gm.startFinalJeopardy(code).media, null, 'nor does a stock one');
+});
+
 test('a half-written final is ignored rather than played', () => {
   // A clue with no answer waiting at the end of a game is worse than a stock
   // one, so an incomplete hand-off falls back to something playable.

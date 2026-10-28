@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import {
   CLUE_COUNT, POINT_VALUES, countClues, emptyBoard,
   normalizeBoard, publishProblem, validateBoardStructure,
-  categoryCountsFor, clueTarget, TOPICS,
+  categoryCountsFor, clueTarget, TOPICS, finalJeopardyState,
 } from '../shared/boardFormat.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -476,6 +476,46 @@ await test('a copy of a copy credits the original author', async () => {
   const second = await api(`/${copy}/copy`, { method: 'POST', token: ada });
   const opened = await api(`/${second.data.slug}`, { token: ada });
   assert.equal(opened.data.adaptedFrom.username, 'ada', 'not the middleman');
+});
+
+await test('a Final Jeopardy can carry a picture or a clip, checked like any clue', () => {
+  const pic = { category: 'RIVERS', answer: 'Seen here from space', question: 'What is the Nile?',
+    mediaType: 'image', mediaData: 'data:image/webp;base64,AAAA', altText: 'A river from orbit' };
+  assert.deepEqual(validateBoardStructure({ ...fullBoard(), finalJeopardy: pic }), { valid: true, errors: [] });
+  const kept = normalizeBoard({ ...fullBoard(), finalJeopardy: pic }).finalJeopardy;
+  assert.equal(kept.mediaType, 'image');
+  assert.equal(kept.mediaData, pic.mediaData);
+  assert.equal(kept.altText, 'A river from orbit');
+
+  const clip = { ...pic, mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 90, youtubeEnd: 60 };
+  assert.match(validateBoardStructure({ ...fullBoard(), finalJeopardy: clip }).errors[0], /Final Jeopardy: the clip ends before it starts/);
+  assert.match(validateBoardStructure({ ...fullBoard(), finalJeopardy: { ...pic, mediaType: 'gif' } }).errors[0], /Final Jeopardy: unknown media type/);
+});
+
+await test('a Final Jeopardy without media stays three fields', () => {
+  const plain = normalizeBoard({ ...fullBoard(), finalJeopardy: { category: 'RIVERS', answer: 'The longest', question: 'What is the Nile?' } });
+  assert.deepEqual(Object.keys(plain.finalJeopardy).sort(), ['answer', 'category', 'question']);
+});
+
+await test('a picture with no words is half a Final Jeopardy, not none', () => {
+  // Otherwise the picture would be dropped on save without a word said.
+  const board = fullBoard();
+  board.finalJeopardy = { category: '', answer: '', question: '', mediaType: 'image', mediaData: 'data:image/webp;base64,AAAA' };
+  assert.equal(finalJeopardyState(normalizeBoard(board)), 'partial');
+  assert.match(publishProblem({ title: 'Fine', board: normalizeBoard(board) }), /Final Jeopardy is half written/);
+});
+
+await test('a Final Jeopardy clip survives a save and comes back', async () => {
+  const create = await api('/', { method: 'POST', token: ada, body: { title: 'A final with a clip' } });
+  const board = fullBoard();
+  board.finalJeopardy = { category: 'NO-SHAVE NOVEMBER', answer: 'This moustache', question: "Who is Tarzan's dad?",
+    mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 1067, youtubeEnd: 1090, audioOnly: false, altText: null };
+  await api(`/${create.data.slug}`, { method: 'PUT', token: ada, body: { board } });
+  const read = await api(`/${create.data.slug}`, { token: ada });
+  assert.equal(read.data.board.finalJeopardy.mediaType, 'youtube');
+  assert.equal(read.data.board.finalJeopardy.mediaData, 'u4YFjksxPg0');
+  assert.equal(read.data.board.finalJeopardy.youtubeStart, 1067);
+  assert.equal(read.data.board.finalJeopardy.youtubeEnd, 1090);
 });
 
 await test('a Final Jeopardy survives a save and comes back', async () => {

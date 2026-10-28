@@ -76,7 +76,7 @@ test('Final Jeopardy comes back at the wager, with a wager already locked in kep
   assert.equal(view.finalJeopardy.phase, 'wager');
   assert.equal(view.finalJeopardy.wagerSubmitted, true);
   assert.equal(view.finalJeopardy.wager, 300);
-  assert.deepEqual(view.finalJeopardy.data, { category: 'POETS', clue: null, answer: null });
+  assert.deepEqual(view.finalJeopardy.data, { category: 'POETS', clue: null, answer: null, media: null });
 });
 
 test('Final Jeopardy comes back at the clue once every wager is in', () => {
@@ -98,6 +98,15 @@ test('Final Jeopardy comes back at the reveal once it has been scored', () => {
   }));
   assert.equal(view.finalJeopardy.phase, 'reveal');
   assert.deepEqual(view.finalJeopardy.results, results);
+});
+
+test("Final Jeopardy's picture comes back with its clue, and not before", () => {
+  const media = { mediaType: 'image', mediaData: 'data:image/webp;base64,AAAA', youtubeStart: null, youtubeEnd: null, audioOnly: false, altText: 'A moustache' };
+  const up = resumeView(playing({ phase: 'finalJeopardy', finalJeopardy: { category: 'POETS', clue: 'He wrote it', media } }));
+  assert.deepEqual(up.finalJeopardy.data.media, media);
+  // The host's own copy has the picture all along; it waits for the clue.
+  const host = resumeView(playing({ phase: 'finalJeopardy', finalJeopardy: { category: 'POETS', clue: 'He wrote it', media, clueShown: false } }));
+  assert.equal(host.finalJeopardy.data.media, null);
 });
 
 test('the break between rounds, and the end of the game, come back as themselves', () => {

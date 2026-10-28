@@ -140,6 +140,40 @@ export function emptyBoard(categoryCount = CATEGORY_COUNT) {
  * questions are deliberately separate: saving a half-written board must always
  * work, or people lose work.
  */
+/* A picture or a clip, on a clue or on Final Jeopardy: checked the same way
+   wherever it is attached. */
+function mediaErrors(clue, where, errors) {
+  if (clue.mediaType != null && !MEDIA_TYPES.includes(clue.mediaType)) {
+    errors.push(`${where}: unknown media type "${clue.mediaType}"`);
+  }
+  if (
+    clue.mediaType === 'youtube' &&
+    clue.youtubeStart != null && clue.youtubeEnd != null &&
+    clue.youtubeEnd <= clue.youtubeStart
+  ) {
+    errors.push(`${where}: the clip ends before it starts`);
+  }
+}
+
+const MEDIA_TYPES = ['image', 'youtube'];
+
+/** A clue's picture or clip, as its own object, or null when it has none. */
+export function clueMedia(clue) {
+  return clue?.mediaType ? mediaFields(clue) : null;
+}
+
+/** A clue's media fields, as saved: all of them, or none when it has none. */
+function mediaFields(clue) {
+  return {
+    mediaType: clue.mediaType ?? null,
+    mediaData: clue.mediaData ?? null,
+    youtubeStart: clue.youtubeStart ?? null,
+    youtubeEnd: clue.youtubeEnd ?? null,
+    audioOnly: Boolean(clue.audioOnly),
+    altText: clue.altText ?? null,
+  };
+}
+
 export function validateBoardStructure(data, { topic = null } = {}) {
   const errors = [];
 
@@ -203,16 +237,7 @@ export function validateBoardStructure(data, { topic = null } = {}) {
           errors.push(`${cell}: options must be a list of at least two`);
         }
       }
-      if (question.mediaType != null && !['image', 'youtube'].includes(question.mediaType)) {
-        errors.push(`${cell}: unknown media type "${question.mediaType}"`);
-      }
-      if (
-        question.mediaType === 'youtube' &&
-        question.youtubeStart != null && question.youtubeEnd != null &&
-        question.youtubeEnd <= question.youtubeStart
-      ) {
-        errors.push(`${cell}: the clip ends before it starts`);
-      }
+      mediaErrors(question, cell, errors);
     });
   });
 
@@ -226,6 +251,7 @@ export function validateBoardStructure(data, { topic = null } = {}) {
           errors.push(`Final Jeopardy: ${field} must be text`);
         }
       }
+      mediaErrors(fj, 'Final Jeopardy', errors);
     }
   }
 
@@ -283,24 +309,23 @@ export function normalizeBoard(data, { topic = null } = {}) {
              otherwise every clue would be a multiple-choice clue with four
              empty answers. */
           options: buildOptions(String(q.answer ?? '').trim(), String(q.question ?? '').trim(), options),
-          mediaType: q.mediaType ?? null,
-          mediaData: q.mediaData ?? null,
-          youtubeStart: q.youtubeStart ?? null,
-          youtubeEnd: q.youtubeEnd ?? null,
-          audioOnly: Boolean(q.audioOnly),
-          altText: q.altText ?? null,
+          ...mediaFields(q),
         };
       }),
     };
   });
 
   const fj = data?.finalJeopardy;
+  /* A picture alone still makes a Final Jeopardy worth keeping: dropped, it
+     would vanish on save, and kept it is half written and says so. Without
+     media it stays the three fields it has always been. */
   const finalJeopardy =
-    fj && (fj.category || fj.answer || fj.question)
+    fj && (fj.category || fj.answer || fj.question || fj.mediaType)
       ? {
           category: String(fj.category ?? '').trim().toUpperCase(),
           answer: String(fj.answer ?? '').trim(),
           question: String(fj.question ?? '').trim(),
+          ...(fj.mediaType ? mediaFields(fj) : {}),
         }
       : null;
 
@@ -320,7 +345,7 @@ export function finalJeopardyState(board) {
   const fj = board?.finalJeopardy;
   const parts = [fj?.category, fj?.answer, fj?.question]
     .map((value) => Boolean(value && String(value).trim()));
-  if (parts.every((part) => !part)) return 'none';
+  if (parts.every((part) => !part) && !fj?.mediaType) return 'none';
   return parts.every(Boolean) ? 'complete' : 'partial';
 }
 
