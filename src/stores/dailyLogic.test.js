@@ -30,6 +30,9 @@ import {
   sixerEarned,
   sixerScore,
   sixerTop,
+  sixerMarks,
+  betterThan,
+  scoreCurve,
 } from './dailyLogic.js';
 
 let passed = 0;
@@ -569,6 +572,45 @@ test('a clue got with the hint has a mark and a square of its own', () => {
   assert.equal(markEmoji('hinted'), '\u{1F7E8}');
   assert.notEqual(markEmoji('hinted', true), markEmoji('correct', true));
   assert.notEqual(markEmoji('hinted', true), markEmoji('wrong', true));
+});
+
+// ------------------------------------------------------------ how everyone did
+
+test('a run is sent as six marks: right, with the hint, wrong, passed', () => {
+  assert.equal(sixerMarks([
+    { revealed: true, correct: true },
+    { revealed: true, correct: true, hinted: true },
+    { revealed: true, correct: false, hinted: true },
+    { revealed: true, passed: true },
+    { revealed: true, correct: false },
+    { revealed: false },
+  ]), 'chwpwp');
+});
+
+const spread = { players: 10, scores: [{ score: 0, count: 2 }, { score: 800, count: 3 }, { score: 2400, count: 4 }, { score: 4800, count: 1 }] };
+
+test('better than: the share of the day\'s players below, counting half of those tied', () => {
+  /* spread: $0 x2, $800 x3, $2,400 x4, $4,800 x1. A tie is neither better nor
+     worse, so half of the players on the same score count as beaten. */
+  assert.equal(betterThan(spread, 2400), 70, '5 below and half of 4 tied, of 10');
+  assert.equal(betterThan(spread, 0), 10, 'half of the 2 on $0');
+  assert.equal(betterThan(spread, 4800), 95);
+  assert.equal(betterThan(spread, 1000), 50, 'a score nobody else got sits between');
+  assert.equal(betterThan({ players: 0, scores: [] }, 800), null, 'nobody to be better than');
+  assert.equal(betterThan(null, 800), null);
+  const blended = { players: 2, weight: 12, scores: [{ score: 0, count: 6 }, { score: 800, count: 6 }] };
+  assert.equal(betterThan(blended, 2400), 100, 'taken over the blend, not the real players alone');
+});
+
+test('the curve covers the day from $0 to the top, rises where players are, and peaks at 1', () => {
+  const curve = scoreCurve(spread, 4800, { points: 49 });
+  assert.equal(curve.length, 49);
+  assert.equal(curve[0].x, 0);
+  assert.equal(curve.at(-1).x, 4800);
+  assert.equal(Math.max(...curve.map((p) => p.y)), 1);
+  const at = (x) => curve.reduce((best, p) => (Math.abs(p.x - x) < Math.abs(best.x - x) ? p : best)).y;
+  assert.ok(at(2400) > at(3600), 'more players at $2,400 than at $3,600');
+  assert.deepEqual(scoreCurve({ players: 0, scores: [] }, 4800), []);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

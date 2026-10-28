@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useUserStore } from '../../stores/userStore';
+import { getSixerStats, postSixerResult } from '../../services/api/sixerStatsService';
+import SixerCurve from './SixerCurve';
+import ClueLog from './ClueLog';
 import { boardGridRows, decodeAnswers,
   sixerEarned,
   sixerScore,
   sixerTop,
+  sixerMarks,
+  betterThan,
   answerMark,
   liveStreak,
   toDateString,
@@ -50,26 +56,25 @@ export default function DailyResults({
 }) {
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
-  const [showTheirAnswers, setShowTheirAnswers] = useState(false);
-  const [theirAnswers, setTheirAnswers] = useState(null);
 
-  const { stats, shareResults, getShareText, ...store } = useDailyStore();
+  const { stats, shareResults, getShareText, markRecorded, ...store } = useDailyStore();
+  const sessionId = useUserStore((s) => s.sessionId);
   const { date: todayDate, questions, answers } = store[slot];
   const formatStats = stats[format];
   const isArchive = slot === 'archiveRun';
 
-  // Decode verification answers when user clicks to reveal
-  const handleRevealTheirAnswers = () => {
-    if (!verifyCode) return;
+  /* A shared link carries the sharer's typed answers. They are shown in the
+     recap, under the player's own on each clue, rather than in a separate
+     list behind a button nobody connected with the clues: this page is only
+     reached once the player has played, so there is nothing left to spoil. */
+  const theirAnswers = useMemo(() => {
+    if (!verifyCode) return null;
     try {
-      const decoded = decodeAnswers(verifyCode);
-      if (!decoded) return;
-      setTheirAnswers(decoded);
-      setShowTheirAnswers(true);
-    } catch (e) {
-      console.error('Failed to decode verification code:', e);
+      return decodeAnswers(verifyCode);
+    } catch {
+      return null;
     }
-  };
+  }, [verifyCode]);
 
   // Transposed for the Board so each row is a value tier, as on the board
   // itself; a single row for the Sixer.
@@ -78,6 +83,44 @@ export default function DailyResults({
     const marks = answers.map(answerMark);
     if (format !== 'board') return [marks];
     return boardGridRows(marks) ?? [marks];
+  })();
+
+  /* How everyone did. Today's finished run is sent once, and the day's
+     spread comes back with it; after that, or for an archive day, it is only
+     read. Without the server the page is the same, minus the comparison. */
+  const [day, setDay] = useState({ state: format === 'sixer' ? 'loading' : 'none', stats: null });
+  useEffect(() => {
+    if (format !== 'sixer' || !todayDate) return undefined;
+    let live = true;
+    const run = store[slot] ?? {};
+    const send = !isArchive && run.isComplete && !run.recorded && sessionId;
+    const asking = send
+      ? postSixerResult({
+        date: todayDate,
+        player: sessionId,
+        marks: sixerMarks(answers),
+        values: questions.map((q) => q.value),
+      }).then((r) => { markRecorded(slot); return r.stats; })
+      : getSixerStats(todayDate);
+    asking
+      .then((dayStats) => { if (live) setDay({ state: 'ready', stats: dayStats }); })
+      .catch(() => { if (live) setDay({ state: 'offline', stats: null }); });
+    return () => { live = false; };
+    // Once per run shown; the run's own changes are not a reason to ask again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [format, slot, todayDate]);
+
+  const won = sixerScore(answers, questions);
+  const top = sixerTop(questions);
+  /* The server's spread is the day's estimate blended with its real players,
+     so there is always a curve to stand on. */
+  const ready = day.state === 'ready';
+  const estimated = Boolean(day.stats?.estimated);
+  const standing = ready ? betterThan(day.stats, won) : null;
+  const standingLine = (() => {
+    if (day.state === 'loading') return 'Seeing how everyone did...';
+    if (!ready || standing === null) return null;
+    return `Better than ${standing}% of players`;
   })();
 
   const highContrast = useSettingsStore((s) => s.highContrast);
@@ -90,15 +133,16 @@ export default function DailyResults({
   const totalQuestions = questions.length;
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
+  const shareOptions = { betterThan: standing, estimated };
   const handleShare = async () => {
-    const success = await shareResults(slot);
+    const success = await shareResults(slot, shareOptions);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } else {
       // Fallback: try to copy manually
       try {
-        await navigator.clipboard.writeText(getShareText(slot));
+        await navigator.clipboard.writeText(getShareText(slot, shareOptions));
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
@@ -125,59 +169,72 @@ export default function DailyResults({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4 }}
     >
-      <h2>Today’s Results</h2>
-      <p className="results-date">{formatDisplayDate(todayDate)}</p>
-
-      {/* Results grid. The Board is laid out the way the board reads, six
-          categories across and five values down, matching the shared text.
-          The Sixer stays a single row. */}
-      <div
-        className={`emoji-grid ${format === 'board' ? 'board' : ''} ${highContrast ? 'high-contrast' : ''}`}
-        role="img"
-        aria-label={`${correctCount} of ${totalQuestions} correct${passedCount > 0 ? `, ${passedCount} passed` : ''}`}
-      >
-        {emojiRows.map((row, rowIndex) => (
-          <div className="emoji-row" key={rowIndex}>
-            {row.map((mark, colIndex) => {
-              const n = rowIndex * row.length + colIndex;
-              return (
-                <motion.span
-                  key={colIndex}
-                  className={`result-mark ${mark}`}
-                  title={MARK_WORD[mark]}
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  // capped so a thirty cell board does not take three seconds
-                  transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
-                />
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Score. The Sixer is played for dollars; the Board keeps its count. */}
       {format === 'sixer' ? (
-        <div className="results-score">
-          {/* Spaced in the text, not only by the layout, so it is read as words. */}
-          <span className="score-number">${sixerScore(answers, questions).toLocaleString()}</span>
-          {' '}<span className="score-divider">of</span>{' '}
-          <span className="score-total">${sixerTop(questions).toLocaleString()}</span>
+        <div className="sixer-summary">
+          <p className="sixer-summary-head">
+            The Sixer <span aria-hidden="true">&middot;</span> {formatDisplayDate(todayDate)} <span aria-hidden="true">&middot;</span> Complete
+          </p>
+          {/* What was won, on its own: the day's total said nothing a player
+              needed, and halved the size of the number they did. */}
+          <div className="results-score">
+            <span className="score-number">${won.toLocaleString()}</span>
+          </div>
+          <p className="score-percentage">
+            {`${correctCount} of ${totalQuestions} right`}
+            {hintedCount > 0 && `, ${hintedCount} with the hint`}
+            {passedCount > 0 && `, ${passedCount} passed`}
+          </p>
+          {ready && <SixerCurve stats={day.stats} top={top} score={won} />}
+          {standingLine && <p className="sixer-standing" role="status">{standingLine}</p>}
+          <ClueLog questions={questions} answers={answers} stats={ready ? day.stats : null} theirAnswers={theirAnswers} />
         </div>
       ) : (
+      <>
+      <h2>Today’s Results</h2>
+        <p className="results-date">{formatDisplayDate(todayDate)}</p>
+
+        {/* Results grid. The Board is laid out the way the board reads, six
+            categories across and five values down, matching the shared text.
+            The Sixer stays a single row. */}
+        <div
+          className={`emoji-grid ${format === 'board' ? 'board' : ''} ${highContrast ? 'high-contrast' : ''}`}
+          role="img"
+          aria-label={`${correctCount} of ${totalQuestions} correct${passedCount > 0 ? `, ${passedCount} passed` : ''}`}
+        >
+          {emojiRows.map((row, rowIndex) => (
+            <div className="emoji-row" key={rowIndex}>
+              {row.map((mark, colIndex) => {
+                const n = rowIndex * row.length + colIndex;
+                return (
+                  <motion.span
+                    key={colIndex}
+                    className={`result-mark ${mark}`}
+                    title={MARK_WORD[mark]}
+                    initial={{ opacity: 0, scale: 0.6 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    // capped so a thirty cell board does not take three seconds
+                    transition={{ delay: Math.min(n * 0.04, 0.8), type: 'spring' }}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Score */}
         <div className="results-score">
           <span className="score-number">{correctCount}</span>
           <span className="score-divider">/</span>
           <span className="score-total">{totalQuestions}</span>
         </div>
-      )}
 
-      <p className="score-percentage">
-        {format === 'sixer' ? `${correctCount} of ${totalQuestions} right` : `${percentage}% correct`}
-        {hintedCount > 0 && `, ${hintedCount} with the hint`}
-        {passedCount > 0 && `, ${passedCount} passed`}
-        {took && ` in ${took}`}
-      </p>
+        <p className="score-percentage">
+          {percentage}% correct
+          {passedCount > 0 && `, ${passedCount} passed`}
+          {took && ` in ${took}`}
+        </p>
+      </>
+      )}
 
       {/* Share Button */}
       <button
@@ -194,31 +251,10 @@ export default function DailyResults({
         </p>
       )}
 
-      {/* View Their Answers (if verification code present) */}
-      {verifyCode && !showTheirAnswers && (
-        <button
-          className="btn-verify"
-          onClick={handleRevealTheirAnswers}
-        >
-          View Their Answers
-        </button>
-      )}
-
-      {/* Their Answers Revealed */}
-      {showTheirAnswers && theirAnswers && (
-        <div className="their-answers-section">
-          <h3>Their Answers</h3>
-          <div className="their-answers-list">
-            {theirAnswers.map((answer, index) => (
-              <div key={index} className="their-answer-item">
-                <span className="their-answer-num">{index + 1}.</span>
-                <span className="their-answer-text">{answer || '(skipped)'}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* The Board keeps its stats and its review. The Sixer's climb above
+          already is its review, and its page ends at the share. */}
+      {format !== 'sixer' && (
+      <>
       {/* Stats Section. An archive day is recorded but never counted, so the
           streak beside it would be answering a question nobody asked. */}
       <div className="stats-section">
@@ -282,6 +318,8 @@ export default function DailyResults({
           })}
         </div>
       </div>
+      </>
+      )}
 
       {/* Back to Menu */}
       <div className="results-actions">

@@ -205,6 +205,52 @@ export function sixerTop(questions) {
   return (questions ?? []).reduce((sum, q) => sum + (Number(q?.value) || 0), 0);
 }
 
+/** A run as the server records it: one letter a clue. */
+export function sixerMarks(answers) {
+  return (answers ?? []).map((a) => {
+    if (!a?.revealed || a.passed) return 'p';
+    if (a.correct) return a.hinted ? 'h' : 'c';
+    return 'w';
+  }).join('');
+}
+
+/** The share of the day's spread a score beat, as a whole percent, or null
+    when there is nothing to compare with. Half of those on the same score
+    count as beaten: a tie is neither better nor worse, and counting none of
+    them put a player on the day's most common score well below where the
+    curve shows them. The server's spread is the day's estimate blended with
+    its real players, and `weight` is what it adds up to; a spread of real
+    players alone adds up to `players`. */
+export function betterThan(stats, score) {
+  const total = stats?.weight ?? stats?.players;
+  if (!total) return null;
+  const beaten = (stats.scores ?? []).reduce((n, s) => {
+    if (s.score < score) return n + s.count;
+    if (s.score === score) return n + s.count / 2;
+    return n;
+  }, 0);
+  return Math.round((beaten / total) * 100);
+}
+
+/**
+ * The day's scores as a smooth curve from $0 to the top, for the chart: each
+ * score in the spread is a little bump and the bumps are added up, then
+ * scaled so the highest point is 1. A histogram of a day's scores is mostly
+ * gaps; the curve shows where the crowd is.
+ */
+export function scoreCurve(stats, top, { points = 61 } = {}) {
+  if (!(stats?.weight ?? stats?.players) || !(top > 0)) return [];
+  const width = top / 10;
+  const curve = Array.from({ length: points }, (_, i) => {
+    const x = (top * i) / (points - 1);
+    const y = (stats.scores ?? []).reduce(
+      (sum, s) => sum + s.count * Math.exp(-(((x - s.score) / width) ** 2) / 2), 0);
+    return { x, y };
+  });
+  const peak = Math.max(...curve.map((p) => p.y)) || 1;
+  return curve.map((p) => ({ x: p.x, y: p.y / peak }));
+}
+
 const SHOWN_WHOLE = new Set(['a', 'an', 'the', 'of', 'and', '&', 'or', 'in', 'on', 'to']);
 
 /**
