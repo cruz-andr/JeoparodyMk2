@@ -64,11 +64,13 @@ try {
 
   // The stage is a locked viewport, so anything above the board comes out of
   // the board's height. Two lines of chrome was a third of the screen.
+  // The daily board's own header now, so the two cannot drift apart.
   const chrome = await phone.evaluate(
-    "Math.round(document.querySelector('.game-header').getBoundingClientRect().height)");
+    "Math.round(document.querySelector('.wheel-header').getBoundingClientRect().height)");
   check('the header stays out of the board\'s way', chrome <= 70, `${chrome}px, daily board is 66`);
   check('and it is one line, not two',
-    await phone.evaluate("getComputedStyle(document.querySelector('.game-header')).flexDirection") === 'row');
+    await phone.evaluate("getComputedStyle(document.querySelector('.wheel-header')).flexDirection") === 'row');
+  check('with the score on the daily board\'s podium', await phone.evaluate("!!document.querySelector('.wheel-podium-score')"));
   await phone.shot('phone-community-play.png');
 
   // Leaving must release the lock, or every later page is stuck.

@@ -1619,7 +1619,7 @@ export default function GamePage() {
               {scorePlayers.map((player) => (
                 <div key={player.id} className={`player-chip ${player.id === currentPickerId ? 'current-picker' : ''}`}>
                   {renderPlayerName(player, 'chip-name')}
-                  <Money value={player.score || 0} />
+                  <span className="chip-score"><Money value={player.score || 0} /></span>
                 </div>
               ))}
             </BoardHeader>
