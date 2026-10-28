@@ -136,3 +136,17 @@
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.8);
 }
+
+/* Fill: as wide as its column, at the video's own shape. */
+.yt-fill .yt-iframe-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.yt-fill .yt-iframe-wrapper iframe,
+.yt-fill .yt-iframe-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}

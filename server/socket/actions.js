@@ -104,8 +104,8 @@ export function createGameActions({
   }
 
   function showFinalClue(roomCode) {
-    const { clue } = rooms.get(roomCode).gameState.finalJeopardy;
-    emitRoom(roomCode, 'game:fj-show-clue', { clue });
+    const { clue, media } = rooms.get(roomCode).gameState.finalJeopardy;
+    emitRoom(roomCode, 'game:fj-show-clue', { clue, media: media ?? null });
   }
 
   function revealFinal(roomCode) {

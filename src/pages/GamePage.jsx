@@ -14,7 +14,7 @@ import TypedResponse from '../components/game/TypedResponse';
 import Timer from '../components/common/Timer';
 import HostControlPanel from '../components/host/HostControlPanel';
 import HostLiveScreen from '../components/host/HostLiveScreen';
-import MediaClueDisplay from '../components/media/MediaClueDisplay';
+import ClueScreen from '../components/game/ClueScreen';
 import ControllerView from '../components/player/ControllerView';
 import AnswerFeedback from '../components/player/AnswerFeedback';
 import PlayerBuzzer from '../components/player/PlayerBuzzer';
@@ -589,7 +589,7 @@ export default function GamePage() {
     // Final Jeopardy - Category reveal. The clue and the response arrive
     // later, with the events that show them.
     const unsubFJStart = subscribe('game:final-jeopardy-started', ({ category }) => {
-      setFinalJeopardyData({ category, clue: null, answer: null });
+      setFinalJeopardyData({ category, clue: null, answer: null, media: null });
       setFjPhase('category');
       setFjWager(0);
       setFjAnswer('');
@@ -607,8 +607,8 @@ export default function GamePage() {
     });
 
     // Final Jeopardy - Show clue (all wagers in)
-    const unsubFJShowClue = subscribe('game:fj-show-clue', ({ clue } = {}) => {
-      setFinalJeopardyData((fj) => fj && { ...fj, clue });
+    const unsubFJShowClue = subscribe('game:fj-show-clue', ({ clue, media } = {}) => {
+      setFinalJeopardyData((fj) => fj && { ...fj, clue, media: media ?? null });
       setFjPhase('clue');
     });
 
@@ -1640,8 +1640,7 @@ export default function GamePage() {
                 <div className="question-header">
                   <span className="question-category">{currentQuestion.category}</span>
                 </div>
-                {currentQuestion.mediaType && <MediaClueDisplay question={currentQuestion} />}
-                <p className="clue-text">{currentQuestion.answer}</p>
+                <ClueScreen clue={currentQuestion} text={currentQuestion.answer} />
 
                 {isMyTurn && typedAnswers && (
                   <TypedResponse onSubmit={handleSubmitResponse} close={answerClose} />
@@ -1723,8 +1722,7 @@ export default function GamePage() {
                   </div>
 
                   <div className="question-content">
-                    {currentQuestion.mediaType && <MediaClueDisplay question={currentQuestion} />}
-                    <p className="clue-text">{currentQuestion.answer}</p>
+                    <ClueScreen clue={currentQuestion} text={currentQuestion.answer} />
                   </div>
 
                   {/* Buzzer + Skip */}
@@ -1869,14 +1867,12 @@ export default function GamePage() {
                 </div>
 
                 <div className="question-content">
-                  {currentQuestion.mediaType && (
-                    <MediaClueDisplay
-                      question={currentQuestion}
-                      hostControls={isHost}
-                      roomCode={roomCode}
-                    />
-                  )}
-                  <p className="clue-text">{currentQuestion.answer}</p>
+                  <ClueScreen
+                    clue={currentQuestion}
+                    text={currentQuestion.answer}
+                    hostControls={isHost}
+                    roomCode={roomCode}
+                  />
                 </div>
 
                 {/* Show buzzer status for players */}
@@ -2040,7 +2036,13 @@ export default function GamePage() {
             >
               <h2>FINAL JEOPARDY</h2>
               <p className="fj-category-display">{finalJeopardyData.category}</p>
-              <div className="fj-clue-display">{finalJeopardyData.clue}</div>
+              <div className="fj-clue-display">
+                <ClueScreen
+                  clue={finalJeopardyData.media}
+                  text={finalJeopardyData.clue}
+                  textClassName="fj-clue-words"
+                />
+              </div>
 
               {!fjAnswerSubmitted ? (
                 <div className="fj-answer-form">

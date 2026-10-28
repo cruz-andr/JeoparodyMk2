@@ -235,6 +235,11 @@ test('the next empty clue wraps within the board\'s own columns', () => {
   assert.equal(nextEmptyFrom(board, { kind: 'clue', c: 0, r: 0 }), null, 'a full five-column board has nothing left');
 });
 
+test('a Final Jeopardy with only a picture is half written', () => {
+  assert.equal(finalState({ finalJeopardy: { category: '', answer: '', question: '', mediaType: 'image', mediaData: 'data:x' } }), 'partial');
+  assert.equal(finalState({ finalJeopardy: { category: 'A', answer: 'B', question: 'C', mediaType: 'image', mediaData: 'data:x' } }), 'complete');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 if (failures.length) {
   for (const f of failures) console.error(`  FAIL  ${f}`);

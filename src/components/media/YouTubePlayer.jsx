@@ -38,6 +38,8 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
     interactive = false, // true = host can click iframe; false = glass shield blocks clicks
     width = '100%',
     height = 300,
+    // Size to the parent's width at 16:9 instead of width by height.
+    fill = false,
     onReady,
     onEnd,
     onError,
@@ -111,7 +113,7 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
   // read once at construction, so they live in a ref rather than the dep list.
   const setupRef = useRef(null);
   setupRef.current = {
-    width, height, autoPlay, startTime, interactive, onReady, onError, startEndTimeLoop,
+    width, height, fill, autoPlay, startTime, interactive, onReady, onError, startEndTimeLoop,
   };
 
   useEffect(() => {
@@ -119,7 +121,7 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
 
     let destroyed = false;
     const {
-      width, height, autoPlay, startTime, interactive, onReady, onError, startEndTimeLoop,
+      width, height, fill, autoPlay, startTime, interactive, onReady, onError, startEndTimeLoop,
     } = setupRef.current;
 
     loadYouTubeApi().then(() => {
@@ -127,8 +129,8 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
 
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId,
-        width: typeof width === 'number' ? width : undefined,
-        height,
+        width: fill ? '100%' : (typeof width === 'number' ? width : undefined),
+        height: fill ? '100%' : height,
         playerVars: {
           autoplay: autoPlay ? 1 : 0,
           start: Math.floor(startTime || 0),
@@ -207,7 +209,7 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
   }
 
   return (
-    <div className={`yt-player-wrapper ${audioOnly ? 'audio-only' : ''}`}>
+    <div className={`yt-player-wrapper ${audioOnly ? 'audio-only' : ''} ${fill ? 'yt-fill' : ''}`}>
       {!isReady && (
         <div className="yt-loading">
           <div className="yt-loading-spinner" />
@@ -215,7 +217,7 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
       )}
 
       {/* The actual YouTube iframe container */}
-      <div className="yt-iframe-wrapper" style={audioOnly ? undefined : { width, height }}>
+      <div className="yt-iframe-wrapper" style={audioOnly || fill ? undefined : { width, height }}>
         <div
           ref={containerRef}
           className={`yt-iframe-container ${audioOnly ? 'yt-hidden' : ''}`}

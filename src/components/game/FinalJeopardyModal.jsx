@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Timer from '../common/Timer';
+import ClueScreen from './ClueScreen';
 import { useAudio } from '../../hooks';
 import { finalWagerLimit, clampFinalWager } from '../../utils/wagers';
 import './FinalJeopardyModal.css';
@@ -14,6 +15,8 @@ export default function FinalJeopardyModal({
   correctAnswer,
   currentScore,
   onComplete,
+  // The Final's picture or clip, when it has one: { mediaType, mediaData, ... }.
+  media = null,
 }) {
   const [phase, setPhase] = useState('category'); // 'category' | 'wager' | 'clue' | 'answer' | 'reveal'
   const [wager, setWager] = useState(0);
@@ -228,7 +231,7 @@ export default function FinalJeopardyModal({
               <p className="fj-wager-display">Your wager: ${wager.toLocaleString()}</p>
 
               <div className="fj-clue-card">
-                <p className="fj-clue-text">{clue}</p>
+                <ClueScreen clue={media} text={clue} textClassName="fj-clue-text" />
               </div>
 
               <button className="fj-submit-btn" onClick={handleClueReveal}>
@@ -247,8 +250,10 @@ export default function FinalJeopardyModal({
               exit={{ opacity: 0, y: -20 }}
             >
               <p className="fj-category-display">{category}</p>
+              {/* Still in front of them while they write: a picture clue is
+                  answered from the picture. */}
               <div className="fj-clue-card fj-clue-small">
-                <p className="fj-clue-text">{clue}</p>
+                <ClueScreen clue={media} text={clue} textClassName="fj-clue-text" />
               </div>
 
               <h3>Your Answer</h3>

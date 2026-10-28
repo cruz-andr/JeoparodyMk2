@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Timer from '../common/Timer';
-import MediaClueDisplay from '../media/MediaClueDisplay';
+import ClueScreen from './ClueScreen';
 import { useSettingsStore } from '../../stores';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import './QuestionModal.css';
@@ -150,8 +150,7 @@ export default function QuestionModal({
         </div>
 
         <div className="question-content">
-          {question.mediaType && <MediaClueDisplay question={question} />}
-          <p className="clue-text">{question.answer}</p>
+          <ClueScreen clue={question} text={question.answer} />
         </div>
 
         {typed ? (
