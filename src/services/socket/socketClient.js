@@ -194,6 +194,19 @@ class SocketClient {
     });
   }
 
+  /** Lend the room a community board by its slug, or null to take it back. */
+  setRoomBoard(roomCode, slug) {
+    return new Promise((resolve, reject) => {
+      this.emit('room:set-board', { roomCode, slug }, (response) => {
+        if (response.success) {
+          resolve(response);
+        } else {
+          reject(new Error(response.error));
+        }
+      });
+    });
+  }
+
   leaveRoom(roomCode) {
     this.emit('room:leave', { roomCode });
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks';
 import { useRoomStore, useUserStore, useSettingsStore } from '../stores';
 import { roomRulesFromSettings } from '../stores/settingsStore';
@@ -25,6 +25,8 @@ export default function MultiplayerPage() {
   usePageTitle('Multiplayer');
   const navigate = useNavigate();
   const onDesk = useMediaQuery('(min-width: 821px)');
+  // A community board handed over from its page, to open a room to play it.
+  const lending = useLocation().state?.board ?? null;
   const [side, setSide] = useState('open'); // 'open' | 'join'
   const [opening, setOpening] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -78,6 +80,18 @@ export default function MultiplayerPage() {
       useRoomStore.getState().setIsHost(true);
 
       const result = await joinRoom(newRoomCode, name, myName);
+
+      /* The board this room is for, read by the server. If it cannot be lent
+         after all, the room still opens and is set up the usual way. */
+      useRoomStore.getState().setBoard(null);
+      if (lending) {
+        try {
+          const { board } = await socketClient.setRoomBoard(newRoomCode, lending.slug);
+          useRoomStore.getState().setBoard(board);
+        } catch (err) {
+          console.error('Could not lend the room its board:', err.message);
+        }
+      }
 
       if (result.players) useRoomStore.getState().setPlayers(result.players);
       if (result.settings) useRoomStore.getState().updateSettings(result.settings);
@@ -147,10 +161,17 @@ export default function MultiplayerPage() {
           </div>
 
           <div className="st-stack">
-            <p className="st-note">
-              You open the room, read the code to the others, and pick the topic once
-              everyone is in. Up to six can play.
-            </p>
+            {lending ? (
+              <p className="st-note">
+                You open the room to play <b>{lending.title}</b>, read the code to the
+                others, and start once everyone is in. Up to six can play.
+              </p>
+            ) : (
+              <p className="st-note">
+                You open the room, read the code to the others, and pick the topic once
+                everyone is in. Up to six can play.
+              </p>
+            )}
             <HouseRules alwaysOpen={onDesk} />
             <Btn wide onClick={handleOpenRoom} disabled={!isConnected || !myName || opening} className="mp-open-btn">
               {opening ? 'Opening' : isConnected ? 'Open the room' : 'Connecting'}

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { seatBots } from './bots.js';
 import { gradeAnswer } from '../shared/answerMatch.js';
 import { clueMedia } from '../shared/boardFormat.js';
+import { boardSummary } from '../services/roomBoards.js';
 
 /* How long the matchmaker holds out for a full table before the house fills
    the empty seats.
@@ -166,6 +167,7 @@ export class GameStateManager {
       isLateJoin,
       isRejoin,
       status: room.status,
+      board: room.board?.summary ?? null,
     };
 
     // Late joiners and returning players need the game state to render the board
@@ -327,6 +329,15 @@ export class GameStateManager {
       // Suggestion state
       room.gameState.suggestions = {};
     }
+  }
+
+  /** Lend a room a community board, or take it back (null). Returns what the
+      lobby is shown of it; the clues stay here until the game is dealt. */
+  setRoomBoard(roomCode, found) {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    room.board = found ? { ...found, summary: boardSummary(found) } : null;
+    return room.board?.summary ?? null;
   }
 
   placeDailyDoubles(categoryCount, round, rowCount) {
@@ -1402,6 +1413,7 @@ export class GameStateManager {
       status: room.status,
       isHost: player.isHost,
       displayName: player.displayName,
+      board: room.board?.summary ?? null,
       /* The rounds the host wrote and has not played yet. Only the host's
          page held them, so a host who reloaded lost Double Jeopardy, their
          Final Jeopardy and their Daily Double placements. */

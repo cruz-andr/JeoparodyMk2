@@ -7,6 +7,8 @@ const initialState = {
   hostId: null,
   isHost: false,
   roomType: null, // 'quickplay' | 'multiplayer' | 'host'
+  // A community board lent to a private room: { slug, title, categories, hasFinal }.
+  board: null,
 
   // Players
   players: [], // [{ id, name, avatar, score, isReady, isConnected, isHost }]
@@ -62,6 +64,7 @@ export const useRoomStore = create((set, get) => ({
   setRoomCode: (roomCode) => set({ roomCode }),
   setIsHost: (isHost) => set({ isHost }),
   setRoomType: (roomType) => set({ roomType }),
+  setBoard: (board) => set({ board: board ?? null }),
 
   // Room Actions
   createRoom: (type, settings = {}) => {

@@ -1102,6 +1102,18 @@
 
 .lobby-room { align-items: start; }
 
+/* The community board the room is playing, named the way the board names it. */
+.lobby-board-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--jeopardy-gold);
+}
+
+.lobby-board-clear { margin-top: 8px; }
+
 .lobby-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .lobby-out { display: flex; justify-content: center; }

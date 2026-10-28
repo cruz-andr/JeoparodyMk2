@@ -20,7 +20,28 @@ const httpServer = createServer();
 const ioServer = new Server(httpServer, { cors: { origin: '*' } });
 /* NODE_ENV=test deals quickplay the written board: a unit run must not scrape
    another site for an episode. */
-const { gameManager } = initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' } });
+/* The community boards a room may borrow, standing in for the database: one
+   five-category Disney board with a clip and a Final, and one with no Final. */
+const lentBoard = (columns, finalJeopardy) => ({
+  version: 1,
+  categories: Array.from({ length: columns }, (_, c) => ({
+    name: `CAT ${c}`,
+    questions: [200, 400, 600, 800, 1000].map((points) => ({
+      points, answer: `Clue ${c}-${points}`, question: `What is ${c}?`,
+      ...(c === 2 && points === 1000 ? { mediaType: 'youtube', mediaData: 'u4YFjksxPg0', youtubeStart: 895, youtubeEnd: 906 } : {}),
+    })),
+  })),
+  finalJeopardy,
+});
+const BOARD_FINAL = { category: 'NO-SHAVE NOVEMBER', answer: 'The Disney dad who wore this moustache', question: "Who is Tarzan's dad?" };
+const LENDABLE = {
+  disney: { slug: 'disney', title: 'Disney 100 Jeopardy: Episode 40', board: lentBoard(5, BOARD_FINAL), finalJeopardy: BOARD_FINAL },
+  nofinal: { slug: 'nofinal', title: 'No final', board: lentBoard(6, null), finalJeopardy: null },
+};
+const boardPlays = [];
+const boards = { find: (slug) => LENDABLE[slug] ?? null, counted: (slug) => boardPlays.push(slug) };
+
+const { gameManager } = initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' }, boards });
 
 const PORT = 34117;
 const URL = `http://localhost:${PORT}`;
@@ -730,6 +751,128 @@ async function run() {
     const { correct, said } = await result;
     assert.equal(correct, true);
     assert.equal(said, 'What is answer 0-0?');
+  });
+
+
+  // ---------------------------------------------------- a community board
+
+  /** A private room, waiting in its lobby: the host and one guest. */
+  async function openRoom(type = 'multiplayer') {
+    const host = await connect(`bh-${Math.random()}`);
+    const guest = await connect(`bg-${Math.random()}`);
+    const { roomCode } = await emitAck(host, 'room:create', { type, settings: { enableDailyDouble: false, enableDoubleJeopardy: true, enableFinalJeopardy: true } });
+    const hostJoin = await emitAck(host, 'room:join', { roomCode, displayName: 'Host' });
+    const guestJoin = await emitAck(guest, 'room:join', { roomCode, displayName: 'Guest' });
+    return { host, guest, roomCode, hostId: hostJoin.players[0].id, guestId: guestJoin.players[1].id };
+  }
+
+  await test('the host lends the room a community board, and everyone in it is told', async (open) => {
+    const { host, guest, roomCode } = await openRoom();
+    open.push(host, guest);
+    const told = once(guest, 'room:board-set');
+    const ack = await emitAck(host, 'room:set-board', { roomCode, slug: 'disney' });
+    assert.equal(ack.success, true);
+    const summary = { slug: 'disney', title: 'Disney 100 Jeopardy: Episode 40', categories: ['CAT 0', 'CAT 1', 'CAT 2', 'CAT 3', 'CAT 4'], hasFinal: true };
+    assert.deepEqual(ack.board, summary);
+    assert.deepEqual((await told).board, summary);
+
+    // Somebody arriving after it was chosen sees it in the lobby too.
+    const late = await connect(`bl-${Math.random()}`);
+    open.push(late);
+    const lateJoin = await emitAck(late, 'room:join', { roomCode, displayName: 'Late' });
+    assert.deepEqual(lateJoin.board, summary);
+
+    // And the host can put it back to questions written for the room.
+    const cleared = once(guest, 'room:board-set');
+    assert.equal((await emitAck(host, 'room:set-board', { roomCode, slug: null })).success, true);
+    assert.equal((await cleared).board, null);
+  });
+
+  await test('only the host lends a board, only a playable one, and only to a private room', async (open) => {
+    const { host, guest, roomCode } = await openRoom();
+    open.push(host, guest);
+    assert.equal((await emitAck(guest, 'room:set-board', { roomCode, slug: 'disney' })).success, false, 'a guest cannot');
+    const missing = await emitAck(host, 'room:set-board', { roomCode, slug: 'private-or-unfinished' });
+    assert.equal(missing.success, false);
+    assert.match(missing.error, /cannot be played/i);
+    assert.equal(gameManager.rooms.get(roomCode).board ?? null, null);
+
+    const hosted = await openRoom('host');
+    open.push(hosted.host, hosted.guest);
+    assert.equal((await emitAck(hosted.host, 'room:set-board', { roomCode: hosted.roomCode, slug: 'disney' })).success, false, 'host mode writes its own');
+  });
+
+  await test("the room plays the board's clues, one round, then the board's own Final", async (open) => {
+    const { host, guest, roomCode, hostId, guestId } = await openRoom();
+    open.push(host, guest);
+    await emitAck(host, 'room:set-board', { roomCode, slug: 'disney' });
+
+    const before = boardPlays.length;
+    const ready = once(guest, 'game:questions-ready');
+    host.emit('game:start-board', { roomCode });
+    const { categories, questions, firstPickerId } = await ready;
+    assert.deepEqual(categories, ['CAT 0', 'CAT 1', 'CAT 2', 'CAT 3', 'CAT 4']);
+    assert.equal(questions.length, 5);
+    assert.ok([hostId, guestId].includes(firstPickerId));
+    assert.equal(boardPlays.length, before + 1, 'one room, one play');
+    assert.deepEqual(boardPlays.at(-1), 'disney');
+
+    // Its clip goes out with the clue, the way any clue's media does.
+    const room = gameManager.rooms.get(roomCode);
+    room.gameState.currentPickerId = hostId;
+    const selected = once(guest, 'game:question-selected');
+    host.emit('game:select-question', { roomCode, categoryIndex: 2, pointIndex: 4 });
+    const { question } = await selected;
+    assert.equal(question.mediaData, 'u4YFjksxPg0');
+    assert.equal(question.youtubeStart, 895);
+
+    // Started once: a second press does not restart it or count it again.
+    host.emit('game:start-board', { roomCode });
+    assert.ok(await notEmitted(guest, 'game:questions-ready'));
+    assert.equal(boardPlays.length, before + 1);
+
+    // One round: it is the board its author wrote, not a Double Jeopardy round nobody did.
+    host.emit('game:round-end', { roomCode, round: 1 });
+    assert.ok(await notEmitted(guest, 'game:round-ended'));
+
+    // Its own Final, whatever the page sends.
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
+    const started = once(guest, 'game:final-jeopardy-started');
+    host.emit('game:start-final-jeopardy', { roomCode, finalJeopardy: { category: 'SOMETHING ELSE', answer: 'x', question: 'y' } });
+    assert.equal((await started).category, 'NO-SHAVE NOVEMBER');
+  });
+
+  await test('a board without a Final ends the game rather than inventing one', async (open) => {
+    const { host, guest, roomCode, hostId, guestId } = await openRoom();
+    open.push(host, guest);
+    await emitAck(host, 'room:set-board', { roomCode, slug: 'nofinal' });
+    const ready = once(guest, 'game:questions-ready');
+    host.emit('game:start-board', { roomCode });
+    await ready;
+    const room = gameManager.rooms.get(roomCode);
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
+    host.emit('game:start-final-jeopardy', { roomCode });
+    assert.ok(await notEmitted(guest, 'game:final-jeopardy-started'), 'no stock clue on somebody else\'s board');
+  });
+
+  await test('a board cannot be swapped once the game is under way', async (open) => {
+    const { host, guest, roomCode } = await openRoom();
+    open.push(host, guest);
+    await emitAck(host, 'room:set-board', { roomCode, slug: 'disney' });
+    const ready = once(guest, 'game:questions-ready');
+    host.emit('game:start-board', { roomCode });
+    await ready;
+    assert.equal((await emitAck(host, 'room:set-board', { roomCode, slug: 'nofinal' })).success, false);
+    assert.equal(gameManager.rooms.get(roomCode).board.slug, 'disney');
+  });
+
+  await test('a room with no board cannot be started as one', async (open) => {
+    const { host, guest, roomCode } = await openRoom();
+    open.push(host, guest);
+    host.emit('game:start-board', { roomCode });
+    assert.ok(await notEmitted(guest, 'game:questions-ready'));
   });
 
   console.log(`\n${passed} passed, ${failures.length} failed\n`);

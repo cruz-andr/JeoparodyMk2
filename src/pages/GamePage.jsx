@@ -41,7 +41,7 @@ export default function GamePage() {
   const location = useLocation();
   usePageTitle(`Room ${roomCode}`);
   const { leaveRoom, setReady, subscribe, isConnected } = useRoom(roomCode);
-  const { players, isHost, resetRoom, settings, updateSettings, roomType, clearHostModeAnswers } = useRoomStore();
+  const { players, isHost, resetRoom, settings, updateSettings, roomType, clearHostModeAnswers, board: roomBoard } = useRoomStore();
   // No field of gameStore is read here any more, but the lint pass is not
   // allowed to change behaviour, and dropping the hook would drop this
   // page's subscription to the store. Kept as a bare call for that reason.
@@ -300,6 +300,7 @@ export default function GamePage() {
         if (result.settings) room.updateSettings(result.settings);
         if (result.isHost !== undefined) room.setIsHost(result.isHost);
         if (result.type) room.setRoomType(result.type);
+        room.setBoard(result.board);
         applyResume(result);
       })
       .catch((err) => {
@@ -318,6 +319,11 @@ export default function GamePage() {
     // Settings updated by host
     const unsubSettingsUpdated = subscribe('room:settings-updated', ({ settings: newSettings }) => {
       updateSettings(newSettings);
+    });
+
+    // The host chose a community board for the room, or put it back.
+    const unsubBoardSet = subscribe('room:board-set', ({ board } = {}) => {
+      useRoomStore.getState().setBoard(board);
     });
 
     // Player reconnected after page reload
@@ -785,6 +791,7 @@ export default function GamePage() {
       unsubSettingsUpdated();
       unsubPlayerReconnected();
       unsubSetupStarted();
+      unsubBoardSet();
       unsubGenreSelected();
       unsubCategoriesSet();
       unsubCategoryEdited();
@@ -837,12 +844,14 @@ export default function GamePage() {
       const totalQuestions = questions.length * (questions[0]?.length || 0);
       if (revealedQuestions.size >= totalQuestions) {
         // Check if we should go to round 2
-        if (currentRound === 1 && settings?.enableDoubleJeopardy && isHost) {
+        /* A community board is the one round its author wrote, and its own
+           Final or none: no Double Jeopardy, and no stock clue in its name. */
+        if (currentRound === 1 && settings?.enableDoubleJeopardy && isHost && !roomBoard) {
           // Host triggers round 2
           socketClient.emit('game:round-end', { roomCode, round: 1 });
-        } else if (currentRound === 2 || !settings?.enableDoubleJeopardy) {
+        } else if (currentRound === 2 || !settings?.enableDoubleJeopardy || roomBoard) {
           // Game over - check for Final Jeopardy
-          if (settings?.enableFinalJeopardy && isHost) {
+          if (settings?.enableFinalJeopardy && isHost && (!roomBoard || roomBoard.hasFinal)) {
             socketClient.emit('game:start-final-jeopardy', {
               roomCode,
               /* The host's own final, when they wrote one. Without it the
@@ -856,7 +865,7 @@ export default function GamePage() {
         }
       }
     }
-  }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion, roomType]);
+  }, [revealedQuestions, questions, phase, roomCode, currentRound, settings, isHost, currentQuestion, roomType, roomBoard]);
 
   /* The local record of a room game, written once when the standings appear.
 
@@ -922,6 +931,18 @@ export default function GamePage() {
   const handleStartSetup = () => {
     socketClient.emit('game:start-setup', { roomCode });
     setPhase('setup');
+  };
+
+  // Host deals the community board the room was lent. The server has it.
+  const handleStartBoard = () => {
+    socketClient.emit('game:start-board', { roomCode });
+  };
+
+  // Host puts the room back to questions written for it.
+  const handleClearBoard = () => {
+    socketClient.setRoomBoard(roomCode, null)
+      .then(({ board }) => useRoomStore.getState().setBoard(board))
+      .catch((err) => setError(err.message));
   };
 
   // Host starts game directly (when questions are pre-loaded from HostPage)
@@ -1453,14 +1474,16 @@ export default function GamePage() {
           settings={settings}
           canEditSettings={isHost}
           onSettingsChange={handleSettingsChange}
-          onStart={isHostMode && questionsReady ? handleStartHostGame : handleStartSetup}
+          board={roomBoard}
+          onClearBoard={isHost ? handleClearBoard : null}
+          onStart={isHostMode && questionsReady ? handleStartHostGame : roomBoard ? handleStartBoard : handleStartSetup}
           onToggleReady={handleToggleReady}
           onKick={isHost ? handleKickPlayer : null}
           onLeave={handleLeave}
           isHostMode={isHostMode}
           startLabel={isHostMode
             ? (questionsReady ? 'Start the game' : 'Set up the game')
-            : 'Set up the game'}
+            : roomBoard ? 'Start the game' : 'Set up the game'}
           canStart={isHostMode ? isHost : allPlayersReady}
           waitingFor={players.length < 2
             ? 'Needs one more player'
