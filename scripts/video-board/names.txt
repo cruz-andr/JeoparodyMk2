@@ -1,0 +1,56 @@
+# Names the show's capitals hide, put back in clue text. One a line, or
+# "AS THE CARD HAS IT = As it should read". Add to it as episodes need.
+Disney
+Disneyland
+Walt Disney World
+Walt
+Mickey
+Minnie
+Donald
+Goofy
+Pluto
+Imagineer
+Imagineers
+Magic Kingdom
+Epcot
+Pirates of the Caribbean
+Florida
+FLORDIA = Florida
+California
+Pixar
+Marvel
+Star Wars
+Elsa
+Anna
+Olaf
+Hans
+Mulan
+Mushu
+Huns
+Riley
+Joy
+TRIPLEDENT = Triple Dent
+Bing Bong
+Bluey
+Bingo
+Bandit
+Chilli
+Billy
+Barnabas T. Bullion
+Tony Baxter
+TINKERBELL = Tinker Bell
+Tinker Bell
+Prince Charming
+Cinderella
+Tiana
+Ariel
+Simba
+Tarzan
+Moana
+Belle
+Aladdin
+Jasmine
+Hercules
+Stitch
+Woody
+Buzz Lightyear

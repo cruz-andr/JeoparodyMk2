@@ -1,0 +1,31 @@
+// The Mac's own text recognition (Vision), run on numbered frames:
+//   osascript -l JavaScript ocr.jxa <dir> <first> <last>
+// One JSON line a frame: s is the second (frame 00001.jpg is second 0), and
+// each line read is [text, top, left, width], all as fractions of the frame.
+ObjC.import('Vision');
+ObjC.import('Foundation');
+function run(argv) {
+  const dir = argv[0], first = +argv[1], last = +argv[2];
+  const out = [];
+  for (let n = first; n <= last; n++) {
+    const name = ('0000' + n).slice(-5) + '.jpg';
+    const url = $.NSURL.fileURLWithPath(dir + '/' + name);
+    const req = $.VNRecognizeTextRequest.alloc.init;
+    req.recognitionLevel = 0; // accurate
+    req.usesLanguageCorrection = false;
+    const handler = $.VNImageRequestHandler.alloc.initWithURLOptions(url, $({}));
+    handler.performRequestsError($([req]), null);
+    const res = req.results;
+    const lines = [];
+    for (let i = 0; i < res.count; i++) {
+      const o = res.objectAtIndex(i);
+      const c = o.topCandidates(1).objectAtIndex(0);
+      const b = o.boundingBox;
+      const r = (v) => +v.toFixed(3);
+      // Vision measures from the bottom left; these are from the top left.
+      lines.push([c.string.js, r(1 - b.origin.y - b.size.height), r(b.origin.x), r(b.size.width)]);
+    }
+    out.push(JSON.stringify({ s: n - 1, t: lines }));
+  }
+  return out.join('\n');
+}

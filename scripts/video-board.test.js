@@ -1,0 +1,120 @@
+/**
+ * The video board reader, run on Episode 40 as the Mac read it, against the
+ * board that was transcribed from the same video by hand and is on the site.
+ * Run with: node scripts/video-board.test.js
+ *
+ * The wording will not match letter for letter (the hand copy fixed the
+ * show's typos and its capitals), so a clue is right when it is in the right
+ * square and says nearly the same thing.
+ */
+import { readFileSync } from 'node:fs';
+import {
+  TODO, draftBoard, formatResponse, parseNames, parseOcr, readEpisode, sentenceCase, titleCase, todosIn, vote, youtubeId,
+} from './video-board/read.mjs';
+import { normalizeBoard, publishProblem, validateBoardStructure } from '../server/shared/boardFormat.js';
+
+let passed = 0;
+let failed = 0;
+const check = (name, ok, detail = '') => {
+  if (ok) passed++;
+  else failed++;
+  console.log(`${ok ? '  ok  ' : ' FAIL '} ${name}${!ok && detail ? `  ${detail}` : ''}`);
+};
+
+const at = (p) => new URL(p, import.meta.url);
+const frames = parseOcr(readFileSync(at('./video-board/fixtures/episode-40.ocr.jsonl'), 'utf8'));
+const published = JSON.parse(readFileSync(at('../server/houseBoards/disney-jeopardy-40.json'), 'utf8'));
+const names = parseNames(readFileSync(at('./video-board/names.txt'), 'utf8'));
+const VIDEO = 'u4YFjksxPg0';
+
+const words = (s) => new Set(String(s).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 1));
+function alike(a, b) {
+  const x = words(a), y = words(b);
+  return [...x].filter((w) => y.has(w)).length / Math.max(x.size, y.size);
+}
+
+// ---------- the pieces ----------
+
+check('a reading cut short counts toward the whole one',
+  vote([{ text: 'WHAT IS SWI' }, { text: 'WHAT IS SWI' }, { text: 'WHAT IS SWIFT/RIVER' }]).text === 'WHAT IS SWIFT/RIVER');
+check('one letter of difference is not cut short: the frames decide',
+  vote([{ text: 'BINGOY', clean: false }, { text: 'BINGOY' }, { text: 'BINGO' }, { text: 'BINGO' }]).text === 'BINGO');
+check('and a close count is not sure', !vote([{ text: 'A' }, { text: 'A' }, { text: 'B' }]).sure);
+check('a response comes out as the show would say it',
+  formatResponse('WHO IS EDDIE MURPHY') === 'Who is Eddie Murphy?'
+  && formatResponse('WHAT IS THE WESTERN RIVER EXPEDITION') === 'What is the Western River Expedition?'
+  && formatResponse("WHAT IS 'WHEN YOU WISH UPON A STAR'") === "What is 'When You Wish Upon a Star'?"
+  && formatResponse("WHAT IS 'ON WITH THE SHOW'") === "What is 'On with the Show'?",
+  formatResponse("WHAT IS 'WHEN YOU WISH UPON A STAR'"));
+check('titles keep their small words small', titleCase('MAKE A MAN OUT OF YOU') === 'Make a Man Out of You');
+check('a card reads as a sentence, with its names put back',
+  sentenceCase("DURING 'REFLECTION', MULAN PULLS OFF HER MAKEUP", [['Mulan', 'Mulan']])
+    === "During 'Reflection', Mulan pulls off her makeup");
+check('and a name the show misspells is put right', sentenceCase('FLORDIA', parseNames('FLORDIA = Florida')) === 'Florida');
+check('a YouTube link of any shape gives its video',
+  [`https://www.youtube.com/watch?v=${VIDEO}&t=4`, `https://youtu.be/${VIDEO}`, VIDEO].every((v) => youtubeId(v) === VIDEO)
+  && youtubeId('not a video') === null);
+
+// ---------- Episode 40, read ----------
+
+const read = readEpisode(frames);
+const { file, problems } = draftBoard(read, { youtube: VIDEO, names, show: 'Disney 100 Jeopardy', topic: 'disney' });
+const mine = file.board;
+const theirs = published.board;
+
+check('it knows which episode it is', read.episode === 40 && file.title === 'Disney 100 Jeopardy: Episode 40', file.title);
+check('five categories, from the rules card', read.columns === 5 && mine.categories.length === 5);
+check('their names, read off the board, the long one from its own title card',
+  mine.categories.map((c) => c.name).join('|') === theirs.categories.map((c) => c.name).join('|'),
+  mine.categories.map((c) => c.name).join('|'));
+
+const squares = theirs.categories.flatMap((cat, c) => cat.questions.map((q, r) => ({ c, r, q })));
+let placed = 0;
+let responses = 0;
+const wrong = [];
+for (const { c, r, q } of squares) {
+  const got = mine.categories[c].questions[r];
+  // In the right square: closer to this square's clue than to any other.
+  const best = squares.reduce((top, s) => (alike(got.answer, s.q.answer) > alike(got.answer, top.q.answer) ? s : top));
+  if (best.c === c && best.r === r && alike(got.answer, q.answer) >= 0.5) placed++;
+  else wrong.push(`${c},${r}: ${got.answer}`);
+  if (alike(got.question, q.question) >= 0.6) responses++;
+  else wrong.push(`${c},${r}: ${got.question} / ${q.question}`);
+}
+check('all 25 clues, each in its own square', placed === 25, `${placed}/25 ${wrong.slice(0, 3).join(' · ')}`);
+check('each with its response', responses === 25, `${responses}/25`);
+
+const grannies = mine.categories[2].questions[4];
+check("Bluey's $1000 plays the grannies clip, from the end of the card to the answer",
+  grannies.mediaType === 'youtube' && grannies.mediaData === VIDEO
+  && grannies.youtubeStart === 895 && grannies.youtubeEnd === 906,
+  JSON.stringify([grannies.youtubeStart, grannies.youtubeEnd]));
+const clips = mine.categories.flatMap((cat) => cat.questions).filter((q) => q.mediaType);
+check('and it is the only clip: the host talking is not one', clips.length === 1, `${clips.length} clips`);
+check('the eleven seconds off the parks card are put to a person instead',
+  problems.some((p) => p.where === 'BIG THUNDER MOUNTAIN $600' && /leaves the card/.test(p.note)));
+
+const fj = mine.finalJeopardy;
+check('Final Jeopardy: its category and response',
+  fj.category === 'NO-SHAVE NOVEMBER' && alike(fj.question, theirs.finalJeopardy.question) >= 0.6, JSON.stringify(fj));
+check('its picture, played from the board from the title card to the answer',
+  fj.mediaType === 'youtube' && Math.abs(fj.youtubeStart - theirs.finalJeopardy.youtubeStart) <= 2
+  && Math.abs(fj.youtubeEnd - theirs.finalJeopardy.youtubeEnd) <= 3,
+  JSON.stringify([fj.youtubeStart, fj.youtubeEnd]));
+check('and its clue is left to a person, since a picture has no words to read',
+  fj.answer.startsWith(TODO) && problems.some((p) => p.blocking && p.where === 'Final Jeopardy'));
+
+// ---------- publishing ----------
+
+check('a draft with a TODO in it will not publish', todosIn(file).length === 1, todosIn(file).join(' · '));
+const finished = { ...file, board: { ...mine, finalJeopardy: { ...fj, answer: theirs.finalJeopardy.answer } } };
+check('written, it passes every check the server makes on a house board',
+  !todosIn(finished).length
+  && validateBoardStructure(finished.board, { topic: 'disney' }).valid
+  && publishProblem({ title: finished.title, board: normalizeBoard(finished.board, { topic: 'disney' }), topic: 'disney' }) === null);
+
+const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
+check('names given are the names used', told.names.join('') === 'ABCDE');
+
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);
