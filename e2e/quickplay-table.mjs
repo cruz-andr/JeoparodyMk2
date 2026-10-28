@@ -158,7 +158,10 @@ try {
     await a.until(`!document.querySelector('.mp-question-overlay') || !!document.querySelector('.buzzer-button')`, { timeout: 60000 });
     if ((await text(a, '.turn-indicator-subtle')).includes('Your turn')) await a.click('.question-cell:not(.revealed)');
     await a.until("!!document.querySelector('.buzzer-button')", { timeout: 60000 });
-    await a.click('.buzzer-button');
+    /* Space, the game's own keyboard buzz. The button springs in from nothing,
+       and a click aimed at it the moment it appears can land while it is
+       still too small to hit, which buzzed nobody and failed in CI. */
+    await a.evaluate("window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))");
     await a.until("!!document.querySelector('.typed-response-input') || document.body.textContent.includes('buzzed first')", { timeout: 10000 });
     ours = await a.evaluate("!!document.querySelector('.typed-response-input')");
     if (!ours) {
