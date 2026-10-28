@@ -1072,6 +1072,44 @@ await test('a finished Disney board can be featured', async () => {
   }
 });
 
+// ============================================================ the site's own
+
+await test("the site's own boards go up when it starts: featured, and by nobody", async () => {
+  const PORT4 = PORT + 3;
+  const house = spawn('node', [join(here, '..', 'index.js')], {
+    env: {
+      ...process.env,
+      SERVER_PORT: String(PORT4),
+      DATABASE_PATH: DB,
+      JWT_SECRET: 'test-secret-not-a-real-one',
+      NODE_ENV: 'test',
+      HOUSE_BOARDS_DIR: join(here, 'fixtures', 'houseBoards'),
+      FEATURED_SLUGS: '',
+    },
+    stdio: 'ignore',
+  });
+  try {
+    for (let i = 0; i < 100; i += 1) {
+      try {
+        if ((await fetch(`http://127.0.0.1:${PORT4}/health`)).ok) break;
+      } catch { /* not up yet */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    const featured = await (await fetch(`http://127.0.0.1:${PORT4}/api/boards?row=featured`)).json();
+    assert.equal(featured.curated, true, 'featured by its own file, no FEATURED_SLUGS needed');
+    assert.deepEqual(featured.boards.map((b) => b.slug), ['house-test-40']);
+    assert.equal(featured.boards[0].author, null, 'no author on the card');
+
+    const one = await (await fetch(`http://127.0.0.1:${PORT4}/api/boards/house-test-40`)).json();
+    assert.equal(one.author, null, 'nor on its page');
+    assert.equal(one.isOwner, false);
+    assert.equal(one.board.categories.length, 5);
+    assert.equal(one.topic, 'disney');
+  } finally {
+    house.kill('SIGKILL');
+  }
+});
+
 // ============================================================ report
 
 server.kill();

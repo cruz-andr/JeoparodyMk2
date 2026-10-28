@@ -23,11 +23,13 @@ import dailyRoutes from './routes/daily.js';
 import { initializeSocketHandlers } from './socket/index.js';
 
 // Import database initialization
-import { initializeDatabase } from './config/database.js';
+import { initializeDatabase, getDatabase } from './config/database.js';
+import { publishHouseBoards } from './services/houseBoards.js';
+import { fileURLToPath } from 'node:url';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
-import { info as logInfo, error as logError, fatal as logFatal } from './utils/log.js';
+import { info as logInfo, warn as logWarn, error as logError, fatal as logFatal } from './utils/log.js';
 
 // Import J-Archive scraper for Daily Challenge
 import { getDailyChallenge } from './services/jarchiveScraper.js';
@@ -231,6 +233,17 @@ async function startServer() {
     // Initialize database
     await initializeDatabase();
     logInfo({ msg: 'Database initialized' });
+
+    /* The site's own boards, from the files that ship with it. One that will
+       not publish is a warning, not a reason to stay down. A test server
+       starts with none unless it names a folder, so the real ones do not
+       turn up in every suite's Featured row. */
+    const houseDir = process.env.HOUSE_BOARDS_DIR
+      || (process.env.NODE_ENV === 'test' ? null : fileURLToPath(new URL('./houseBoards', import.meta.url)));
+    for (const result of publishHouseBoards(getDatabase(), houseDir)) {
+      if (result.error) logWarn({ msg: 'House board not published', slug: result.slug, reason: result.error });
+      else logInfo({ msg: 'House board', slug: result.slug, action: result.action });
+    }
 
     // Start HTTP server
     httpServer.listen(PORT, '0.0.0.0', () => {

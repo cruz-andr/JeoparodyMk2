@@ -1,0 +1,347 @@
+{
+  "title": "Disney 100 Jeopardy: Episode 40",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 40, 11/11/23), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": true,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "MULAN",
+        "questions": [
+          {
+            "points": 200,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Mushu is voiced by this actor",
+            "question": "Who is Eddie Murphy?"
+          },
+          {
+            "points": 400,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "During 'Reflection', Mulan pulls off perhaps her most impressive feat by successfully removing all of her makeup in this many wipes of her face",
+            "question": "What is 2?"
+          },
+          {
+            "points": 600,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Match game! Using the lyrics from 'I'll Make a Man Out of You', match each word with the aspect of nature it's associated with: 1) Swift, 2) Force, 3) Strength. A) Raging fire, B) Coursing river, C) Great typhoon",
+            "question": "What is swift/river, force/typhoon, strength/fire?"
+          },
+          {
+            "points": 800,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Mulan uses a cannon to start one of these atop a mountain and wipe out the Huns",
+            "question": "What is an avalanche?"
+          },
+          {
+            "points": 1000,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The name of Mulan's dog",
+            "question": "Who is Little Brother?"
+          }
+        ]
+      },
+      {
+        "name": "INSIDE OUT",
+        "questions": [
+          {
+            "points": 200,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The five emotions showcased inside Riley's head",
+            "question": "What are Joy, Sadness, Anger, Disgust and Fear?"
+          },
+          {
+            "points": 400,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Riley's favorite sport",
+            "question": "What is hockey?"
+          },
+          {
+            "points": 600,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "This character sacrifices themselves in an effort to help Joy escape the memory dump area of Riley's brain",
+            "question": "Who is Bing Bong?"
+          },
+          {
+            "points": 800,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "During a family dinner one night, Riley's mom thinks back to a memory she had with a helicopter pilot from this country",
+            "question": "What is Brazil?"
+          },
+          {
+            "points": 1000,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Throughout the film, Riley's brain sporadically remembers a jingle for Triple Dent, a company that makes this",
+            "question": "What is gum?"
+          }
+        ]
+      },
+      {
+        "name": "BLUEY",
+        "questions": [
+          {
+            "points": 200,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The country the show originated from",
+            "question": "What is Australia?"
+          },
+          {
+            "points": 400,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The name of Bluey's little sister",
+            "question": "Who is Bingo?"
+          },
+          {
+            "points": 600,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "He's more commonly known as Dad, but Bluey's father's name is this",
+            "question": "Who is Bandit?"
+          },
+          {
+            "points": 800,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Bluey's mom's occupation",
+            "question": "What is airport security?"
+          },
+          {
+            "points": 1000,
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "u4YFjksxPg0",
+            "youtubeStart": 895,
+            "youtubeEnd": 906,
+            "audioOnly": false,
+            "altText": "Bluey and Bingo dressed as grannies, driving a toy car",
+            "answer": "Seen here are Bluey and Bingo dressed as two grannies who go by these two names",
+            "question": "Who are Rita and Janet?"
+          }
+        ]
+      },
+      {
+        "name": "BIG THUNDER MOUNTAIN",
+        "questions": [
+          {
+            "points": 200,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "'Billy' the goat has become a famous mascot for the coaster. You can spot him chewing a piece of this as you zoom by him aboard your train",
+            "question": "What is dynamite?"
+          },
+          {
+            "points": 400,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Fill in the blank: before riding the coaster, the safety spiel warns you that Big Thunder Mountain is the wildest ride in the ____",
+            "question": "What is wilderness?"
+          },
+          {
+            "points": 600,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The number of Disney parks with a Big Thunder Mountain roller coaster",
+            "question": "What is 4?"
+          },
+          {
+            "points": 800,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Barnabas T. Bullion is the main character featured in the back story of Big Thunder Mountain. His portrait and likeness are modeled after this former Imagineer, who many consider the brains behind the famous roller coaster",
+            "question": "Who is Tony Baxter?"
+          },
+          {
+            "points": 1000,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The idea and thrill ride of Big Thunder Mountain originated from this planned, but never built, Magic Kingdom attraction. The attraction was ultimately shelved to build Florida's version of Pirates of the Caribbean",
+            "question": "What is the Western River Expedition?"
+          }
+        ]
+      },
+      {
+        "name": "ONCE UPON A STUDIO",
+        "questions": [
+          {
+            "points": 200,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The song the entire cast of characters sing at the end of the short",
+            "question": "What is 'When You Wish Upon a Star'?"
+          },
+          {
+            "points": 400,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "Despite being frozen by Elsa at one point, this Disney character does manage to make it into the group photo at the end",
+            "question": "Who is Hans?"
+          },
+          {
+            "points": 600,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "This character grabs Prince Charming's shoe after he loses it while walking down a staircase",
+            "question": "Who is Max?"
+          },
+          {
+            "points": 800,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "After Mickey and Minnie talk to Tinker Bell, this is the first character in the film we see emerge from a picture on a wall",
+            "question": "Who is Tiana?"
+          },
+          {
+            "points": 1000,
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null,
+            "answer": "The final line Mickey says to Walt's photo before heading for the group photo",
+            "question": "What is 'On with the show'?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "NO-SHAVE NOVEMBER",
+      "answer": "The Disney dad who wore this moustache",
+      "question": "Who is Tarzan's dad?",
+      "mediaType": "youtube",
+      "mediaData": "u4YFjksxPg0",
+      "youtubeStart": 1068,
+      "youtubeEnd": 1088,
+      "audioOnly": false,
+      "altText": "A close-up of a thick dark moustache"
+    }
+  }
+}

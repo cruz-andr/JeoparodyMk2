@@ -1,0 +1,166 @@
+{
+  "title": "House Test 40",
+  "description": "A house board, for the tests.",
+  "topic": "disney",
+  "featured": true,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "MULAN",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "MULAN clue 200",
+            "question": "What is MULAN?"
+          },
+          {
+            "points": 400,
+            "answer": "MULAN clue 400",
+            "question": "What is MULAN?"
+          },
+          {
+            "points": 600,
+            "answer": "MULAN clue 600",
+            "question": "What is MULAN?"
+          },
+          {
+            "points": 800,
+            "answer": "MULAN clue 800",
+            "question": "What is MULAN?"
+          },
+          {
+            "points": 1000,
+            "answer": "MULAN clue 1000",
+            "question": "What is MULAN?"
+          }
+        ]
+      },
+      {
+        "name": "INSIDE OUT",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "INSIDE OUT clue 200",
+            "question": "What is INSIDE OUT?"
+          },
+          {
+            "points": 400,
+            "answer": "INSIDE OUT clue 400",
+            "question": "What is INSIDE OUT?"
+          },
+          {
+            "points": 600,
+            "answer": "INSIDE OUT clue 600",
+            "question": "What is INSIDE OUT?"
+          },
+          {
+            "points": 800,
+            "answer": "INSIDE OUT clue 800",
+            "question": "What is INSIDE OUT?"
+          },
+          {
+            "points": 1000,
+            "answer": "INSIDE OUT clue 1000",
+            "question": "What is INSIDE OUT?"
+          }
+        ]
+      },
+      {
+        "name": "BLUEY",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "BLUEY clue 200",
+            "question": "What is BLUEY?"
+          },
+          {
+            "points": 400,
+            "answer": "BLUEY clue 400",
+            "question": "What is BLUEY?"
+          },
+          {
+            "points": 600,
+            "answer": "BLUEY clue 600",
+            "question": "What is BLUEY?"
+          },
+          {
+            "points": 800,
+            "answer": "BLUEY clue 800",
+            "question": "What is BLUEY?"
+          },
+          {
+            "points": 1000,
+            "answer": "BLUEY clue 1000",
+            "question": "What is BLUEY?"
+          }
+        ]
+      },
+      {
+        "name": "BIG THUNDER MOUNTAIN",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "BIG THUNDER MOUNTAIN clue 200",
+            "question": "What is BIG THUNDER MOUNTAIN?"
+          },
+          {
+            "points": 400,
+            "answer": "BIG THUNDER MOUNTAIN clue 400",
+            "question": "What is BIG THUNDER MOUNTAIN?"
+          },
+          {
+            "points": 600,
+            "answer": "BIG THUNDER MOUNTAIN clue 600",
+            "question": "What is BIG THUNDER MOUNTAIN?"
+          },
+          {
+            "points": 800,
+            "answer": "BIG THUNDER MOUNTAIN clue 800",
+            "question": "What is BIG THUNDER MOUNTAIN?"
+          },
+          {
+            "points": 1000,
+            "answer": "BIG THUNDER MOUNTAIN clue 1000",
+            "question": "What is BIG THUNDER MOUNTAIN?"
+          }
+        ]
+      },
+      {
+        "name": "ONCE UPON A STUDIO",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "ONCE UPON A STUDIO clue 200",
+            "question": "What is ONCE UPON A STUDIO?"
+          },
+          {
+            "points": 400,
+            "answer": "ONCE UPON A STUDIO clue 400",
+            "question": "What is ONCE UPON A STUDIO?"
+          },
+          {
+            "points": 600,
+            "answer": "ONCE UPON A STUDIO clue 600",
+            "question": "What is ONCE UPON A STUDIO?"
+          },
+          {
+            "points": 800,
+            "answer": "ONCE UPON A STUDIO clue 800",
+            "question": "What is ONCE UPON A STUDIO?"
+          },
+          {
+            "points": 1000,
+            "answer": "ONCE UPON A STUDIO clue 1000",
+            "question": "What is ONCE UPON A STUDIO?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "NO-SHAVE NOVEMBER",
+      "answer": "This moustache",
+      "question": "Who is Tarzan's dad?"
+    }
+  }
+}

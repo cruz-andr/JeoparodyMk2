@@ -92,6 +92,9 @@ export async function initializeDatabase() {
     /* How many categories a board has: six, or five on a Disney board. A card
        needs it to say how many clues finish the board and to draw it. */
     ['boards', 'category_count', 'INTEGER NOT NULL DEFAULT 6'],
+    /* Put in the Featured row by the site itself: a house board's file says
+       so (services/houseBoards.js). FEATURED_SLUGS still picks any other. */
+    ['boards', 'featured', 'INTEGER NOT NULL DEFAULT 0'],
     // Google's profile picture, when they sign in that way.
     ['users', 'avatar_url', 'TEXT'],
     /* The archive. game_history was created as one row per room with the

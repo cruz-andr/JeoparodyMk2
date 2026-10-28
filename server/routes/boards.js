@@ -216,12 +216,14 @@ function featuredSlugs() {
     .split(',').map((slug) => slug.trim()).filter(Boolean).slice(0, 24);
 }
 
+/* A finished board: the full thirty, or a five-category Disney board's
+   twenty-five. */
+const FINISHED = `(b.clue_count = ${CLUE_COUNT} OR (b.topic = 'disney' AND b.clue_count = ${CLUE_COUNT - ROW_COUNT}))`;
+
 const ROWS = {
   /* Featured falls back to the most played finished boards when nothing is
      picked, so the row is never an empty shelf next to two full ones. */
-  /* A finished board: the full thirty, or a five-category Disney board's
-     twenty-five. */
-  featured: `AND (b.clue_count = ${CLUE_COUNT} OR (b.topic = 'disney' AND b.clue_count = ${CLUE_COUNT - ROW_COUNT})) ORDER BY b.plays DESC, b.published_at DESC`,
+  featured: `AND ${FINISHED} ORDER BY b.plays DESC, b.published_at DESC`,
   popular: 'ORDER BY b.plays DESC, b.published_at DESC',
   new: 'ORDER BY b.published_at DESC',
 };
@@ -242,10 +244,21 @@ router.get('/', optionalAuth, (req, res, next) => {
        judgement, not a number. */
     let order = ROWS[row];
     const picked = row === 'featured' ? featuredSlugs() : [];
-    if (picked.length) {
-      where.push(`b.slug IN (${picked.map(() => '?').join(',')})`);
+    /* And the house's own: a house board's file can put it in the row, so a
+       collab is featured by the same commit that publishes it. */
+    const flagged = row === 'featured' && Boolean(getDatabase().prepare(
+      "SELECT 1 FROM boards WHERE featured = 1 AND visibility = 'public' LIMIT 1"
+    ).get());
+    const curated = picked.length > 0 || flagged;
+    if (curated) {
+      where.push(FINISHED);
+      where.push(picked.length
+        ? `(b.featured = 1 OR b.slug IN (${picked.map(() => '?').join(',')}))`
+        : 'b.featured = 1');
       params.push(...picked);
-      order = `ORDER BY CASE b.slug ${picked.map((_, i) => `WHEN ? THEN ${i}`).join(' ')} END`;
+      order = picked.length
+        ? `ORDER BY CASE b.slug ${picked.map((_, i) => `WHEN ? THEN ${i}`).join(' ')} ELSE ${picked.length} END, b.published_at DESC`
+        : 'ORDER BY b.published_at DESC';
     }
     if (q) {
       /* Title or author. Searching inside `data` would mean a full scan over
@@ -262,7 +275,7 @@ router.get('/', optionalAuth, (req, res, next) => {
       LIMIT ?
     `).all(...params, ...(picked.length ? picked : []), limit);
 
-    res.json({ row, boards: rows.map(cardFromRow), curated: picked.length > 0 });
+    res.json({ row, boards: rows.map(cardFromRow), curated });
   } catch (err) {
     next(err);
   }

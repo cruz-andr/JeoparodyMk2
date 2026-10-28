@@ -75,7 +75,7 @@ function Card({ board, onOpen }) {
           {board.author?.signature ? (
             <img className="bb-card-sig" src={board.author.signature} alt="" />
           ) : null}
-          <span>{board.author?.username ? `@${board.author.username}` : 'Unknown'}</span>
+          {board.author?.username && <span>@{board.author.username}</span>}
           <span className="bb-card-plays">
             {board.plays.toLocaleString()} {board.plays === 1 ? 'play' : 'plays'}
           </span>
