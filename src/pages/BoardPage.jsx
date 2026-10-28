@@ -203,8 +203,13 @@ export default function BoardPage() {
                   alt={board.author.username}
                 />
               ) : null}
-              <span>{board.author?.username ? `@${board.author.username}` : 'Unknown'}</span>
-              <span className="board-by-sep" />
+              {/* The site's own boards have no author to name. */}
+              {board.author?.username && (
+                <>
+                  <span>@{board.author.username}</span>
+                  <span className="board-by-sep" />
+                </>
+              )}
               <span>{written} of {total} clues</span>
               {board.visibility === 'public' && (
                 <>
