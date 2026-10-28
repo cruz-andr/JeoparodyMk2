@@ -106,10 +106,13 @@ try {
   const t0 = Date.now();
   /* Or nobody knew it, every house player passed or the clock ran out, and
      the clue sits on Continue: that is a clue played too. */
-  await a.until(`!document.querySelector('.mp-question-overlay') || !!document.querySelector('.correct-answer-reveal')
+  await a.until(`!document.querySelector('.mp-question-overlay') || !!document.querySelector('.typed-result')
     || document.body.textContent.includes('buzzed first')
     || [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Continue')`, { timeout: 45000 });
-  const rangIn = await a.evaluate("document.body.textContent.includes('buzzed first')");
+  /* Rang in: still holding the buzz, or the verdict card says who answered
+     and what they said. */
+  const rangIn = await a.evaluate(`document.body.textContent.includes('buzzed first')
+    || / said: | ran out of time/.test(document.querySelector('.typed-said')?.textContent ?? '')`);
   const nobodyKnew = await a.evaluate("[...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Continue')");
   check('a house player rang in on it, or nobody knew it', rangIn || nobodyKnew,
     `${((Date.now() - t0) / 1000).toFixed(1)}s${rangIn ? '' : ', nobody knew it'}`);
@@ -162,8 +165,8 @@ try {
        and a click aimed at it the moment it appears can land while it is
        still too small to hit, which buzzed nobody and failed in CI. */
     await a.evaluate("window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))");
-    await a.until("!!document.querySelector('.typed-response-input') || document.body.textContent.includes('buzzed first')", { timeout: 10000 });
-    ours = await a.evaluate("!!document.querySelector('.typed-response-input')");
+    await a.until("!!document.querySelector('.typed-input') || document.body.textContent.includes('buzzed first')", { timeout: 10000 });
+    ours = await a.evaluate("!!document.querySelector('.typed-input')");
     if (!ours) {
       /* Lost it. The clue ends with the response shown, or on Continue,
          which waits for us like everyone else. */
@@ -180,11 +183,12 @@ try {
     check('and no Reveal Answer, and no "I got it right"',
       !(await a.evaluate("[...document.querySelectorAll('button')].some(b => /Reveal Answer|I Got It/.test(b.textContent))")));
     check('nor any correct response anywhere on the page',
-      !(await a.evaluate("document.body.innerText.includes('Correct Response')")));
-    await a.type('.typed-response-input', 'xyzzy plugh');
-    await a.click('.typed-response-submit');
-    await a.until("!!document.querySelector('.said-note')", { timeout: 10000 });
-    check('the room is shown what we typed', (await text(a, '.said-note')).includes('xyzzy plugh'));
+      !(await a.evaluate("/correct response/i.test(document.body.innerText)")));
+    await a.type('.typed-input', 'xyzzy plugh');
+    await a.click('.typed-submit');
+    await a.until("!!document.querySelector('.typed-said')", { timeout: 10000 });
+    check('the room is shown what we typed, on the verdict card', (await text(a, '.typed-said')).includes('xyzzy plugh'));
+    check('marked wrong, for what the clue was worth', /Incorrect -\$/.test(await text(a, '.typed-badge')));
     await a.shot('quickplay-typed.png');
   }
 

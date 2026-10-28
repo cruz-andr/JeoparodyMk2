@@ -122,6 +122,34 @@ try {
   })()`);
   check("the clue's picture is up for the room, beside the clue", side);
   await g.shot('room-board-clue.png');
+
+  // ---------- typed, graded, and the same verdict on every screen ----------
+  check('nobody in the room is offered "Reveal Answer" or "I got it right"',
+    !(await h.evaluate("[...document.querySelectorAll('button')].some((b) => /Reveal Answer|I Got It/i.test(b.textContent))"))
+    && !(await g.evaluate("[...document.querySelectorAll('button')].some((b) => /Reveal Answer|I Got It/i.test(b.textContent))")));
+  await g.until("!!document.querySelector('.buzzer-button')", { timeout: 15000 });
+  await g.click('.buzzer-button');
+  await g.until("!!document.querySelector('.typed-input')", { timeout: 10000 });
+  check('the friend who rang in gets a box to type in', true);
+  check('and nobody has been sent the response', !(await h.evaluate("/what is bluey/i.test(document.body.innerText)"))
+    && !(await g.evaluate("/what is bluey/i.test(document.body.innerText)")));
+  await sleep(300);
+  await g.type('.typed-input', 'bluey');
+  await g.click('.typed-submit');
+  await h.until("!!document.querySelector('.typed-badge')", { timeout: 10000 });
+  await g.until("!!document.querySelector('.typed-badge')", { timeout: 10000 });
+  const verdict = async (b) => b.evaluate(`({
+    badge: document.querySelector('.typed-badge')?.textContent.trim(),
+    said: document.querySelector('.typed-said')?.textContent.trim(),
+    truth: document.querySelector('.typed-truth')?.textContent.trim(),
+  })`);
+  const [mine, theirs] = [await verdict(g), await verdict(h)];
+  check('graded right, for what the clue was worth, on both screens',
+    mine.badge === 'Correct +$200' && theirs.badge === 'Correct +$200', `${mine.badge} / ${theirs.badge}`);
+  check('the friend sees what they said', /^You said: bluey$/.test(mine.said ?? ''), mine.said);
+  check('and so does the host', /said: bluey$/.test(theirs.said ?? '') && !/^You/.test(theirs.said ?? ''), theirs.said);
+  check('with the correct response, now the clue is over', /What is BLUEY\?/i.test(mine.truth ?? '') && /What is BLUEY\?/i.test(theirs.truth ?? ''));
+  await h.shot('room-board-verdict.png');
 } catch (err) {
   bad++;
   console.log(' THREW', err.message);

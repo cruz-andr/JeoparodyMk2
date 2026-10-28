@@ -184,9 +184,93 @@ test('a quickplay Daily Double is typed too, and the response shown after', () =
   assert.equal(t.room.players.get('p0').score, 1600);
 });
 
-test('a room whose players judge themselves is not graded this way', () => {
+// ------------------------------------------------------------ a private room
+
+test('a private room types its response and is graded the same way', () => {
   const t = mkTable({ type: 'multiplayer' });
   t.buzzedIn();
+  t.actions.submitResponse('p1', t.code, 'Batman');
+  const [result] = t.sent(t.toPlayers, 'game:answer-result');
+  assert.equal(result.payload.correct, true);
+  assert.equal(result.payload.said, 'Batman');
+  assert.equal(t.room.players.get('p1').score, 200);
+});
+
+test('nobody in a private room is sent the responses, not even whoever opened it', () => {
+  const t = mkTable({ type: 'multiplayer' });
+  const [ready] = t.sent(t.toHouse, 'game:questions-ready');
+  assert.ok(ready.payload.questions.flat().every((q) => q.question === undefined), 'the board, to everyone');
+  t.actions.selectQuestion('p0', t.code, 0, 0);
+  for (const list of [t.toPlayers, t.toHouse]) {
+    assert.equal(t.sent(list, 'game:question-selected')[0].payload.question.question, undefined);
+  }
+  const gs = t.gm.reconnectPlayer({ id: 'again', sessionId: 'p0' }, t.code).gameState;
+  assert.equal(gs.currentQuestion.question, undefined, 'nor its opener on a reload');
+});
+
+test("a private room's answer clock is long enough to type in", () => {
+  // Seven seconds was for saying it; typing gets at least twelve.
+  const t = mkTable({ type: 'multiplayer', settings: { answerTimeLimit: 7000 } });
+  t.buzzedIn();
+  t.clock.advance(11000);
+  assert.equal(t.sent(t.toPlayers, 'game:answer-result').length, 0, 'still typing at eleven seconds');
+  t.clock.advance(1500);
+  const [result] = t.sent(t.toPlayers, 'game:answer-result');
+  assert.equal(result.payload.timeout, true);
+  assert.equal(result.payload.correct, false);
+});
+
+test('quickplay keeps its own answer clock', () => {
+  const t = mkTable({ settings: { answerTimeLimit: 9000 } });
+  t.buzzedIn();
+  t.clock.advance(9500);
+  assert.equal(t.sent(t.toPlayers, 'game:answer-result')[0]?.payload.timeout, true);
+});
+
+test('a close spelling gets a fresh clock for its second go, and the page is told how long', () => {
+  const t = mkTable({ type: 'multiplayer' });
+  t.buzzedIn();
+  t.clock.advance(10000);
+  t.actions.submitResponse('p1', t.code, 'Brooce Wain');
+  assert.equal(t.toOne[0].payload.ms, 12000);
+  t.clock.advance(10000);
+  assert.equal(t.sent(t.toPlayers, 'game:answer-result').length, 0,
+    'twenty seconds in, but ten into the retry');
+  t.clock.advance(2500);
+  assert.equal(t.sent(t.toPlayers, 'game:answer-result')[0]?.payload.timeout, true, 'then the retry runs out');
+});
+
+test('a Daily Double in a graded room has a clock: reading time, then typing time', () => {
+  const t = mkTable({ type: 'multiplayer', settings: { enableDailyDouble: true } });
+  t.room.gameState.dailyDoubles = [{ categoryIndex: 0, pointIndex: 0 }];
+  t.room.players.get('p0').score = 1000;
+  t.actions.selectQuestion('p0', t.code, 0, 0);
+  t.actions.dailyDoubleWager('p0', t.code, 600);
+  t.clock.advance(21000);
+  assert.equal(t.sent(t.toPlayers, 'game:daily-double-result').length, 0, 'ten to read and twelve to type');
+  t.clock.advance(1500);
+  const [result] = t.sent(t.toPlayers, 'game:daily-double-result');
+  assert.equal(result.payload.timeout, true);
+  assert.equal(result.payload.correct, false);
+  assert.equal(t.room.players.get('p0').score, 400, 'the wager lost');
+});
+
+test('answering a Daily Double in time stops its clock', () => {
+  const t = mkTable({ type: 'multiplayer', settings: { enableDailyDouble: true } });
+  t.room.gameState.dailyDoubles = [{ categoryIndex: 0, pointIndex: 0 }];
+  t.room.players.get('p0').score = 1000;
+  t.actions.selectQuestion('p0', t.code, 0, 0);
+  t.actions.dailyDoubleWager('p0', t.code, 600);
+  t.actions.submitResponse('p0', t.code, 'Batman');
+  t.clock.advance(60000);
+  assert.equal(t.sent(t.toPlayers, 'game:daily-double-result').length, 1, 'one result, not a second on the clock');
+  assert.equal(t.room.players.get('p0').score, 1600);
+});
+
+test("a hosted room's host still judges: no grading there", () => {
+  const t = mkTable({ type: 'host' });
+  t.actions.selectQuestion('p0', t.code, 0, 0);
+  t.room.gameState.buzzedPlayerId = 'p1';
   assert.equal(t.actions.submitResponse('p1', t.code, 'Batman'), null);
 });
 

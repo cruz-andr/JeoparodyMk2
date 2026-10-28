@@ -1437,7 +1437,12 @@ export class GameStateManager {
      grades, because the players are strangers and their word on whether
      they were right is not worth taking. */
   answersAreTyped(room) {
-    return room?.type === 'host' || room?.type === 'quickplay';
+    return room?.type === 'host' || room?.type === 'quickplay' || room?.type === 'multiplayer';
+  }
+
+  /** A room whose players type their response and the server grades it. */
+  gradesTyped(room) {
+    return room?.type === 'quickplay' || room?.type === 'multiplayer';
   }
 
   /**
