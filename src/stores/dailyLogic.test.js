@@ -26,6 +26,10 @@ import {
   formatDuration,
   elapsedMs,
   markEmoji,
+  answerHint,
+  sixerEarned,
+  sixerScore,
+  sixerTop,
 } from './dailyLogic.js';
 
 let passed = 0;
@@ -518,6 +522,53 @@ test('an archive run is only picked up again by the daily it belongs to', () => 
   assert.equal(isArchiveRunFor(run, { date: '2026-03-01', format: 'board' }), false, 'the other daily');
   assert.equal(isArchiveRunFor(run, { date: '2026-03-02', format: 'sixer' }), false, 'another day');
   assert.equal(isArchiveRunFor({ ...run, questions: [] }, { date: '2026-03-01', format: 'sixer' }), false, 'empty');
+});
+
+// ------------------------------------------------------------ the Sixer in dollars
+
+test('a hint is the shape of the answer: first letters and blanks', () => {
+  assert.equal(answerHint('Moby Dick'), 'M _ _ _   D _ _ _');
+  assert.equal(answerHint('(Ludwig van) Beethoven'), 'B _ _ _ _ _ _ _ _', 'the main form, not the optional part');
+  assert.equal(answerHint('Bruce Wayne (Batman)'), 'B _ _ _ _   W _ _ _ _');
+  assert.equal(answerHint('the Chunnel (or Channel Tunnel)'), 'the   C _ _ _ _ _ _', 'an article is shown whole');
+  assert.equal(answerHint('"Maggie\'s Farm"'), "M _ _ _ _ _ ' _   F _ _ _", 'quotes go, apostrophes stay');
+  assert.equal(answerHint('Soviet Union/Russia'), 'S _ _ _ _ _   U _ _ _ _', 'one side of a slash');
+});
+
+test('a short one-word answer gets blanks only, since its first letter is most of it', () => {
+  assert.equal(answerHint('Nile'), '_ _ _ _');
+  assert.equal(answerHint('Leo'), '_ _ _');
+  assert.equal(answerHint('Paris'), 'P _ _ _ _');
+});
+
+test('a clue pays its value first time, half with the hint, nothing otherwise, and never takes money away', () => {
+  assert.equal(sixerEarned({ revealed: true, correct: true }, 1200), 1200);
+  assert.equal(sixerEarned({ revealed: true, correct: true, hinted: true }, 1200), 600);
+  assert.equal(sixerEarned({ revealed: true, correct: false, hinted: true }, 1200), 0);
+  assert.equal(sixerEarned({ revealed: true, passed: true }, 1200), 0);
+  assert.equal(sixerEarned({ revealed: false }, 1200), 0);
+});
+
+test('a run is the sum of what its clues paid, out of what they were worth', () => {
+  const questions = [400, 400, 800, 800, 1200, 1200].map((value) => ({ value }));
+  const answers = [
+    { revealed: true, correct: true },
+    { revealed: true, correct: true, hinted: true },
+    { revealed: true, correct: false, hinted: true },
+    { revealed: true, passed: true },
+    { revealed: true, correct: true },
+    { revealed: true, correct: true, hinted: true },
+  ];
+  assert.equal(sixerScore(answers, questions), 400 + 200 + 1200 + 600);
+  assert.equal(sixerTop(questions), 4800);
+});
+
+test('a clue got with the hint has a mark and a square of its own', () => {
+  assert.equal(answerMark({ revealed: true, correct: true, hinted: true }), 'hinted');
+  assert.equal(answerMark({ revealed: true, correct: false, hinted: true }), 'wrong');
+  assert.equal(markEmoji('hinted'), '\u{1F7E8}');
+  assert.notEqual(markEmoji('hinted', true), markEmoji('correct', true));
+  assert.notEqual(markEmoji('hinted', true), markEmoji('wrong', true));
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

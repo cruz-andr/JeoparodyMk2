@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useDailyStore } from '../stores/dailyStore';
 import { useUserStore } from '../stores';
 import { canPlayDate, toDateString } from '@shared/archiveWindow.js';
-import { isArchiveRunFor, liveStreak } from '../stores/dailyLogic';
+import { answerHint, isArchiveRunFor, liveStreak, sixerEarned, sixerScore } from '../stores/dailyLogic';
 import { getChallengeForDate, getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
 import { useAudio } from '../hooks';
@@ -14,6 +14,22 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import './DailyPage.css';
 
 const FORMAT = 'sixer';
+
+/* The Sixer climbs through the week, and a player should know which day of
+   the climb they are on before the first clue. Monday first. */
+const WEEK_NOTE = [
+  'The gentlest Sixer of the week',
+  'A little harder than Monday',
+  'Midweek, halfway up',
+  'Getting harder',
+  'Nearly the hardest of the week',
+  'A hard one',
+  'The hardest Sixer of the week',
+];
+const weekNote = (date) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? '' : WEEK_NOTE[(d.getUTCDay() + 6) % 7];
+};
 
 export default function DailyPage() {
   usePageTitle('The Sixer');
@@ -38,6 +54,9 @@ export default function DailyPage() {
      against the following clue's response. */
   const [openIndex, setOpenIndex] = useState(null);
   const [verifyCode, setVerifyCode] = useState(null);
+  /* A close answer gets one free retype per try, said in this note. */
+  const [note, setNote] = useState(null);
+  const [closeUsed, setCloseUsed] = useState(false);
 
   // Parse verification code from URL (for viewing sharer's answers)
   useEffect(() => {
@@ -63,6 +82,7 @@ export default function DailyPage() {
     setUserAnswer,
     revealAnswer,
     overrideAnswer,
+    showHint,
     passQuestion,
     nextQuestion,
     completeGame,
@@ -166,6 +186,8 @@ export default function DailyPage() {
     if (!playable || openIndex !== null || activeIndex === -1) return;
     setOpenIndex(activeIndex);
     setResult(null);
+    setNote(null);
+    setCloseUsed(false);
   }, [playable, openIndex, activeIndex]);
 
   /* Every clue used but the run never closed, which a reload on the last one
@@ -174,8 +196,8 @@ export default function DailyPage() {
   useEffect(() => {
     if (!playable || openIndex !== null) return;
     if (!answers.length || activeIndex !== -1) return;
-    completeGame(SLOT);
-  }, [playable, openIndex, answers, activeIndex, completeGame, SLOT]);
+    completeGame(SLOT, { score: sixerScore(answers, questions) });
+  }, [playable, openIndex, answers, activeIndex, completeGame, SLOT, questions]);
 
   const openQuestion = useMemo(() => {
     if (openIndex === null) return null;
@@ -187,20 +209,61 @@ export default function DailyPage() {
     return { ...q, answer: q.clue, question: q.answer };
   }, [openIndex, questions]);
 
+  /* Whether the clue up has had its hint: a miss brings it up, and from then
+     on the clue pays half. Read from the run, so a reload keeps it. */
+  const hinted = openIndex !== null && Boolean(answers[openIndex]?.hinted);
+
+  /* The answer is settled: right, or wrong after the hint. */
+  const settle = useCallback(
+    (correct, given, withHint) => {
+      setUserAnswer(SLOT, openIndex, given);
+      revealAnswer(SLOT, openIndex, correct, given, withHint);
+      setResult({ correct, hinted: withHint, playerAnswer: given });
+      setNote(null);
+      if (correct) playCorrect();
+      else playWrong();
+    },
+    [openIndex, setUserAnswer, revealAnswer, playCorrect, playWrong, SLOT]
+  );
+
   const submitAnswer = useCallback(
     (given) => {
       if (openIndex === null) return;
       const q = questions[openIndex];
       if (!q) return;
-      setUserAnswer(SLOT, openIndex, given);
-      const { isCorrect } = checkAnswer(given, q.answer);
-      revealAnswer(SLOT, openIndex, isCorrect, given);
-      setResult({ correct: isCorrect, playerAnswer: given });
-      if (isCorrect) playCorrect();
-      else playWrong();
+      const { verdict } = checkAnswer(given, q.answer);
+
+      // Nearly: the spelling, once, for free. The box keeps what was typed.
+      if (verdict === 'close' && !closeUsed) {
+        setCloseUsed(true);
+        setNote('Close. Check the spelling and try again.');
+        return;
+      }
+      if (verdict === 'correct') {
+        settle(true, given, hinted);
+        return;
+      }
+      // A first miss is not the end: up comes the hint, and one more try for half.
+      if (!hinted) {
+        setUserAnswer(SLOT, openIndex, given);
+        showHint(SLOT, openIndex);
+        setCloseUsed(false);
+        const half = Math.round((q.value ?? 0) / 2);
+        setNote(`Not quite. Here is a hint, and one more try for $${half.toLocaleString()}.`);
+        return;
+      }
+      settle(false, given, true);
     },
-    [openIndex, questions, setUserAnswer, revealAnswer, playCorrect, playWrong, SLOT]
+    [openIndex, questions, closeUsed, hinted, settle, setUserAnswer, showHint, SLOT]
   );
+
+  /* The grader can turn down a right answer. A player it did that to on the
+     first try says so before seeing the response, and is paid in full. */
+  const claim = useCallback(() => {
+    if (openIndex === null) return;
+    const given = useDailyStore.getState()[SLOT].userAnswers[openIndex] ?? '';
+    settle(true, given, false);
+  }, [openIndex, settle, SLOT]);
 
   // Fuzzy matching gets things wrong, so the player has the last word.
   const override = useCallback(() => {
@@ -230,16 +293,18 @@ export default function DailyPage() {
     nextQuestion(SLOT);
     const settled = useDailyStore.getState()[SLOT].answers;
     const next = settled.findIndex((a) => !a?.revealed);
+    setNote(null);
+    setCloseUsed(false);
     if (next === -1) {
       setOpenIndex(null);
-      completeGame(SLOT);
+      completeGame(SLOT, { score: sixerScore(settled, questions) });
       return;
     }
     /* Straight to the next clue rather than back through null: releasing the
        index unmounts the clue screen and mounts it again, so every Continue
        played a fade out, a fade in and a spring before the next clue arrived. */
     setOpenIndex(next);
-  }, [nextQuestion, completeGame, SLOT]);
+  }, [nextQuestion, completeGame, SLOT, questions]);
 
   const handleBackToMenu = () => {
     navigate('/menu');
@@ -312,6 +377,7 @@ export default function DailyPage() {
         <div className="daily-title">
           <h1>The Sixer</h1>
           <p className="daily-date">{formatDisplayDate(todayDate)}</p>
+          {todayDate && <p className="daily-week-note">{weekNote(todayDate)}. Easy to hard.</p>}
         </div>
         <div className="daily-stats-mini">
           {liveStreak(formatStats, toDateString()) > 0 && (
@@ -348,6 +414,10 @@ export default function DailyPage() {
             onContinue={continueOn}
             closeLabel="Pass"
             onClose={passClue}
+            note={result ? null : note}
+            hint={!result && hinted ? answerHint(openQuestion.question) : null}
+            onClaim={!result && hinted ? claim : null}
+            earned={result ? sixerEarned({ revealed: true, ...result }, openQuestion.value) : 0}
           />
         )}
       </AnimatePresence>

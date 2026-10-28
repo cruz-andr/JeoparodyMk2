@@ -24,6 +24,25 @@ test('a daily finished after midnight is recorded against the day it was dealt f
   assert.equal(useDailyStore.getState().hasPlayedToday('sixer'), false, "today's puzzle is still open");
 });
 
+test('a Sixer shares what it won, with the hint shown as its own square', () => {
+  const store = useDailyStore.getState();
+  store.setDailyChallenge('sixer', {
+    date: '2000-01-02',
+    questions: [400, 400, 800, 800, 1200, 1200].map((value, i) => ({ value, clue: `c${i}`, answer: `a${i}` })),
+  });
+  const s = useDailyStore.getState();
+  s.revealAnswer('sixer', 0, true, 'a0');
+  s.revealAnswer('sixer', 1, true, 'a1', true);
+  s.revealAnswer('sixer', 2, false, 'x', true);
+  s.passQuestion('sixer', 3);
+  s.revealAnswer('sixer', 4, true, 'a4');
+  s.revealAnswer('sixer', 5, true, 'a5', true);
+  // Title, squares, tally, link.
+  const [, grid, tally] = useDailyStore.getState().getShareText('sixer').split('\n');
+  assert.equal(grid, '\u{1F7E9}\u{1F7E8}\u{1F7E5}\u{2B1C}\u{1F7E9}\u{1F7E8}');
+  assert.equal(tally, '$2,400 · 4/6');
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed\n`);
 for (const { name, err } of failures) {
   console.log(`  FAIL  ${name}`);

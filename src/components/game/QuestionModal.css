@@ -283,6 +283,30 @@
   color: var(--text-primary);
 }
 
+/* The Sixer's second chance: what happened, then the shape of the answer. */
+.typed-note {
+  margin: 0 0 10px;
+  color: var(--jeopardy-gold);
+  font-weight: 700;
+}
+
+.typed-hint {
+  margin: 0 0 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  letter-spacing: 0.08em;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+}
+
+.typed-claim {
+  margin-top: 10px;
+  min-height: 44px;
+  background: none;
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
 .typed-result { margin-top: 8px; }
 
 .typed-badge {

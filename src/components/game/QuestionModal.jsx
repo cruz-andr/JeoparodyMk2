@@ -26,6 +26,16 @@ export default function QuestionModal({
   onOverride,
   onContinue,
   closeLabel = 'Skip',
+  /* The Sixer's second chance. `note` says what just happened ("close",
+     "not quite"), `hint` is the shape of the answer once a miss has brought
+     it up, and `onClaim` lets a player the grader got wrong say so before
+     the response is shown. `earned` is what the clue paid, for a game that
+     never takes money away; without it the verdict reads plus or minus the
+     clue's value, as on The Board. */
+  note = null,
+  hint = null,
+  onClaim = null,
+  earned,
 }) {
   const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
   // Settings offers a Show timer switch that nothing was reading.
@@ -50,6 +60,11 @@ export default function QuestionModal({
     setEntry('');
     setTimedOut(false);
   }, [question]);
+
+  // The hint is a fresh try, so it starts from an empty box too.
+  useEffect(() => {
+    if (hint) setEntry('');
+  }, [hint]);
 
   const handleTimeUp = () => {
     if (onTimeUp) {
@@ -156,14 +171,18 @@ export default function QuestionModal({
               >
                 {result.passed
                   ? 'Passed'
-                  : result.correct
-                    ? `Correct +$${points.toLocaleString()}`
-                    : `Incorrect -$${points.toLocaleString()}`}
+                  : earned !== undefined
+                    ? (result.correct
+                      ? `Correct +$${earned.toLocaleString()}${result.hinted ? ' with the hint' : ''}`
+                      : 'Incorrect')
+                    : result.correct
+                      ? `Correct +$${points.toLocaleString()}`
+                      : `Incorrect -$${points.toLocaleString()}`}
               </div>
 
               <p className="typed-said">
                 {result.passed
-                  ? 'No points either way.'
+                  ? (earned !== undefined ? 'Nothing won or lost.' : 'No points either way.')
                   : result.playerAnswer
                     ? <>You said: <span>{result.playerAnswer}</span></>
                     : 'You did not answer.'}
@@ -184,6 +203,13 @@ export default function QuestionModal({
               </div>
             </motion.div>
           ) : (
+            <>
+            {note && <p className="typed-note" role="status">{note}</p>}
+            {hint && (
+              <p className="typed-hint" aria-label={`Hint: ${hint.replace(/_/g, 'blank')}`}>
+                {hint}
+              </p>
+            )}
             <form
               className="typed-form"
               onSubmit={(e) => {
@@ -210,6 +236,12 @@ export default function QuestionModal({
                 Submit
               </button>
             </form>
+            {onClaim && (
+              <button type="button" className="typed-claim" onClick={onClaim}>
+                I was right
+              </button>
+            )}
+            </>
           )
         ) : showAnswer ? (
           <motion.div

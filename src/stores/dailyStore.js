@@ -13,6 +13,7 @@ import {
   answerMark,
   boardGridRows,
   encodeAnswers,
+  sixerScore,
 } from './dailyLogic.js';
 import { useSettingsStore } from './settingsStore.js';
 
@@ -111,11 +112,24 @@ export const useDailyStore = create(
         });
       },
 
-      revealAnswer: (slot, index, isCorrect, playerAnswer = '') => {
+      /* `hinted`: the Sixer's second try, after a miss brought up the hint,
+         which pays half. */
+      revealAnswer: (slot, index, isCorrect, playerAnswer = '', hinted = false) => {
         if (!isSlot(slot)) return;
         set((state) => {
           const answers = [...state[slot].answers];
-          answers[index] = { correct: isCorrect, revealed: true, playerAnswer };
+          answers[index] = { correct: isCorrect, revealed: true, playerAnswer, ...(hinted ? { hinted: true } : {}) };
+          return { [slot]: { ...state[slot], answers } };
+        });
+      },
+
+      /* A Sixer clue missed once: the hint is up and the clue now pays half.
+         Kept with the run so a reload does not hand back the full value. */
+      showHint: (slot, index) => {
+        if (!isSlot(slot)) return;
+        set((state) => {
+          const answers = [...state[slot].answers];
+          answers[index] = { ...answers[index], hinted: true };
           return { [slot]: { ...state[slot], answers } };
         });
       },
@@ -329,9 +343,12 @@ export const useDailyStore = create(
         }
 
         const took = format === 'board' ? formatDuration(elapsedMs(run.timing)) : null;
+        /* The Sixer is played for dollars, and the money is what is worth
+           bragging about; the count rides beside it. */
+        const won = format === 'sixer' ? `$${sixerScore(run.answers, run.questions).toLocaleString('en-US')} · ` : '';
         const tally = took
           ? `${correctCount}/${run.questions.length} in ${took}`
-          : `${correctCount}/${run.questions.length}`;
+          : `${won}${correctCount}/${run.questions.length}`;
 
         /* Built from wherever the player is rather than from a domain written
            into the source. The old hardcoded URL survived a domain change and
