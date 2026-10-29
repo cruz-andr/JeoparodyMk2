@@ -435,7 +435,7 @@ button.bp-play {
   padding: 14px 30px;
   font-size: 1.05rem;
 }
-.bp-play-mark { font-size: 0.85em; }
+.bp-play-mark { display: inline-flex; font-size: 0.8em; }
 
 /* The other ways to play are words, not boxes: one big way in, then the rest. */
 button.bp-more-way {

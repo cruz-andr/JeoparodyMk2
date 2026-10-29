@@ -281,7 +281,8 @@ const YouTubePlayer = forwardRef(function YouTubePlayer(
       {/* Click-to-play overlay for mobile autoplay block */}
       {needsInteraction && (
         <button className="yt-play-overlay" onClick={handleClickToPlay}>
-          <span className="yt-play-icon">&#9654;</span>
+          {/* Drawn, not the ▶ character, which phones show as a colour emoji. */}
+          <span className="yt-play-icon"><svg viewBox="0 0 10 12" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M0 0L10 6L0 12Z" /></svg></span>
           <span>Tap to play</span>
         </button>
       )}
