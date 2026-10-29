@@ -103,13 +103,7 @@ button.bb-topic:focus-visible {
   color: var(--text-muted);
 }
 
-.bb-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 14px;
-}
-
-/* ---- a rail: one line that scrolls, bigger cards ---- */
+/* ---- a row is a rail: one line that scrolls, the way a streaming shelf does ---- */
 .bb-rail { position: relative; }
 
 .bb-rail-track {
@@ -323,7 +317,6 @@ button.bb-foot-link {
   .bb-tools { flex-wrap: wrap; }
   .bb-search { flex-basis: 100%; }
   button.bb-make { width: 100%; }
-  .bb-cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   /* Most of the screen, so the next card peeks in and says there is more. */
   .bb-rail-track { grid-auto-columns: 78%; gap: 10px; }
   .bb-topics { gap: 16px; }

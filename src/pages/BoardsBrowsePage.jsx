@@ -25,8 +25,8 @@ const TOPIC_NAMES = {
 };
 
 const ROWS = [
-  // One line that scrolls, with the bigger cards: the show's episodes, a shelf of one series.
-  { key: 'house', name: 'Disney Jeopardy', note: "From Inside the Magic's show", rail: true, limit: 48 },
+  // Every episode the show has: a series is the shelf people scroll to the end of.
+  { key: 'house', name: 'Disney Jeopardy', note: "From Inside the Magic's show", limit: 48 },
   { key: 'featured', name: 'Featured', note: 'Picked by hand' },
   { key: 'popular', name: 'Popular', note: 'Most played' },
   { key: 'new', name: 'New this week', note: 'Just published' },
@@ -150,7 +150,7 @@ export default function BoardsBrowsePage() {
          questions and a single endpoint answering all of them would be a
          parameter that changes what the response means. */
       const results = await Promise.all(
-        ROWS.map((row) => browse({ row: row.key, topic, q: query, limit: row.limit ?? 12 }, token))
+        ROWS.map((row) => browse({ row: row.key, topic, q: query, limit: row.limit ?? 24 }, token))
       );
       const loaded = ROWS
         .map((row, i) => ({ ...row, ...results[i] }))
@@ -306,19 +306,11 @@ export default function BoardsBrowsePage() {
                 <h2>{row.name}</h2>
                 <span className="bb-row-note">{row.note}</span>
               </div>
-              {row.rail ? (
-                <Rail>
-                  {row.boards.map((board) => (
-                    <Card key={board.slug} board={board} onOpen={(slug) => navigate(`/boards/${slug}`)} />
-                  ))}
-                </Rail>
-              ) : (
-                <div className="bb-cards">
-                  {row.boards.map((board) => (
-                    <Card key={board.slug} board={board} onOpen={(slug) => navigate(`/boards/${slug}`)} />
-                  ))}
-                </div>
-              )}
+              <Rail>
+                {row.boards.map((board) => (
+                  <Card key={board.slug} board={board} onOpen={(slug) => navigate(`/boards/${slug}`)} />
+                ))}
+              </Rail>
             </section>
           ))
         )}
