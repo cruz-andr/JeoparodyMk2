@@ -153,7 +153,7 @@ await test('the Episode 40 file that ships with the site would publish', () => {
   for (const x of r) assert.equal(x.error, undefined, `${x.slug}: ${x.error}`);
   const ep40 = row('disney-jeopardy-40');
   assert.equal(ep40.category_count, 5);
-  assert.equal(ep40.featured, 1);
+  assert.equal(ep40.featured, 0, "the episodes have their own row, not Featured");
   assert.equal(JSON.parse(ep40.data).finalJeopardy.mediaType, 'youtube');
 });
 

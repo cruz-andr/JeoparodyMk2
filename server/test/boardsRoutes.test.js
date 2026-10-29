@@ -1109,6 +1109,10 @@ await test("the site's own boards go up when it starts: featured, and by nobody"
     assert.deepEqual(featured.boards.map((b) => b.slug), ['house-test-40']);
     assert.equal(featured.boards[0].author, null, 'no author on the card');
 
+    // And on a shelf of their own: the house's boards, and nobody else's.
+    const shelf = await (await fetch(`http://127.0.0.1:${PORT4}/api/boards?row=house`)).json();
+    assert.deepEqual(shelf.boards.map((b) => b.slug), ['house-test-40']);
+
     const one = await (await fetch(`http://127.0.0.1:${PORT4}/api/boards/house-test-40`)).json();
     assert.equal(one.author, null, 'nor on its page');
     assert.equal(one.isOwner, false);
