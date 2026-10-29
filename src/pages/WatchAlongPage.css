@@ -126,6 +126,72 @@ button.wa-word:focus-visible { outline: none; color: var(--jeopardy-gold); }
 .wa-verdict-money { font-size: 1.3rem; color: var(--jeopardy-gold); }
 .wa-verdict-money .negative { color: inherit; }
 
+/* ---- watching together ---- */
+.wa-waiting {
+  margin-left: auto;
+  font-family: var(--font-board);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+button.wa-buzz { padding: 14px 34px; font-size: 1.05rem; }
+.wa-ask-do > .wa-waiting:only-child { margin-left: 0; }
+
+/* The driver's hand on the video, under it. */
+.wa-drive {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+}
+.wa-drive .wa-note { margin: 0; }
+button.wa-drive-play { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); }
+button.wa-drive-play:disabled { opacity: 0.45; cursor: default; }
+
+/* How everyone else did, under your own. */
+.wa-others {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+.wa-others li { display: flex; gap: 12px; padding: 3px 0; }
+.wa-others .wa-verdict-money { font-size: inherit; }
+
+.wa-players {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid rgba(242, 236, 224, 0.12);
+}
+.wa-players li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 0.4px;
+}
+.wa-players li.is-away { opacity: 0.45; }
+.wa-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wa-player-score { color: var(--jeopardy-gold); }
+
+.wa-invite { margin-top: 16px; }
+.wa-invite-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.wa-invite-row .wa-input { font-size: 0.8rem; padding: 9px 10px; }
+
+.wa-name { max-width: 420px; }
+
 /* ---- the side: the board ---- */
 .wa-side { min-width: 0; }
 

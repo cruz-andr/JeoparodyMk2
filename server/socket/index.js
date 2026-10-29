@@ -6,6 +6,7 @@ import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
 import { roomBoards, roomGrid } from '../services/roomBoards.js';
 import { createSessionClaims } from './sessionClaims.js';
+import { createWatchRooms } from './watchRooms.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
 
 const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
@@ -176,6 +177,19 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
 
   const sessionClaims = createSessionClaims();
 
+  /* Watching one of the show's episodes together, each on their own device:
+     a room of its own, apart from the game rooms (see watchRooms.js). */
+  const watchRoom = (code) => `watch:${code}`;
+  const watching = createWatchRooms({
+    loadBoard: async (slug) => {
+      const row = getDatabase().prepare(
+        "SELECT data, watch FROM boards WHERE slug = ? AND visibility IN ('public', 'unlisted')"
+      ).get(String(slug ?? ''));
+      return row ? { board: JSON.parse(row.data), watch: row.watch ? JSON.parse(row.watch) : null } : null;
+    },
+    emitState: (code, state) => io.to(watchRoom(code)).emit('watch:state', state),
+  });
+
   // Authentication middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
@@ -244,6 +258,49 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
       } catch (err) {
         fail(err);
       }
+    });
+
+    // Watching an episode together
+    const me = (name) => ({ id: socket.sessionId, name });
+    on('watch:create', async ({ slug, name }, callback) => {
+      try {
+        const code = await watching.create({ slug, player: me(name) });
+        socket.join(watchRoom(code));
+        socket.watchCode = code;
+        callback({ code, state: watching.view(code) });
+      } catch (error) {
+        callback({ error: error.message });
+      }
+    });
+    on('watch:join', ({ code, name }, callback) => {
+      try {
+        const joined = watching.join({ code, player: me(name) });
+        socket.join(watchRoom(joined));
+        socket.watchCode = joined;
+        callback({ code: joined, state: watching.view(joined) });
+      } catch (error) {
+        callback({ error: error.message });
+      }
+    });
+    on('watch:control', ({ action, t, column, row }) => {
+      if (socket.watchCode) watching.control({ code: socket.watchCode, playerId: socket.sessionId, action, t, column, row });
+    });
+    on('watch:buzz', ({ key }, callback) => {
+      callback(socket.watchCode ? watching.buzz({ code: socket.watchCode, playerId: socket.sessionId, key }) : false);
+    });
+    on('watch:answer', ({ key, given, wager }, callback) => {
+      callback(socket.watchCode ? watching.answer({ code: socket.watchCode, playerId: socket.sessionId, key, given, wager }) : null);
+    });
+    on('watch:pass', ({ key }) => {
+      if (socket.watchCode) watching.pass({ code: socket.watchCode, playerId: socket.sessionId, key });
+    });
+    on('watch:overrule', ({ key }) => {
+      if (socket.watchCode) watching.overrule({ code: socket.watchCode, playerId: socket.sessionId, key });
+    });
+    // The server's time, for a device to set its video by the room's clock.
+    on('watch:time', (_, callback) => callback({ now: Date.now() }));
+    socket.on('disconnect', () => {
+      if (socket.watchCode) watching.leave({ code: socket.watchCode, playerId: socket.sessionId });
     });
 
     // Room events

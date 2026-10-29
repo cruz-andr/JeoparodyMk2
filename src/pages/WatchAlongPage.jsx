@@ -5,9 +5,10 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { useUserStore } from '../stores';
 import { getBoard } from '../services/api/boardsService';
 import { loadYouTubeApi } from '../components/media/youtubeApi';
-import { CLOSE_NOTE, judgeTyped } from '../utils/typedClue';
-import { canPlayFinalJeopardy, clampFinalWager, finalWagerLimit, wagerEntry } from '../utils/wagers';
-import { reached, scored, stopsFor } from '../utils/watchAlong';
+import { judgeTyped } from '../utils/typedClue';
+import { clampFinalWager } from '../utils/wagers';
+import { reached, scored, stopsFor } from '@shared/watchAlong.js';
+import { AskPanel, StartButton, Verdict } from '../components/watch/WatchParts';
 import GameBoard from '../components/game/GameBoard';
 import { BoardHeader, Money } from '../components/game/BoardChrome';
 import '../components/boards/BoardsChrome.css';
@@ -34,10 +35,7 @@ export default function WatchAlongPage() {
 
   const [started, setStarted] = useState(false);
   const [asking, setAsking] = useState(null);
-  const [given, setGiven] = useState('');
   const [closeUsed, setCloseUsed] = useState(false);
-  const [note, setNote] = useState('');
-  const [wager, setWager] = useState(null);
   const [score, setScore] = useState(0);
   const [results, setResults] = useState({});
   const [last, setLast] = useState(null);
@@ -47,7 +45,6 @@ export default function WatchAlongPage() {
   const player = useRef(null);
   const settled = useRef(new Set());
   const askingRef = useRef(null);
-  const input = useRef(null);
 
   useEffect(() => {
     getBoard(slug, token).then(setBoard).catch((err) => setError(err.message));
@@ -97,17 +94,10 @@ export default function WatchAlongPage() {
       video.pauseVideo();
       askingRef.current = ask;
       setAsking(ask);
-      setGiven('');
       setCloseUsed(false);
-      setNote('');
-      setWager(ask.final ? '' : null);
     }, 250);
     return () => clearInterval(tick);
   }, [stops]);
-
-  useEffect(() => {
-    if (asking) setTimeout(() => input.current?.focus(), 0);
-  }, [asking, wager]);
 
   /* A square on the board: the video from a little before that clue, to
      see it read and play it. A question already up is let go unanswered. */
@@ -127,7 +117,7 @@ export default function WatchAlongPage() {
     player.current?.playVideo?.();
   };
 
-  const finish = (correct, response = given) => {
+  const finish = (correct, response, wager) => {
     const stop = asking;
     const staked = stop.final ? clampFinalWager(Number(wager) || 0, score) : 0;
     const points = scored(stop, correct, staked);
@@ -137,16 +127,14 @@ export default function WatchAlongPage() {
     goOn();
   };
 
-  const submit = (e) => {
-    e.preventDefault();
-    if (!given.trim()) return;
+  const answer = (given, wager) => {
     const verdict = judgeTyped(gradeAnswer, given, asking.clue.question, { closeUsed });
     if (verdict.retry) {
       setCloseUsed(true);
-      setNote(CLOSE_NOTE);
-      return;
+      return verdict;
     }
-    finish(verdict.correct);
+    finish(verdict.correct, given, wager);
+    return verdict;
   };
 
   const pass = () => {
@@ -184,7 +172,6 @@ export default function WatchAlongPage() {
   }
 
   const done = stops.filter((s) => results[s.key]).length;
-  const finalBlocked = asking?.final && !canPlayFinalJeopardy(score);
   // Answered or passed: gone from the board, the way a taken clue is.
   const taken = new Set(Object.keys(results).filter((k) => k !== 'final').map((k) => k.replace(':', '-')));
   const values = board.board.categories[0]?.questions.map((q) => q.points) ?? [];
@@ -204,64 +191,13 @@ export default function WatchAlongPage() {
         <div className="wa-stage">
           <div className="wa-video">
             <div ref={host} />
-            {!started && (
-              <button className="plain-btn wa-start" onClick={() => player.current?.playVideo?.()}>
-                <span className="wa-start-mark" aria-hidden="true">
-                  <svg viewBox="0 0 10 12" width="1em" height="1em" fill="currentColor" focusable="false"><path d="M0 0L10 6L0 12Z" /></svg>
-                </span>
-                Start the episode
-              </button>
-            )}
+            {!started && <StartButton onStart={() => player.current?.playVideo?.()} />}
           </div>
 
           {asking ? (
-            <form className="wa-ask" onSubmit={submit}>
-              <p className="wa-ask-where">
-                {asking.final ? `Final Jeopardy · ${asking.category}` : `${asking.category} · $${asking.clue.points}`}
-              </p>
-              <p className="wa-ask-clue">{asking.clue.answer}</p>
-
-              {finalBlocked ? (
-                <>
-                  <p className="wa-note">Final Jeopardy takes a score above zero to wager. Watch how it ends.</p>
-                  <div className="wa-ask-do">
-                    <button type="button" className="btn-primary" onClick={pass}>Keep watching</button>
-                  </div>
-                </>
-              ) : asking.final && wager !== null && !String(wager).length ? (
-                <WagerEntry
-                  limit={finalWagerLimit(score)}
-                  inputRef={input}
-                  onWager={(w) => setWager(String(w))}
-                />
-              ) : (
-                <>
-                  {asking.final && <p className="wa-note">Wagering {money(clampFinalWager(Number(wager) || 0, score))}</p>}
-                  <input
-                    ref={input}
-                    className="wa-input"
-                    value={given}
-                    onChange={(e) => setGiven(e.target.value)}
-                    placeholder="What is..."
-                    aria-label="Your response"
-                    autoComplete="off"
-                  />
-                  {note && <p className="wa-note">{note}</p>}
-                  <div className="wa-ask-do">
-                    <button type="submit" className="btn-primary" disabled={!given.trim()}>Answer</button>
-                    <button type="button" className="plain-btn wa-word" onClick={pass}>Pass</button>
-                  </div>
-                </>
-              )}
-            </form>
+            <AskPanel key={asking.key} stop={asking} score={score} onAnswer={answer} onPass={pass} />
           ) : last ? (
-            <p className="wa-verdict" aria-live="polite">
-              <span className="wa-verdict-word">{last.passed ? 'Passed' : last.correct ? 'Right' : 'Wrong'}</span>
-              {!last.passed && <span className="wa-verdict-money"><Money value={last.points} /></span>}
-              {!last.passed && !last.correct && (
-                <button className="plain-btn wa-word" onClick={overrule}>I had it</button>
-              )}
-            </p>
+            <Verdict result={last} onOverrule={overrule} />
           ) : (
             <p className="wa-hint">
               The episode stops a moment before each answer for yours. Pick a square to go to that clue.
@@ -287,30 +223,6 @@ export default function WatchAlongPage() {
           )}
         </aside>
       </main>
-    </div>
-  );
-}
-
-/** Final's wager: up to the whole score, as the show allows. */
-function WagerEntry({ limit, inputRef, onWager }) {
-  const [text, setText] = useState('');
-  const amount = Math.min(Number(wagerEntry(text)) || 0, limit);
-  return (
-    <div className="wa-wager">
-      <label className="wa-note" htmlFor="wa-wager">Wager up to {money(limit)}</label>
-      <input
-        id="wa-wager"
-        ref={inputRef}
-        className="wa-input"
-        inputMode="numeric"
-        value={text}
-        onChange={(e) => setText(wagerEntry(e.target.value))}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onWager(amount); } }}
-        placeholder="0"
-      />
-      <div className="wa-ask-do">
-        <button type="button" className="btn-primary" onClick={() => onWager(amount)}>Wager {money(amount)}</button>
-      </div>
     </div>
   );
 }

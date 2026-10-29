@@ -300,6 +300,15 @@ export default function BoardPage() {
                 Watch along
               </button>
             )}
+            {board.watch && (
+              <button
+                className="plain-btn bp-more-way"
+                disabled={!playable}
+                onClick={() => navigate(`/boards/${slug}/together`)}
+              >
+                Watch together
+              </button>
+            )}
             {/* A private room plays it together. Not a private board: everyone
                 in the room would be sent its clues. */}
             {board.visibility !== 'private' && (
