@@ -49,7 +49,7 @@ const SHOW = {
   name: (episode) => (episode && episode <= 100 ? 'Disney 100 Jeopardy' : 'Disney Jeopardy!'),
   topic: 'disney',
   slug: (episode) => `disney-jeopardy-${episode}`,
-  description: (episode) => `From Inside the Magic's Disney Jeopardy (Episode ${episode}), hosted by Bryan Perri. Used with permission.`,
+  description: (episode) => `From Inside the Magic's Disney Jeopardy (Episode ${episode}), hosted by Bryan Perri.`,
 };
 
 const args = process.argv.slice(2);
