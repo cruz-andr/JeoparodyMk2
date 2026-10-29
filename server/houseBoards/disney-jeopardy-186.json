@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 186), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-186.jpg",
+  "watch": {
+    "youtube": "FnWbzT6N9XI",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 82,
+        "pause": 100
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 331,
+        "pause": 362
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 530,
+        "pause": 545
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 727,
+        "pause": 740
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 946,
+        "pause": 960
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 137,
+        "pause": 164.3
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 384,
+        "pause": 401.3
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 566,
+        "pause": 596.3
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 759,
+        "pause": 783.3
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 971,
+        "pause": 1000.3
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 206,
+        "pause": 218
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 431,
+        "pause": 438.3
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 613,
+        "pause": 622
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 788,
+        "pause": 796
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 1017,
+        "pause": 1033.3
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 245,
+        "pause": 262
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 473,
+        "pause": 484
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 644,
+        "pause": 662
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 811,
+        "pause": 843
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 1059,
+        "pause": 1092
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 290,
+        "pause": 305
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 494,
+        "pause": 504
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 677,
+        "pause": 694
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 871,
+        "pause": 885
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1126,
+        "pause": 1142
+      }
+    ],
+    "final": {
+      "at": 1228,
+      "pause": 1256.3
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -343,6 +503,5 @@
       "audioOnly": false,
       "altText": null
     }
-  },
-  "cover": "disney-jeopardy-186.jpg"
+  }
 }

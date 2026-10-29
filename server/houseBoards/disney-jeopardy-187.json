@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 187), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-187.jpg",
+  "watch": {
+    "youtube": "S-XkcKpUFKc",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 71,
+        "pause": 82
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 286,
+        "pause": 301
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 434,
+        "pause": 441
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 647,
+        "pause": 674
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 856,
+        "pause": 868
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 121,
+        "pause": 129
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 311,
+        "pause": 324
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 447,
+        "pause": 455
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 684,
+        "pause": 704
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 881,
+        "pause": 891
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 165,
+        "pause": 181.3
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 338,
+        "pause": 369.3
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 553,
+        "pause": 577.3
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 716,
+        "pause": 732.3
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 900,
+        "pause": 920.3
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 216,
+        "pause": 238
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 375,
+        "pause": 395
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 588,
+        "pause": 605
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 742,
+        "pause": 755
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 932,
+        "pause": 948
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 246,
+        "pause": 264
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 404,
+        "pause": 419
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 612,
+        "pause": 626
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 767,
+        "pause": 783
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 958,
+        "pause": 990
+      }
+    ],
+    "final": {
+      "at": 1126,
+      "pause": 1170
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "Coincidentally, this is the exact number of years that separate the releases of Lady and the Tramp & Who Framed Roger Rabbit, as well as Who Framed Roger Rabbit & Encanto",
       "question": "What is 33?"
     }
-  },
-  "cover": "disney-jeopardy-187.jpg"
+  }
 }

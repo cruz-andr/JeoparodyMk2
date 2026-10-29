@@ -437,6 +437,24 @@ button.bp-play {
 }
 .bp-play-mark { display: inline-flex; font-size: 0.8em; }
 
+/* Watching along is the second way in: a box, but an outlined one. */
+button.bp-watch {
+  padding: 13px 24px;
+  border: 2px solid var(--text-primary);
+  border-radius: 6px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.6px;
+  color: var(--text-primary);
+  background: rgba(5, 10, 36, 0.35);
+  cursor: pointer;
+}
+button.bp-watch:focus-visible { outline: 2px solid var(--jeopardy-gold); outline-offset: 2px; }
+.board-page button.bp-watch.plain-btn:hover:not(:disabled),
+.board-page button.bp-watch.plain-btn:focus { background: rgba(5, 10, 36, 0.35); }
+
 /* The other ways to play are words, not boxes: one big way in, then the rest. */
 button.bp-more-way {
   padding: 6px 0;

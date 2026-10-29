@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 188), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-188.jpg",
+  "watch": {
+    "youtube": "LX_MS_sy4yg",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 98,
+        "pause": 111
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 300,
+        "pause": 320
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 479,
+        "pause": 502
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 652,
+        "pause": 661.3
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 849,
+        "pause": 864
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 141,
+        "pause": 158
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 336,
+        "pause": 353
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 521,
+        "pause": 538
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 674,
+        "pause": 697
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 882,
+        "pause": 898
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 185,
+        "pause": 219
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 376,
+        "pause": 398
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 555,
+        "pause": 579
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 713,
+        "pause": 738
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 910,
+        "pause": 939
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 248,
+        "pause": 261
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 410,
+        "pause": 427
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 598,
+        "pause": 612
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 753,
+        "pause": 767
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 950,
+        "pause": 965
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 283,
+        "pause": 291.3
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 438,
+        "pause": 448.3
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 626,
+        "pause": 638.3
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 777,
+        "pause": 786.3
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 984,
+        "pause": 991.3
+      }
+    ],
+    "final": {
+      "at": 1118,
+      "pause": 1122
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "After voicing a character in 2004's Home on the Range, Patrick Warburton went on to voice this same type of animal in Zootopia 2",
       "question": "What is a horse?"
     }
-  },
-  "cover": "disney-jeopardy-188.jpg"
+  }
 }

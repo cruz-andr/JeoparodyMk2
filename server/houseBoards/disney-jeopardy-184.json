@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 184), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-184.jpg",
+  "watch": {
+    "youtube": "5Oeqwgn0e_k",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 67,
+        "pause": 78
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 339,
+        "pause": 350
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 502,
+        "pause": 514
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 658,
+        "pause": 676
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 874,
+        "pause": 882
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 145,
+        "pause": 154
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 360,
+        "pause": 369
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 532,
+        "pause": 546
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 693,
+        "pause": 725
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 923,
+        "pause": 934
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 193,
+        "pause": 207
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 386,
+        "pause": 411
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 561,
+        "pause": 579
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 731,
+        "pause": 756
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 958,
+        "pause": 981
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 234,
+        "pause": 254
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 424,
+        "pause": 444
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 594,
+        "pause": 609
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 785,
+        "pause": 808
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 996,
+        "pause": 1014
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 268,
+        "pause": 288
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 462,
+        "pause": 482
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 634,
+        "pause": 643
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 816,
+        "pause": 830
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1025,
+        "pause": 1056
+      }
+    ],
+    "final": {
+      "at": 1181,
+      "pause": 1209
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "Answer ray's question to Nemo with what Nemo is about to attempt to say",
       "question": "What is Anemone (or Sea Anemone)?"
     }
-  },
-  "cover": "disney-jeopardy-184.jpg"
+  }
 }

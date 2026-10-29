@@ -4,6 +4,165 @@
   "topic": "disney",
   "featured": false,
   "cover": "disney-jeopardy-40.jpg",
+  "watch": {
+    "youtube": "u4YFjksxPg0",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 181,
+        "pause": 190
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 316,
+        "pause": 337
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 452,
+        "pause": 477
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 642,
+        "pause": 659
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 828,
+        "pause": 836
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 198,
+        "pause": 209
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 352,
+        "pause": 359
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 504,
+        "pause": 520
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 683,
+        "pause": 701
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 856,
+        "pause": 869
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 232,
+        "pause": 238
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 370,
+        "pause": 380
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 543,
+        "pause": 552
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 720,
+        "pause": 731
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 892,
+        "pause": 906.3
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 246,
+        "pause": 262
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 390,
+        "pause": 405
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 560,
+        "pause": 582
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 743,
+        "pause": 764
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 915,
+        "pause": 933
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 276,
+        "pause": 288
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 422,
+        "pause": 436
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 600,
+        "pause": 614
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 776,
+        "pause": 791
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 961,
+        "pause": 973
+      }
+    ],
+    "final": {
+      "at": 1067,
+      "pause": 1090
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
