@@ -1,7 +1,7 @@
 /**
  * The video board reader, run on Episode 40 as the Mac read it, against the
  * board that was transcribed from the same video by hand and is on the site,
- * on Episode 21, for the ways a show can trip it, and on Episodes 188 and 187,
+ * on Episode 21, for the ways a show can trip it, and on Episodes 188, 187 and 186,
  * the newer show.
  * Run with: node scripts/video-board.test.js
  *
@@ -180,6 +180,19 @@ check('lyrics filled in over a clip are offered in reading order',
 check('the Daily Double screens are not taken for a picture clue: the card after the wager is the clue',
   /^Sing the very last lines of Go the Distance/.test(cats187[2].questions[2].answer) && !cats187[2].questions[2].mediaType,
   cats187[2].questions[2].answer);
+
+// ---------- Episode 186: a host known by his shirt, lyrics over the song, a Final of pictures ----------
+
+const ep186 = draftBoard(readEpisode(parseOcr(readFileSync(at('./video-board/fixtures/episode-186.ocr.jsonl'), 'utf8'))),
+  { youtube: 'FnWbzT6N9XI', names, show: 'Disney Jeopardy!', topic: 'disney' });
+const cats186 = ep186.file.board.categories;
+check('the host is known by what is on his shirt, so it is never offered as an answer',
+  !ep186.problems.some((p) => /ZERO|BOTHERS/.test(p.note)), ep186.problems.filter((p) => /ZERO/.test(p.note)).map((p) => p.where).join(', '));
+check('with no answer bar to come, the lyrics sung straight off the card are the answer, not a clip',
+  cats186[1].questions.every((q) => !q.mediaType), JSON.stringify(cats186[1].questions.map((q) => q.youtubeStart)));
+const fj186 = ep186.file.board.finalJeopardy;
+check("a Final of pictures plays the pictures, and stops when the host is back, before the answers are shown",
+  fj186.category === 'FANTASIA' && fj186.youtubeStart === 1228 && fj186.youtubeEnd === 1256, JSON.stringify(fj186));
 
 const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
 check('names given are the names used', told.names.join('') === 'ABCDE');
