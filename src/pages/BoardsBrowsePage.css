@@ -142,13 +142,20 @@ button.bb-rail-arrow {
   line-height: 1;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 button.bb-rail-arrow.is-back { left: 0; }
 button.bb-rail-arrow.is-on { right: 0; }
 .bb-rail:hover button.bb-rail-arrow,
 button.bb-rail-arrow:focus-visible { opacity: 1; }
-button.bb-rail-arrow:hover { background: rgba(5, 9, 30, 0.92); color: var(--jeopardy-gold-light); }
+/* Under the pointer, or focused, the arrow looks exactly as it does at rest.
+   globals.css clears a plain button's background on :hover and :focus, at
+   0,3,1, so this has to outweigh it to keep the backing. */
+.bb-rail button.bb-rail-arrow.plain-btn:hover:not(:disabled),
+.bb-rail button.bb-rail-arrow.plain-btn:focus {
+  background: rgba(5, 9, 30, 0.72);
+  color: var(--cream, #f2ece0);
+}
 button.bb-rail-arrow:focus-visible { outline: 2px solid var(--jeopardy-gold); outline-offset: -2px; }
 
 /* A finger swipes; there is no hover to show the arrows on. */
