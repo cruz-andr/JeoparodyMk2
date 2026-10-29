@@ -939,6 +939,8 @@ await test('a cover can be set and comes back as an image, not as JSON', async (
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-type'), 'image/png');
   assert.match(res.headers.get('cache-control') ?? '', /max-age/);
+  // The site is on another origin; same-origin here and the browser draws nothing.
+  assert.equal(res.headers.get('cross-origin-resource-policy'), 'cross-origin');
   assert.ok((await res.arrayBuffer()).byteLength > 0);
 });
 

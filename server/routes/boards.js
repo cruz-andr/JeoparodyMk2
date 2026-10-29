@@ -609,6 +609,11 @@ router.get('/:slug/cover', optionalAuth, (req, res, next) => {
     /* Immutable for an hour, and revalidated after: a cover changes rarely and
        the board's updated_at is the version that matters. */
     res.set('Cache-Control', 'public, max-age=3600');
+    /* The site and this server are different origins (Vercel and Fly), and
+       helmet's default of same-origin stops a browser drawing the picture in
+       an <img> on the site at all. A cover is a public picture; anyone may
+       show it. */
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     res.send(Buffer.from(match[2], 'base64'));
   } catch (err) {
     next(err);
