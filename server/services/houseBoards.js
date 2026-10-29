@@ -21,6 +21,11 @@ export const HOUSE_USER_ID = 'house';
 // The file name is the slug, so it is read in links: short, plain, lower case.
 const SLUG = /^[a-z0-9][a-z0-9-]{2,59}$/;
 
+// A cover is an image file beside the board's, named by its `cover`.
+const COVER_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+// The same limit as a cover put up from the board page.
+const MAX_COVER_BYTES = 512 * 1024;
+
 export function ensureHouseUser(db) {
   db.prepare('INSERT OR IGNORE INTO users (id, display_name) VALUES (?, ?)').run(HOUSE_USER_ID, 'Jeoparody');
 }
@@ -40,14 +45,24 @@ export function publishHouseBoards(db, dir) {
     const slug = name.replace(/\.json$/, '');
     try {
       const file = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
-      return { slug, action: publishOne(db, slug, file) };
+      return { slug, action: publishOne(db, slug, file, dir) };
     } catch (err) {
       return { slug, error: err.message };
     }
   });
 }
 
-function publishOne(db, slug, file) {
+/** The board's cover as the data URL boards keep, or undefined when the file names none. */
+function readCover(dir, name) {
+  if (name === undefined || name === null) return undefined;
+  const type = COVER_TYPES[path.extname(String(name)).toLowerCase()];
+  if (!type || path.basename(String(name)) !== name) throw new Error(`the cover "${name}" is not an image file beside the board`);
+  const cover = `data:${type};base64,${fs.readFileSync(path.join(dir, name)).toString('base64')}`;
+  if (Buffer.byteLength(cover) > MAX_COVER_BYTES) throw new Error(`the cover "${name}" is too large`);
+  return cover;
+}
+
+function publishOne(db, slug, file, dir) {
   if (!SLUG.test(slug)) throw new Error('the file name is not a usable slug');
 
   const topic = file.topic ?? null;
@@ -65,9 +80,11 @@ function publishOne(db, slug, file) {
   const featured = file.featured ? 1 : 0;
   const data = JSON.stringify(board);
   const names = board.categories.map((c) => c.name.trim()).filter(Boolean).join('\u0000');
+  // A file that names no cover leaves whatever cover the board has alone.
+  const cover = readCover(dir, file.cover);
 
   const existing = db.prepare(`
-    SELECT id, owner_id, title, description, topic, data, featured FROM boards WHERE slug = ?
+    SELECT id, owner_id, title, description, topic, data, featured, cover_image FROM boards WHERE slug = ?
   `).get(slug);
 
   if (existing && existing.owner_id !== HOUSE_USER_ID) {
@@ -77,17 +94,18 @@ function publishOne(db, slug, file) {
   if (!existing) {
     db.prepare(`
       INSERT INTO boards (id, slug, owner_id, title, description, topic, data, clue_count,
-                          category_names, category_count, visibility, published_at, featured)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', datetime('now'), ?)
+                          category_names, category_count, visibility, published_at, featured, cover_image)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', datetime('now'), ?, ?)
     `).run(
       uuidv4(), slug, HOUSE_USER_ID, title, description, topic, data, countClues(board),
-      names, board.categories.length, featured
+      names, board.categories.length, featured, cover ?? null
     );
     return 'published';
   }
 
   const same = existing.title === title && existing.description === description
-    && existing.topic === topic && existing.data === data && existing.featured === featured;
+    && existing.topic === topic && existing.data === data && existing.featured === featured
+    && (cover === undefined || existing.cover_image === cover);
   if (same) return 'unchanged';
 
   // A new version of the same board: its plays and its link are kept.
@@ -95,11 +113,13 @@ function publishOne(db, slug, file) {
     UPDATE boards
     SET title = ?, description = ?, topic = ?, data = ?, clue_count = ?,
         category_names = ?, category_count = ?, visibility = 'public', featured = ?,
+        cover_image = COALESCE(?, cover_image),
         published_at = COALESCE(published_at, datetime('now')),
         version = version + 1, updated_at = datetime('now')
     WHERE id = ?
   `).run(
-    title, description, topic, data, countClues(board), names, board.categories.length, featured, existing.id
+    title, description, topic, data, countClues(board), names, board.categories.length, featured,
+    cover ?? null, existing.id
   );
   return 'updated';
 }
