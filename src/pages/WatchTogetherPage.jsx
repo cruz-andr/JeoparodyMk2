@@ -23,7 +23,8 @@ const ask = (event, payload) => new Promise((resolve) => socketClient.emit(event
  * One of the show's episodes, watched together, each on their own device.
  * The server keeps the room's clock (watchRooms.js); this page keeps its own
  * copy of the video where that clock says, answers when the room stops, and
- * shows how everyone did. Whoever started the room drives it.
+ * shows how everyone did. Whoever started the room drives it, until someone
+ * gets one right: the last one right drives, as in a multiplayer game.
  */
 export default function WatchTogetherPage() {
   const { slug } = useParams();
@@ -226,7 +227,7 @@ export default function WatchTogetherPage() {
                   <PlayMark /> Play for everyone
                 </button>
               )}
-              <span className="wa-note">You are driving. Pick a square to take everyone to that clue.</span>
+              <span className="wa-note">You are driving until someone else gets one right. Pick a square to take everyone to that clue.</span>
             </div>
           )}
 

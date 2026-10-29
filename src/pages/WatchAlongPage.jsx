@@ -7,7 +7,7 @@ import { getBoard } from '../services/api/boardsService';
 import { loadYouTubeApi } from '../components/media/youtubeApi';
 import { judgeTyped } from '../utils/typedClue';
 import { clampFinalWager } from '../utils/wagers';
-import { reached, scored, stopsFor } from '@shared/watchAlong.js';
+import { reached, scored, startOf, stopsFor } from '@shared/watchAlong.js';
 import { AskPanel, StartButton, Verdict } from '../components/watch/WatchParts';
 import GameBoard from '../components/game/GameBoard';
 import { BoardHeader, Money } from '../components/game/BoardChrome';
@@ -15,8 +15,6 @@ import '../components/boards/BoardsChrome.css';
 import './WatchAlongPage.css';
 
 const money = (n) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString()}`;
-// How far before a clue's stop a click on its square starts the video: enough to see the clue read.
-const LEAD = 10;
 
 /**
  * One of the show's episodes, played along with: the video runs, and stops a
@@ -99,15 +97,15 @@ export default function WatchAlongPage() {
     return () => clearInterval(tick);
   }, [stops]);
 
-  /* A square on the board: the video from a little before that clue, to
-     see it read and play it. A question already up is let go unanswered. */
+  /* A square on the board: the video from as that clue comes up, to see
+     it read and play it. A question already up is let go unanswered. */
   const jump = (column, row) => {
     const stop = stops.find((s) => s.column === column && s.row === row);
     const video = player.current;
     if (!stop || !video?.seekTo) return;
     askingRef.current = null;
     setAsking(null);
-    video.seekTo(Math.max(0, stop.pause - LEAD), true);
+    video.seekTo(startOf(stop), true);
     video.playVideo();
   };
 

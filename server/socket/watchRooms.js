@@ -10,21 +10,21 @@
  * everyone's, with a wager, as it is on the show.
  *
  * Whoever starts the room drives it: play, pause, and a square on the board
- * to go to that clue. If they leave, the next player in drives.
+ * to go to that clue. As in a multiplayer game, a right answer takes the
+ * board: whoever got the last one right drives. If they leave, the next
+ * player in drives.
  *
  * Plain JavaScript over injected time and messages, so the test runs it
  * with a hand-wound clock and no sockets.
  */
 import { gradeAnswer } from '../shared/answerMatch.js';
 import { TYPING_ANSWER_MS } from '../shared/answerClock.js';
-import { reached, scored, stopsFor } from '../shared/watchAlong.js';
+import { reached, scored, startOf, stopsFor } from '../shared/watchAlong.js';
 
 // How long the buzzer is open at a clue, and again after a wrong answer.
 const BUZZ_MS = 15_000;
 const REBUZZ_MS = 8_000;
 const FINAL_MS = 60_000;
-// How far before a clue's stop a square on the board starts the video.
-const LEAD = 10;
 // A room nobody is in for this long is forgotten.
 const EMPTY_MS = 30 * 60_000;
 const MAX_PLAYERS = 12;
@@ -249,7 +249,7 @@ export function createWatchRooms({
         if (action === 'clue') {
           const stop = room.stops.find((s) => s.column === column && s.row === row);
           if (!stop) return;
-          to = Math.max(0, stop.pause - LEAD);
+          to = startOf(stop);
         }
         if (!Number.isFinite(to) || to < 0) return;
         // Going elsewhere lets a question that is up go, unanswered.
@@ -303,6 +303,8 @@ export function createWatchRooms({
       const points = scored(cur.stop, verdict.correct, staked);
       player.score += points;
       cur.answers.set(playerId, { correct: verdict.correct, points, given: text });
+      // Right takes the board, as it does in a multiplayer game.
+      if (!final && verdict.correct) room.hostId = playerId;
       if (final) {
         if (!settleIfAllIn(room)) tell(room);
       } else {
@@ -327,6 +329,9 @@ export function createWatchRooms({
       const player = room?.players.get(playerId);
       if (!result || !player || result.correct || result.passed) return;
       player.score += -result.points * 2;
+      // Nobody else had it, so "I had it" takes the board too.
+      const others = Object.entries(room.last.results).some(([id, r]) => id !== playerId && r.correct);
+      if (room.last.key !== 'final' && !others && room.players.get(playerId).connected) room.hostId = playerId;
       room.last.results[playerId] = { ...result, correct: true, points: -result.points, overruled: true };
       tell(room);
     },
