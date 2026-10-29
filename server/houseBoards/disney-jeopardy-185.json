@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 185",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 185), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "FINDING NEMO",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "When Darla nearly bites down on P. Sherman's finger, she claims that she's this type of fish found in the amazon",
+            "question": "What is Piranha?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "What EAC stands for",
+            "question": "What is East Australian Current?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "At one point in the film Dory calls Nemo this sesame street character's name",
+            "question": "What is Elmo?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "This is what the fish in the fish tank nickname Nemo",
+            "question": "What is Shark Bait?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "The name of the two sharks who swim with Bruce",
+            "question": "Who are Anchor & Chum?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "PIRATES 5",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "All of the film's characters are on the hunt for this item, known to break all the curses of the sea",
+            "question": "What is Poseidon's Trident?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Salazar gave Jack his signature last name after spotting him on this part of a ship",
+            "question": "What is Crow's Nest?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "As a baby, Carina's father gave her a diary written by this great astronomer",
+            "question": "What is Galileo Galilei?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Hector Barbossa's answer to when Carina asks \"who am I to you\"",
+            "question": "What is Treasure?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "When Jack spots his uncle Jackie in a jail cell, Jackie tells him about the skeleton who goes to a bar and orders these two things",
+            "question": "What is Beer & a Mop?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "DID SOMEONE SAY PIE?",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the film this pie scene is from",
+            "question": "What is Robin Hood?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CciUgiaQo1Q",
+            "youtubeStart": 212,
+            "youtubeEnd": 227,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "After being a bully in his youth, Gideon Grey grew up to become a pastry chef and delivers pies in this film",
+            "question": "What is Zootopia?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "\"pies? Pies are luxuries, they don't need luxuries\" name the live action remake character who spoke this line",
+            "question": "Who is the Evil Queen?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Listen to the audio about pie and identify which animated film it is from",
+            "question": "What is a Bug's Life?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CciUgiaQo1Q",
+            "youtubeStart": 769,
+            "youtubeEnd": 788,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Complete the Nani line from Lilo & Stitch: \"I'm going to stuff you in a blender, push puree, then bake you into a pie and feed it to the social worker. And when he says 'mmm this is great! What's your secret?' I'm going to say",
+            "question": "What is Love?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "GET IN, WE'RE GOING SHOPPING",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Whether attending the Magic Kingdom or Disneyland park, head to left of Main Street and you'll end up in this large store, each park's biggest.",
+            "question": "What is Emporium?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The largest store located at Disney Springs (and also Downtown Disney)",
+            "question": "What is World of Disney?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Once Epcot's largest souvenir store (in what was Future World), this shop included hidden mickeys formed from industrial décor before being replaced by Creations Shop.",
+            "question": "What is Mouse Gear?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "At Star Wars: Galaxy's Edge, guests can head to this secret workshop where you can build your own lightsaber",
+            "question": "What is Savi's Workshop?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "California Adventure and Hollywood Studios don't only share theming based on the Golden State. They also each have faux gas stations located right when you enter the park, both beginning with the letter o. Name the two stations.",
+            "question": "What is Oswald's & Oscar's?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "BANDS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the film this band is playing in",
+            "question": "What is Beauty & the Beast?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CciUgiaQo1Q",
+            "youtubeStart": 282,
+            "youtubeEnd": 295,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The Firefly Five are a jazz band with this Disney character on the trumpet",
+            "question": "Who is Louis the Alligator?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Dr. Teeth is the lead singer of this famous band who got their start back in 1975",
+            "question": "What is the Electric Mayhem?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "In Coco, this is the prize for winning the battle of the Bands competition",
+            "question": "What is Perform for Ernesto?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "According to Thomas O'Malley, this band member is the coolest feline of them all",
+            "question": "Who is Scat Cat?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "HERCULES",
+      "answer": "While training Hercules and flying on Pegasus, Phil says this after hearing a distant scream: \"sounds like your basic D.I.D.\" this is what D.I.D. stands for",
+      "question": "What is Damsel in Distress?"
+    }
+  },
+  "cover": "disney-jeopardy-185.jpg"
+}

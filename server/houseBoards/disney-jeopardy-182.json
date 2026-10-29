@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 182",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 182), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "FANTASIA",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "This magical duo introduced the returning \"Sorcerer's Apprentice\" sequence in the movie",
+            "question": "Who are Penn and Teller?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "8 years after animating Genie, this newly inducted Disney legend directed Fantasia 2000's 'Rhapsody in Blue' segment",
+            "question": "Who is Eric Goldberg?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "A dragon, unicorn, and griffin can be seen laughing at other animals boarding Noah's Ark in this Fantasia 2000 segment",
+            "question": "What is Pomp and Circumstance?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Fantasia 2000's music was performed by a group from this city",
+            "question": "What is Chicago?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "\"What would happen if you gave a ____ to a flock of ____?\"",
+            "question": "What is Yo-Yo & Flamingos?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "DEAD MAN'S CHEST",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The name of Davy Jones' ship",
+            "question": "What is the Flying Dutchman?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Elizabeth puppeteers this item to make a crew at sea believe their ship is haunted",
+            "question": "What is Her Dress?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Tia Dalma reveals that Captain Jack has been hiding this on his left palm",
+            "question": "What is the Black Spot?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "When the Pelegostos catch Captain Jack trying to escape, he sprinkles himself with this spice for extra seasoning",
+            "question": "What is Paprika?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "While playing liar's dice, Bootstrap sacrifices himself by guessing this amount of 5s despite knowing that result isn't possible",
+            "question": "What is 12?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "DUOS DOUBLE UP",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "These two actors share this scene. Name the Disney film where they voiced a duo",
+            "question": "What is Monsters, Inc?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "ZqRxMueYxY4",
+            "youtubeStart": 196,
+            "youtubeEnd": 233,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "These two actors share this scene. Name the Disney film where they voiced a duo",
+            "question": "What is the Lion King?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "ZqRxMueYxY4",
+            "youtubeStart": 382,
+            "youtubeEnd": 409,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "These two actors share this scene. Name the Disney film where they voiced a duo",
+            "question": "What is Onward?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "ZqRxMueYxY4",
+            "youtubeStart": 576,
+            "youtubeEnd": 592,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "These two actors share this scene. Name the Disney film where they voiced a duo",
+            "question": "What is Inside Out?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "ZqRxMueYxY4",
+            "youtubeStart": 787,
+            "youtubeEnd": 805,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "These two actors share this scene. Name the Disney film where they voiced a duo",
+            "question": "What is Chicken Little?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "ZqRxMueYxY4",
+            "youtubeStart": 1030,
+            "youtubeEnd": 1058,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "JOE ROHDE",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Joe is credited with being a lead designer for this Disney theme park",
+            "question": "What is Animal Kingdom?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Joe went coast-to-coast and lead the transformation of this ride at California Adventure into Guardians of the Galaxy: Mission: Breakout",
+            "question": "What is Tower of Terror?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Rohde stepped outside of the theme parks when he lead the design team for this hawaiian Disney resort",
+            "question": "What is Aulani?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Rohde played a role in bringing both the Mexico and Norway pavilions to life at Epcot, but he also was a part of the creation of the American Adventure attraction. He voiced this american inventor within the show",
+            "question": "Who is Alexander Graham Bell?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Joe Rohde was the model for this character, seen in his portrait here",
+            "question": "Who is Harrison Hightower?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "ZqRxMueYxY4",
+            "youtubeStart": 1077,
+            "youtubeEnd": 1094,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "INSULTING QUOTES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "\"you are a sad, strange little man, and you have my pity.\"",
+            "question": "Who is Buzz Lightyear?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "\"it looks awful!\" \"that's because it's on you, dear!\"",
+            "question": "Who are Flora and Merryweather?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "\"I'm surrounded by amateurs\"",
+            "question": "Who is Sebastian?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "\"let me guess, you have a great personality\"",
+            "question": "Who is Kuzco?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "\"isn't it rather dangerous to use one's entire vocabulary in a single sentence?\"",
+            "question": "Who is Francis?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "TARZAN",
+      "answer": "Tarzan transforms from a boy to an adult during this song in the film",
+      "question": "What is Son of Man?"
+    }
+  },
+  "cover": "disney-jeopardy-182.jpg"
+}

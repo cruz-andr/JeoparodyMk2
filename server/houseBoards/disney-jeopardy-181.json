@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 181",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 181), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "THE CURSE OF THE BLACK PEARL",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The name of Barbossa's monkey",
+            "question": "What is Jack?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Legend has it that Captain Jack used this to get off the island he was marooned on (it wasn't true)",
+            "question": "What is Rope/Back Hair & Sea Turtles?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "According to Jack, this nationality of people are who to blame for coming up with parley",
+            "question": "What is the French?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "The name of the ship Jack and Will commandeer when escaping Port Royal",
+            "question": "What is Interceptor?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Barbossa's final line",
+            "question": "What is I Feel Cold?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "CHARACTER LABOR",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Before meeting Remy and becoming a world-class chef, this was Linguini's job at Gusteau's",
+            "question": "What is Garbage Boy?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "WALL-E's name comes from the labor that he does. This is what the E in his name stands for",
+            "question": "What is Earth Class?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Celia Mae's job in Monsters, Inc.",
+            "question": "What is Receptionist?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Before becoming his crew chief, Doc Hudson has this job in Radiator Springs",
+            "question": "What is Judge?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Elsa gives Kristoff this official occupation at the end of Frozen: Arendelle's ice master and",
+            "question": "What is Deliverer?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "TENNIS, ANYONE?",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "If you need some tennis balls, look no further than the bottom of the cane belonging to this Pixar character",
+            "question": "Who is Carl?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the character holding the tennis racket",
+            "question": "Who is Bandit?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5SEdjgqITV4",
+            "youtubeStart": 427,
+            "youtubeEnd": 441,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Released in the 1940's, Tennis Racquet is a short starring this character playing a number of different roles. Something he commonly did for sports-centric shorts he starred in",
+            "question": "Who is Goofy?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "The computer who wore tennis shoes starred this young actor, his full name is rumored to be some of Walt Disney's last words",
+            "question": "Who is Kurt Russell?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Two Can't Play is a new-age Mickey short that focuses on a tennis double match between Mickey and Minnie and these two opponents",
+            "question": "Who are Donald and Daisy?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "LABOR IN THE PARKS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Cast members portrayed gangsters who stole your ride vehicle in this defunct Disney world attraction",
+            "question": "What is the Great Movie Ride?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The jammitors are a band at Epcot dressed up in costumes tied to this theme park role",
+            "question": "What is Custodial?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "If you're looking for a fairy godmother apprentice working in the parks, you can find them at this magical park experience",
+            "question": "What is Bibbidi Bobbidi Boutique?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Rather than being called drivers, cast members who sit in the front of the monorails are called this",
+            "question": "What is Pilot?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "If you want to start working for Disney parks, you'll have to first take this orientation class, a true welcome to Disney moment",
+            "question": "What is Traditions?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "WAS THIS A REAL LINE?",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Listen to Tom Hanks and identify which line was actually spoken by Woody",
+            "question": "What is the second clip?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5SEdjgqITV4",
+            "youtubeStart": 239,
+            "youtubeEnd": 280,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Listen to Robin Williams and identify which line was actually spoken by Genie",
+            "question": "What is the first clip?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5SEdjgqITV4",
+            "youtubeStart": 498,
+            "youtubeEnd": 523,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Listen to Mandy Moore and identify which line was actually spoken by Rapunzel",
+            "question": "What is the second clip?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5SEdjgqITV4",
+            "youtubeStart": 680,
+            "youtubeEnd": 714,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Listen to Kristen Bell and identify which line was actually spoken by Anna",
+            "question": "What is the first clip?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5SEdjgqITV4",
+            "youtubeStart": 898,
+            "youtubeEnd": 934,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Listen to Eddie Murphy and identify which line was actually spoken by Mushu",
+            "question": "What is the first clip?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5SEdjgqITV4",
+            "youtubeStart": 1178,
+            "youtubeEnd": 1202,
+            "audioOnly": true,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "FANTASIA 2000",
+      "answer": "Fantasia 2000 made history by becoming the first feature-length animated film to debut exclusively in this format",
+      "question": "What is IMAX?"
+    }
+  },
+  "cover": "disney-jeopardy-181.jpg"
+}

@@ -179,7 +179,8 @@ async function draft() {
   const read = readEpisode(parseOcr(text), { categories });
   const names = parseNames(readFileSync(join(here, 'names.txt'), 'utf8'));
   const cover = youtube && await fetchCover(youtube, join(out, 'cover.jpg')) ? 'cover.jpg' : null;
-  read.episode ??= cover ? await readThumbnail(join(out, cover)) : null;
+  // The thumbnail's number, when it has one, is the episode's own; the video can mention others.
+  read.episode = (cover ? await readThumbnail(join(out, cover)) : null) ?? read.episode ?? read.mentioned;
   const { file, problems } = draftBoard(read, {
     youtube,
     names,

@@ -27,10 +27,15 @@ export const TODO = 'TODO:';
  * ocr.jxa's output, one JSON line a frame, as frames: `lines` is the text top
  * to bottom, `boxes` the same with where each line sits.
  */
+/* Recognition now and then reads a capital as its Cyrillic twin ("EPCOТ",
+   "METOОН"), which then fails as card type. They are put back. */
+const TWINS = { А: 'A', В: 'B', Е: 'E', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', У: 'Y', Х: 'X', а: 'a', е: 'e', о: 'o', р: 'p', с: 'c', у: 'y', х: 'x' };
+const latin = (s) => s.replace(/[АВЕКМНОРСТУХаеорсух]/g, (c) => TWINS[c]);
+
 export function parseOcr(text) {
   return text.split('\n').filter((line) => line.trim()).map((line) => JSON.parse(line))
     .map(({ s, t }) => {
-      const boxes = t.map(([text, y, x = null, w = 0]) => ({ text: text.trim(), y, x, w }))
+      const boxes = t.map(([text, y, x = null, w = 0]) => ({ text: latin(text).trim(), y, x, w }))
         .filter((b) => b.text)
         .sort((a, b) => a.y - b.y);
       return { s, boxes, lines: boxes.map((b) => b.text) };
@@ -76,7 +81,8 @@ const capitals = (s) => (s.match(/[A-Z]/g) ?? []).length;
 const FURNITURE = /JEOPARDY|^\s*\S*\s*\d+\s*POINTS?\b|\bROUND\s*$|^[•·*]/i;
 
 // The cards are plain type. A letter from outside it ("SƠUU") is a misreading.
-const CARD_TYPE = /^[\x20-\x7E‘’“”…–—•·]+$/;
+// Accented capitals too: "INDUSTRIAL DÉCOR" is the card, not a misreading.
+const CARD_TYPE = /^[\x20-\x7E‘’“”…–—•·À-ÖØ-öø-ÿ]+$/;
 
 // The host at his desk: its plate, "DisNEy JEOPARDY" as it is read.
 const DESK = /^D\S*\s+JEOPARDY$/i;
@@ -99,7 +105,8 @@ function cardOn(frame, also = () => true) {
   // A line starting "ANS" is an answer fading in ("ANSIVEI ARIE AND"), unless it reads on, with no colon, as a sentence ("ANSWER THIS QUESTION FROM THE").
   const fading = (line) => /^ANS/.test(line) && (line.includes(':') || line.split(/\s+/).length < 4);
   const lines = frame.lines.filter((line) => cardLine(line) && !fading(line) && also(line));
-  const enough = lines.reduce((n, line) => n + letters(line), 0) >= CARD_LETTERS;
+  // Digits count: "MAY 5TH, 2005 / EPCOT" is a whole card.
+  const enough = lines.reduce((n, line) => n + (line.match(/[A-Za-z0-9]/g) ?? []).length, 0) >= CARD_LETTERS;
   return enough && lines.some((line) => line.split(/\s+/).length >= 3) ? lines : null;
 }
 
@@ -191,6 +198,8 @@ function answerRuns(frames) {
  */
 const SHOWN = /\b(SEEN|SHOWN|PICTURED|WATCH|UPCOMING LINE|NEXT LINE)\b|\bTHIS (SCENE|CLIP|IMAGE|PICTURE)\b/;
 const HEARD = /\b(HEAR|HEARD|LISTEN)\b|\bTHIS (SONG|SOUND|VOICE)\b/;
+// Told to listen. Only then is the card's own time a sound to play: "singing this song" names a song, it does not play one.
+const LISTEN = /\b(HEAR|LISTEN)\b/;
 
 /**
  * The card before an answer: the run of card frames nearest before it,
@@ -226,7 +235,19 @@ function answerShowsAt(frames, from, to) {
   return frames.find((f) => f.s > from && f.s <= to && f.lines.some((l) => /^.?ANS|N?SWER\s*:/.test(l)))?.s ?? to;
 }
 
-const said = (f) => letters(f.lines.join(''));
+// How much is written on a frame, not counting a list of choices (bullets) shown with a picture.
+const BULLET = /^\s*[•·*]\s*/;
+const said = (f) => letters(f.lines.filter((l) => !BULLET.test(l)).join(''));
+
+/** Choices listed with a picture ("• THE JUNGLE BOOK"), as most of its frames read them. */
+function choicesIn(frames, from, to) {
+  const seen = new Map();
+  for (const f of frames) {
+    if (f.s <= from || f.s >= to) continue;
+    for (const line of new Set(f.lines)) if (BULLET.test(line)) seen.set(line, (seen.get(line) ?? 0) + 1);
+  }
+  return [...seen].filter(([, n]) => n >= 2).map(([line]) => line.replace(BULLET, '').trim()).filter((l) => letters(l) >= 2);
+}
 
 /**
  * Footage straight off the board, with no card: a picture to name (a poster
@@ -305,6 +326,7 @@ function readClue(frames, run, stretch, problems, where) {
   };
   if (!card) {
     clue.clip = pictureAfter(frames, seg.from, to);
+    clue.choices = choicesIn(frames, seg.from, to);
     clue.at = clue.clip?.start ?? clue.at;
     problems.push({
       where, at: clue.at, blocking: true,
@@ -328,7 +350,7 @@ function readClue(frames, run, stretch, problems, where) {
 
   /* A sound to name plays under its card, which stays up until the answer
      ("LISTEN UP AND NAME THE DISNEY CHANNEL SHOW"). */
-  if (heard && !seen && (answerAt - card.end <= 2 || card.end - card.start >= 6)) {
+  if (LISTEN.test(text) && !seen && (answerAt - card.end <= 2 || card.end - card.start >= 6)) {
     clue.clip = { start: card.start, end: answerAt - card.end <= 2 ? answerAt - 1 : card.end, audio: true };
     return clue;
   }
@@ -351,7 +373,7 @@ function readClue(frames, run, stretch, problems, where) {
         note: `Footage straight off the card (${clock(card.end + 1)} to ${clock(answerAt - 1)}) plays as the clue's clip. Check it does not give the answer away.`,
       });
     }
-  } else if (seen && answerAt - lastDesk - 1 >= 4) {
+  } else if (seen && lastDesk !== null && answerAt - lastDesk - 1 >= 4) {
     problems.push({
       where, at: lastDesk + 1,
       note: `The host talks, then footage plays into the answer (${clock(lastDesk + 1)} to ${clock(answerAt - 1)}). That is usually the answer being shown; if it is the clue's clip, add it.`,
@@ -389,7 +411,14 @@ function readFinal(frames, run, after, problems) {
 
   const card = cardBefore(frames, lastTitle, run.start,
     (line) => !FINAL.test(line) && !categoryLines.has(line) && !/WAGER/.test(line));
-  const response = vote(run.readings);
+  const response = run.readings.length ? vote(run.readings) : { text: null, sure: true };
+  if (!run.readings.length) {
+    const says = shownText(frames, run.start - 1, Infinity);
+    problems.push({
+      where, at: run.start, blocking: true,
+      note: `No answer was put on screen. Write the response${says.length ? `; the screen after the clue reads: ${says.join(' / ')}` : ''}.`,
+    });
+  }
   const final = {
     category: category.text, lines: card?.lines ?? [], response: response.text,
     at: card?.start ?? lastTitle + 1, answerAt: run.start, clip: null,
@@ -489,10 +518,23 @@ function boardStretches(boards, target, end) {
 }
 
 export function readEpisode(shown, { categories = null } = {}) {
-  let frames = shown.map(joinFinal);
+  /* A fan's clue has a banner over its card with the fan's name: under it
+     ("DISNEY JEOPARDY FAN CLUE" / "JEDEDIAH") or on it ("FAN CLUE: AVI").
+     Neither is the clue. */
+  const unbannered = (f) => {
+    const i = f.lines.findIndex((l) => /FAN CLUE/i.test(l));
+    if (i === -1) return f;
+    const named = /FAN CLUE\s*:\s*\S/i.test(f.lines[i]);
+    return { ...f, lines: f.lines.filter((_, n) => n !== i && (named || n !== i + 1)) };
+  };
+  let frames = shown.map(joinFinal).map(unbannered);
   const problems = [];
   const all = frames.flatMap((f) => f.lines);
-  const episode = Number(all.map((l) => /EPISODE\s+(\d+)/i.exec(l)?.[1]).find(Boolean)) || null;
+  /* The title card says it in capitals ("EPISODE 40"). A caption in the
+     running text can name another one ("featured in this week's Episode
+     181", said in 182), so it is only `mentioned`, the last thing to go on. */
+  const episode = Number(all.map((l) => /EPISODE\s+(\d+)/.exec(l)?.[1]).find(Boolean)) || null;
+  const mentioned = Number(all.map((l) => /\bEpisode\s+(\d+)/i.exec(l)?.[1]).find(Boolean)) || null;
   const said = Number(all.map((l) => /(\d+)\s+CATEGORIES ON THE BOARD/i.exec(l)?.[1]).find(Boolean));
 
   const runs = answerRuns(frames);
@@ -572,8 +614,12 @@ export function readEpisode(shown, { categories = null } = {}) {
     });
   }
 
-  const final = finalIndex === -1 ? null
-    : readFinal(frames, runs[finalIndex], (finalFrom ?? finalTitle.s) - 1, problems);
+  /* A Final whose answer is never put in a bar (the reveal is clips): it runs
+     to the last frame its title is on. */
+  const titledLast = finalTitle ? frames.findLast((f) => finalSeen(f))?.s : null;
+  const finalRun = finalIndex !== -1 ? runs[finalIndex]
+    : titledLast ? { start: titledLast + 1, end: titledLast + 1, readings: [] } : null;
+  const final = finalRun ? readFinal(frames, finalRun, (finalFrom ?? finalTitle.s) - 1, problems) : null;
   if (!final) problems.push({ where: 'Final Jeopardy', at: 0, note: 'No Final Jeopardy was found. The board will have none.' });
 
   let names;
@@ -593,7 +639,7 @@ export function readEpisode(shown, { categories = null } = {}) {
     }
   }
 
-  return { episode, columns, cells, final, names, problems };
+  return { episode, mentioned, columns, cells, final, names, problems };
 }
 
 // ── Writing it as a board ───────────────────────────────────
@@ -721,7 +767,8 @@ export function draftBoard(read, { youtube = null, names = [], show = null, desc
       return {
         ...blank,
         points: POINTS[r],
-        answer: cl.lines.length ? sentenceCase(joinCard(cl.lines), known) : `${TODO} write the clue`,
+        answer: cl.lines.length ? sentenceCase(joinCard(cl.lines), known)
+          : `${TODO} write the clue${cl.choices?.length >= 2 ? `. Choices: ${cl.choices.map((c) => titleCase(c)).join(', ')}` : ''}`,
         question: cl.response ? formatResponse(cl.response) : `${TODO} write the response`,
         ...clipFor(cl.clip, where, cl.at),
       };
