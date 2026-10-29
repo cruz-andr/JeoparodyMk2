@@ -232,7 +232,10 @@ check('an episode named only in a caption is known by it, but only as a last res
 const watch188 = ep188.file.watch;
 const pauseAt = (w, column, row) => w.clues.find((c) => c.column === column && c.row === row).pause;
 check('every square is timed, for the video it plays from', watch188.youtube === 'LX_MS_sy4yg' && watch188.clues.length === 25);
-check('a clue stops a second before its answer bar', pauseAt(watch188, 0, 0) === 111, String(pauseAt(watch188, 0, 0)));
+check('a card up until its answer bar stops a second before the bar', pauseAt(watch188, 0, 4) === 864, String(pauseAt(watch188, 0, 4)));
+check("a clue stops as its card goes, before the players' guesses", pauseAt(watch188, 0, 0) === 109.3, String(pauseAt(watch188, 0, 0)));
+check('a clue stops before the footage that answers it, not at the answer bar after (Pain and Panic as snakes)',
+  pauseAt(ep186.file.watch, 0, 1) === 344.3, String(pauseAt(ep186.file.watch, 0, 1)));
 check('a zoomed-in poster stops as the zoom ends, before the poster is shown whole',
   zoomed.every(([, end], row) => pauseAt(watch188, 4, row) === end + 0.3), JSON.stringify(watch188.clues.filter((c) => c.column === 4)));
 const fj186watch = ep186.file.watch.final;

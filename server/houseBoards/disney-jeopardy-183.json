@@ -11,7 +11,7 @@
         "column": 0,
         "row": 0,
         "at": 83,
-        "pause": 100
+        "pause": 94.3
       },
       {
         "column": 0,
@@ -23,25 +23,25 @@
         "column": 0,
         "row": 2,
         "at": 524,
-        "pause": 545
+        "pause": 538.3
       },
       {
         "column": 0,
         "row": 3,
         "at": 713,
-        "pause": 735
+        "pause": 733.3
       },
       {
         "column": 0,
         "row": 4,
         "at": 942,
-        "pause": 968
+        "pause": 956.3
       },
       {
         "column": 1,
         "row": 0,
         "at": 133,
-        "pause": 149
+        "pause": 145.3
       },
       {
         "column": 1,
@@ -65,7 +65,7 @@
         "column": 1,
         "row": 4,
         "at": 976,
-        "pause": 1017
+        "pause": 992.3
       },
       {
         "column": 2,
@@ -160,7 +160,7 @@
     ],
     "final": {
       "at": 1226,
-      "pause": 1261
+      "pause": 1247.3
     }
   },
   "board": {

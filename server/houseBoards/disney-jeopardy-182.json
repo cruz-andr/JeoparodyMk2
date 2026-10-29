@@ -23,7 +23,7 @@
         "column": 0,
         "row": 2,
         "at": 510,
-        "pause": 533
+        "pause": 527.3
       },
       {
         "column": 0,
@@ -35,13 +35,13 @@
         "column": 0,
         "row": 4,
         "at": 932,
-        "pause": 958
+        "pause": 950.3
       },
       {
         "column": 1,
         "row": 0,
         "at": 149,
-        "pause": 165
+        "pause": 158.3
       },
       {
         "column": 1,
@@ -59,13 +59,13 @@
         "column": 1,
         "row": 3,
         "at": 745,
-        "pause": 766
+        "pause": 763.3
       },
       {
         "column": 1,
         "row": 4,
         "at": 976,
-        "pause": 1003
+        "pause": 995.3
       },
       {
         "column": 2,
@@ -119,7 +119,7 @@
         "column": 3,
         "row": 3,
         "at": 817,
-        "pause": 845
+        "pause": 839.3
       },
       {
         "column": 3,
@@ -143,19 +143,19 @@
         "column": 4,
         "row": 2,
         "at": 647,
-        "pause": 672
+        "pause": 658.3
       },
       {
         "column": 4,
         "row": 3,
         "at": 852,
-        "pause": 871
+        "pause": 864.3
       },
       {
         "column": 4,
         "row": 4,
         "at": 1113,
-        "pause": 1132
+        "pause": 1127.3
       }
     ],
     "final": {
