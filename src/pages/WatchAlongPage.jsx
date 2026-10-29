@@ -8,10 +8,14 @@ import { loadYouTubeApi } from '../components/media/youtubeApi';
 import { CLOSE_NOTE, judgeTyped } from '../utils/typedClue';
 import { canPlayFinalJeopardy, clampFinalWager, finalWagerLimit, wagerEntry } from '../utils/wagers';
 import { reached, scored, stopsFor } from '../utils/watchAlong';
+import GameBoard from '../components/game/GameBoard';
+import { BoardHeader, Money } from '../components/game/BoardChrome';
 import '../components/boards/BoardsChrome.css';
 import './WatchAlongPage.css';
 
 const money = (n) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString()}`;
+// How far before a clue's stop a click on its square starts the video: enough to see the clue read.
+const LEAD = 10;
 
 /**
  * One of the show's episodes, played along with: the video runs, and stops a
@@ -86,8 +90,9 @@ export default function WatchAlongPage() {
     const tick = setInterval(() => {
       const video = player.current;
       if (askingRef.current || !video?.getCurrentTime) return;
-      const { ask, skipped } = reached(stops, settled.current, video.getCurrentTime());
-      for (const stop of skipped) settle(stop, { skipped: true, points: 0 });
+      /* Stops gone past without stopping (skipped ahead) are left as they
+         are: still on the board, a click away. */
+      const { ask } = reached(stops, settled.current, video.getCurrentTime());
       if (!ask) return;
       video.pauseVideo();
       askingRef.current = ask;
@@ -98,11 +103,23 @@ export default function WatchAlongPage() {
       setWager(ask.final ? '' : null);
     }, 250);
     return () => clearInterval(tick);
-  }, [stops, settle]);
+  }, [stops]);
 
   useEffect(() => {
     if (asking) setTimeout(() => input.current?.focus(), 0);
   }, [asking, wager]);
+
+  /* A square on the board: the video from a little before that clue, to
+     see it read and play it. A question already up is let go unanswered. */
+  const jump = (column, row) => {
+    const stop = stops.find((s) => s.column === column && s.row === row);
+    const video = player.current;
+    if (!stop || !video?.seekTo) return;
+    askingRef.current = null;
+    setAsking(null);
+    video.seekTo(Math.max(0, stop.pause - LEAD), true);
+    video.playVideo();
+  };
 
   const goOn = () => {
     askingRef.current = null;
@@ -144,7 +161,7 @@ export default function WatchAlongPage() {
     const worth = -last.points * 2;
     setScore((s) => s + worth);
     setResults((now) => ({ ...now, [last.stop.key]: { ...now[last.stop.key], correct: true, points: -last.points } }));
-    setLast({ ...last, correct: true, points: -last.points, overruled: true });
+    setLast({ ...last, correct: true, points: -last.points });
   };
 
   if (error) {
@@ -168,21 +185,20 @@ export default function WatchAlongPage() {
 
   const done = stops.filter((s) => results[s.key]).length;
   const finalBlocked = asking?.final && !canPlayFinalJeopardy(score);
+  // Answered or passed: gone from the board, the way a taken clue is.
+  const taken = new Set(Object.keys(results).filter((k) => k !== 'final').map((k) => k.replace(':', '-')));
+  const values = board.board.categories[0]?.questions.map((q) => q.points) ?? [];
 
   return (
-    <div className="wa-page">
-      <header className="boards-top">
-        <button
-          className="plain-btn boards-back back-chevron"
-          onClick={() => navigate(`/boards/${slug}`)}
-          aria-label="Back to the board"
-          title="Back to the board"
-        >
-          &lsaquo;
-        </button>
-        <span className="boards-top-title">Watch along</span>
-        <span className="wa-score" aria-live="polite">{money(score)}</span>
-      </header>
+    <div className="board-play-page wa-page">
+      <BoardHeader
+        title={board.title}
+        sub="Watch along"
+        onBack={() => navigate(`/boards/${slug}`)}
+        backLabel="Back to the board"
+      >
+        <Money value={score} />
+      </BoardHeader>
 
       <main className="wa-body">
         <div className="wa-stage">
@@ -233,48 +249,35 @@ export default function WatchAlongPage() {
                   {note && <p className="wa-note">{note}</p>}
                   <div className="wa-ask-do">
                     <button type="submit" className="btn-primary" disabled={!given.trim()}>Answer</button>
-                    <button type="button" className="plain-btn wa-pass" onClick={pass}>Pass</button>
+                    <button type="button" className="plain-btn wa-word" onClick={pass}>Pass</button>
                   </div>
                 </>
               )}
             </form>
           ) : last ? (
-            <div className={`wa-last ${last.passed ? 'is-passed' : last.correct ? 'is-right' : 'is-wrong'}`} aria-live="polite">
-              <p className="wa-last-verdict">
-                {last.passed ? 'Passed' : last.correct ? `Right. ${money(last.points)}` : `Not quite. ${money(last.points)}`}
-              </p>
+            <p className="wa-verdict" aria-live="polite">
+              <span className="wa-verdict-word">{last.passed ? 'Passed' : last.correct ? 'Right' : 'Wrong'}</span>
+              {!last.passed && <span className="wa-verdict-money"><Money value={last.points} /></span>}
               {!last.passed && !last.correct && (
-                <button className="plain-btn wa-overrule" onClick={overrule}>I had it</button>
+                <button className="plain-btn wa-word" onClick={overrule}>I had it</button>
               )}
-              {last.overruled && <p className="wa-note">Counted as right.</p>}
-            </div>
+            </p>
           ) : (
             <p className="wa-hint">
-              The episode stops a moment before each answer for yours. Skip ahead and the clues you skip don&rsquo;t count.
+              The episode stops a moment before each answer for yours. Pick a square to go to that clue.
             </p>
           )}
         </div>
 
         <aside className="wa-side">
-          <h1 className="wa-title">{board.title}</h1>
+          <GameBoard
+            categories={board.board.categories.map((c) => c.name)}
+            questions={board.board.categories.map((c) => c.questions)}
+            pointValues={values}
+            revealedQuestions={taken}
+            onQuestionSelect={jump}
+          />
           <p className="wa-progress">{done} of {stops.length} played</p>
-          <div className="wa-grid" style={{ gridTemplateColumns: `repeat(${board.board.categories.length}, minmax(0, 1fr))` }}>
-            {board.board.categories.map((cat, c) => (
-              <div className="wa-col" key={c}>
-                <span className="wa-col-name">{cat.name}</span>
-                {cat.questions.map((q, r) => {
-                  const result = results[`${c}:${r}`];
-                  const state = !result ? '' : result.correct ? 'is-right' : result.skipped || result.passed ? 'is-gone' : 'is-wrong';
-                  const now = asking?.key === `${c}:${r}`;
-                  return (
-                    <span key={r} className={`wa-cell ${state} ${now ? 'is-now' : ''}`}>
-                      {result ? '' : q.points}
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
 
           {(ended || done === stops.length) && (
             <div className="wa-end">
