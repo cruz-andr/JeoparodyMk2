@@ -25,6 +25,7 @@ const TOPIC_NAMES = {
 };
 
 const ROWS = [
+  { key: 'house', name: 'Disney Jeopardy', note: "From Inside the Magic's show" },
   { key: 'featured', name: 'Featured', note: 'Picked by hand' },
   { key: 'popular', name: 'Popular', note: 'Most played' },
   { key: 'new', name: 'New this week', note: 'Just published' },
@@ -102,7 +103,7 @@ export default function BoardsBrowsePage() {
   const load = useCallback(async () => {
     setError('');
     try {
-      /* Three requests rather than one, because they are three different
+      /* A request per row rather than one, because they are different
          questions and a single endpoint answering all of them would be a
          parameter that changes what the response means. */
       const results = await Promise.all(

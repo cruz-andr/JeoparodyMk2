@@ -19,6 +19,7 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../config/database.js';
+import { HOUSE_USER_ID } from '../services/houseBoards.js';
 import { authenticateToken, optionalAuth } from '../middleware/auth.js';
 import { clientAddress } from '../middleware/rateLimit.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -224,6 +225,10 @@ const ROWS = {
   /* Featured falls back to the most played finished boards when nothing is
      picked, so the row is never an empty shelf next to two full ones. */
   featured: `AND ${FINISHED} ORDER BY b.plays DESC, b.published_at DESC`,
+  /* The site's own boards, the show's episodes: newest episode first, by the
+     number its slug ends in ("disney-jeopardy-188"). They go up together on
+     a deploy, so when they were published says nothing about their order. */
+  house: "ORDER BY CAST(substr(b.slug, length(rtrim(b.slug, '0123456789')) + 1) AS INTEGER) DESC, b.published_at DESC",
   popular: 'ORDER BY b.plays DESC, b.published_at DESC',
   new: 'ORDER BY b.published_at DESC',
 };
@@ -238,6 +243,7 @@ router.get('/', optionalAuth, (req, res, next) => {
     const where = ["b.visibility = 'public'"];
     const params = [];
     if (topic) { where.push('b.topic = ?'); params.push(topic); }
+    if (row === 'house') { where.push('b.owner_id = ?'); params.push(HOUSE_USER_ID); }
 
     /* A hand-picked Featured row is an explicit list, so it is ordered by that
        list rather than by plays: the point of picking is that the order is a
