@@ -29,6 +29,11 @@ export function stopsFor(watch, board) {
   return [...clues.sort((a, b) => a.pause - b.pause), ...final];
 }
 
+/** Where a square on the board takes the video: a second before its clue comes up, to see it come. */
+export function startOf(stop) {
+  return Math.max(0, stop.at - 1);
+}
+
 /**
  * Where the video is now, against the stops: the one to stop at, and the
  * ones it went past without stopping (skipped ahead), which do not count.

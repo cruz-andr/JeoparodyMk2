@@ -3,7 +3,7 @@
  * Run with: node server/test/watchAlong.test.js
  */
 import assert from 'node:assert/strict';
-import { reached, scored, stopsFor } from '../shared/watchAlong.js';
+import { reached, scored, startOf, stopsFor } from '../shared/watchAlong.js';
 
 let passed = 0;
 const failures = [];
@@ -65,6 +65,11 @@ test('a right response is worth the clue, a wrong one costs it; Final is the wag
 test('a board without Final, or a clue the board no longer has, is left out', () => {
   const short = stopsFor({ ...watch, clues: [...watch.clues, { column: 5, row: 0, at: 1, pause: 2 }], final: null }, board);
   assert.deepEqual(short.map((s) => s.key), ['0:0', '1:0', '0:1', '1:1']);
+});
+
+test('a square starts the video a second before its clue comes up, never before the start', () => {
+  assert.equal(startOf(stops[1]), 39);
+  assert.equal(startOf({ at: 0, pause: 8 }), 0);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed\n`);

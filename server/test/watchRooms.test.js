@@ -162,13 +162,13 @@ await test('the driver playing with the buzzer open moves on from the clue', asy
   assert.equal(last().clock.playing, true);
 });
 
-await test('a square sends everyone to just before that clue', async () => {
+await test('a square sends everyone to that clue as it comes up', async () => {
   const { rooms, advance, last } = harness();
   const code = await rooms.create({ slug: 'ep', player: ada });
   rooms.control({ code, playerId: 'ada', action: 'clue', column: 1, row: 1 });
-  assert.equal(last().clock.position, 90);
+  assert.equal(last().clock.position, 89);
   assert.equal(last().clock.playing, true);
-  advance(10_000);
+  advance(11_000);
   assert.equal(last().current.key, '1:1', 'the clues it went past are not asked');
 });
 
@@ -199,10 +199,10 @@ await test('right takes the board: the last one right drives, as in multiplayer'
   rooms.answer({ code, playerId: 'bo', key: '0:0', given: 'trident' });
   assert.equal(last().hostId, 'bo');
   rooms.control({ code, playerId: 'ada', action: 'clue', column: 1, row: 1 });
-  assert.notEqual(last().clock.position, 90, 'Ada no longer picks');
+  assert.notEqual(last().clock.position, 89, 'Ada no longer picks');
   rooms.control({ code, playerId: 'bo', action: 'clue', column: 1, row: 1 });
-  assert.equal(last().clock.position, 90, 'Bo picks the next clue');
-  advance(10_000);
+  assert.equal(last().clock.position, 89, 'Bo picks the next clue');
+  advance(11_000);
   rooms.buzz({ code, playerId: 'ada', key: '1:1' });
   rooms.answer({ code, playerId: 'ada', key: '1:1', given: 'a muppet band' });
   assert.equal(last().hostId, 'bo', 'wrong does not take it');

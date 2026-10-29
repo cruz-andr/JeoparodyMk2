@@ -19,14 +19,12 @@
  */
 import { gradeAnswer } from '../shared/answerMatch.js';
 import { TYPING_ANSWER_MS } from '../shared/answerClock.js';
-import { reached, scored, stopsFor } from '../shared/watchAlong.js';
+import { reached, scored, startOf, stopsFor } from '../shared/watchAlong.js';
 
 // How long the buzzer is open at a clue, and again after a wrong answer.
 const BUZZ_MS = 15_000;
 const REBUZZ_MS = 8_000;
 const FINAL_MS = 60_000;
-// How far before a clue's stop a square on the board starts the video.
-const LEAD = 10;
 // A room nobody is in for this long is forgotten.
 const EMPTY_MS = 30 * 60_000;
 const MAX_PLAYERS = 12;
@@ -251,7 +249,7 @@ export function createWatchRooms({
         if (action === 'clue') {
           const stop = room.stops.find((s) => s.column === column && s.row === row);
           if (!stop) return;
-          to = Math.max(0, stop.pause - LEAD);
+          to = startOf(stop);
         }
         if (!Number.isFinite(to) || to < 0) return;
         // Going elsewhere lets a question that is up go, unanswered.
