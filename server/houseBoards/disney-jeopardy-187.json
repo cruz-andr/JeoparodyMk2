@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 187",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 187), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "FANTASIA",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The only segment from the movie to reappear in Fantasia 2000",
+            "question": "What is the Sorcerer's Apprentice?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "\"How do you do? My name is (Fantasia's master of ceremonies)\"",
+            "question": "What is Deems Taylor?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "The number of siblings Peter Pegasus has in the Pastoral Symphony segment",
+            "question": "What is 4?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Following the \"Rite of Spring\" sequence, Fantasia paused its musical journey for something that has since never been seen in a Disney feature animation film: one of these.",
+            "question": "What is an Intermission?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the 4 types of animals to appear in the Dance of the Hours segment",
+            "question": "What is Hippos, Elephants, Ostriches, Gators?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "DISNEY EXTRAS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the film these background extras are from",
+            "question": "What is Hunchback of Notre Dame?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 121,
+            "youtubeEnd": 129,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the film these background extras are from",
+            "question": "What is Tangled?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 311,
+            "youtubeEnd": 324,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the film these background extras are from",
+            "question": "What is Encanto?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 447,
+            "youtubeEnd": 455,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Name the film these background extras are from",
+            "question": "What is Bolt?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 684,
+            "youtubeEnd": 704,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the film these background extras are from",
+            "question": "What is Pocahontas?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 881,
+            "youtubeEnd": 891,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "SIGN-OFF KARAOKE",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Sing the very last lines of A Whole New World from Aladdin. Aladdin: “A thrilling chase.” Jasmine: ____ Together: ____",
+            "question": "Jasmine: “A wondrous place.” Together: “For you and me.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Sing Timon and Pumbaa’s ending to Can You Feel the Love Tonight from The Lion King. Pumbaa: “His carefree days with us are history.” Timon & Pumbaa: ____",
+            "question": "“In short, our pal is doomed.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Sing the very last lines of Go the Distance from Hercules",
+            "question": "“I would go most anywhere to find where I belong.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Sing the final lines of I Wanna Be Like You from The Jungle Book",
+            "question": "“Can learn to be like someone like me.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Sing the final lines of Surface Pressure from Encanto. Luisa: “Who am I if I don’t have what it takes?” ____",
+            "question": "“No cracks, no breaks, no mistakes, no pressure.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "SAFETY SPIELS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Listen to the safey spiel and identify what ride or attraction it is a part of",
+            "question": "What is Monorail?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 216,
+            "youtubeEnd": 234,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Listen to the safey spiel and identify what ride or attraction it is a part of",
+            "question": "What is Peter Pan's Flight?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 375,
+            "youtubeEnd": 389,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Listen to the safey spiel and identify what ride or attraction it is a part of",
+            "question": "What is Journey into Imagination?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 588,
+            "youtubeEnd": 605,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Listen to the safey spiel and identify what ride or attraction it is a part of",
+            "question": "What is Rise of the Resistance?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 742,
+            "youtubeEnd": 755,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Listen to the safey spiel and identify what ride or attraction it is a part of",
+            "question": "What is Star Tours?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "S-XkcKpUFKc",
+            "youtubeStart": 932,
+            "youtubeEnd": 945,
+            "audioOnly": true,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "MIRRORS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Famed is thy beauty is how the Magic Mirror begins to answer this question from the Evil Queen in Snow White",
+            "question": "Who is the Fairest One of All?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "When Vanessa is singing in front of a mirror, this Little Mermaid character watches from a window and discovers that Vanessa is actually Ursula",
+            "question": "What is Scuttle?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "While looking in a mirror, Aurora breaks down and cries after this fairy places a crown on her head",
+            "question": "What is Flora?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Georgette knocks over her beautiful mirror after being frightened when spotting this character standing behind her reflection",
+            "question": "What is Dodger?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "When Gothel stands with Rapunzel in front of the mirror and makes the \"oh look you're here too\" joke, she first uses these 3 adjectives to describe the young lady she sees",
+            "question": "What is Strong, Confident, Beautiful?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "LADY & THE TRAMP, ENCANTO, ROGER RABBIT",
+      "answer": "Coincidentally, this is the exact number of years that separate the releases of Lady and the Tramp & Who Framed Roger Rabbit, as well as Who Framed Roger Rabbit & Encanto",
+      "question": "What is 33?"
+    }
+  },
+  "cover": "disney-jeopardy-187.jpg"
+}
