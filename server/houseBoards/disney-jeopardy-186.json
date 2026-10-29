@@ -1,0 +1,348 @@
+{
+  "title": "Disney Jeopardy!: Episode 186",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 186), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "HERCULES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The full name of Meg's song from the film",
+            "question": "What is I Won't Say (I'm in Love)?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "What Pain and Panic turn into right after Hercules drinks Hades' potion",
+            "question": "What is Snakes?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Phil's dream was to have people look up at a constellation of a hero and say this",
+            "question": "What is \"That's Phil's Boy\"?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "The fruit-related nickname given to the city of Thebes",
+            "question": "What is the Big Olive?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Before he discovers he's Zeus' son, Hercules lives with a family who has a donkey named this",
+            "question": "What is Penelope?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "KICK-OFF KARAOKE",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Fill in the blanks for the start of I'll Make a Man Out of You from Mulan",
+            "question": "“Let’s get down to business, to defeat the Huns.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Fill in the blanks for the start of Let It Go from Frozen",
+            "question": "“The snow glows white on the mountain tonight, not a footprint to be seen.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Fill in the blanks for the start of This Is Halloween from The Nightmare Before Christmas",
+            "question": "“Boys and girls of every age, wouldn’t you like to see something strange?”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Fill in the blanks for the start of How Far I'll Go from Moana",
+            "question": "“I’ve been staring at the edge of the water.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Fill in the blanks for the start of I've Got a Dream from Tangled",
+            "question": "“I’m malicious, mean and scary, my sneer could curdle dairy, and violence-wise my hands are not the cleanest.”",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "PIXAR EXTRAS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the Pixar film these background extras are from",
+            "question": "What is The Incredibles?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 206,
+            "youtubeEnd": 218,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the Pixar film these background extras are from",
+            "question": "What is WALL-E?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 431,
+            "youtubeEnd": 438,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the Pixar film these background extras are from",
+            "question": "What is Hoppers?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 613,
+            "youtubeEnd": 622,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Name the Pixar film these background extras are from",
+            "question": "What is Soul?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 788,
+            "youtubeEnd": 796,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the Pixar film these background extras are from",
+            "question": "What is Finding Dory?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 1017,
+            "youtubeEnd": 1033,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "ISLAND HOPPING",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Fantasmic takes place on this island in Disneyland",
+            "question": "What is Tom Sawyer Island?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The only Disney park where Big Thunder Mountain sits on an island",
+            "question": "What is Disneyland Paris?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Places like the Adventurers Club and mannequins were establishments found on this former Downtown Disney staple",
+            "question": "What is Pleasure Island?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Operating as an attraction for 25 years, this now-abandoned island sits in the middle of Bay Lake",
+            "question": "What is Discovery Island?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "The original name of the island that holds the Tree of Life in Animal Kingdom (it was renamed in 2000)",
+            "question": "What is Safari Village?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "RANDOM CAMEOS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the celebrity behind this silhouette, making a cameo",
+            "question": "Who is Dolly Parton?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 290,
+            "youtubeEnd": 305,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the show this silhouetted celebrity made a cameo in",
+            "question": "What is Wizards of Waverly Place?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 494,
+            "youtubeEnd": 504,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the celebrity behind this silhouette, making a cameo",
+            "question": "Who is Larry David?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 677,
+            "youtubeEnd": 694,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Name the celebrity behind this silhouette, making a cameo",
+            "question": "Who is Steven Tyler?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 871,
+            "youtubeEnd": 885,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the celebrity behind this silhouette, making a cameo",
+            "question": "Who is Tony Hawk?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "FnWbzT6N9XI",
+            "youtubeStart": 1126,
+            "youtubeEnd": 1142,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "FANTASIA",
+      "answer": "Put these four Fantasia segments in the order they appear in the film",
+      "question": "What is D, B, A, C?",
+      "mediaType": "youtube",
+      "mediaData": "FnWbzT6N9XI",
+      "youtubeStart": 1228,
+      "youtubeEnd": 1256,
+      "audioOnly": false,
+      "altText": null
+    }
+  },
+  "cover": "disney-jeopardy-186.jpg"
+}

@@ -80,7 +80,7 @@ const CARD_TYPE = /^[\x20-\x7E‘’“”…–—•·]+$/;
 
 // The host at his desk: its plate, "DisNEy JEOPARDY" as it is read.
 const DESK = /^D\S*\s+JEOPARDY$/i;
-const atDesk = (frame) => frame.lines.some((line) => DESK.test(line));
+const atDesk = (frame) => frame.host || frame.lines.some((line) => DESK.test(line));
 
 /** A line that could be part of a clue card: capitals, and not furniture. */
 function cardLine(line) {
@@ -341,7 +341,9 @@ function readClue(frames, run, stretch, problems, where) {
   const lastDesk = between.findLast(atDesk)?.s ?? null;
   const offScreen = answerAt - card.end - 1;
   // Footage with no word on the card to say so is a clip when it is long: a scene to finish, not a moment's cutaway.
-  if (lastDesk === null && offScreen >= ((seen || heard) ? 4 : 8)) {
+  /* With no answer bar to come, footage straight off the card is the answer
+     being shown (lyrics filled in over the song), not a clip to play first. */
+  if (lastDesk === null && run && offScreen >= ((seen || heard) ? 4 : 8)) {
     clue.clip = { start: card.end + 1, end: answerAt - 1 };
     if (!seen && !heard) {
       problems.push({
@@ -396,7 +398,9 @@ function readFinal(frames, run, after, problems) {
 
   // No words on screen between the title and the answer: the clue is a picture.
   if (!card) {
-    final.clip = { start: lastTitle + 1, end: answerShowsAt(frames, lastTitle, run.start) - 1 };
+    // The pictures, until the host is back: after him come the answers being shown.
+    const back = frames.find((f) => f.s > lastTitle + 1 && f.s < run.start && atDesk(f))?.s;
+    final.clip = { start: lastTitle + 1, end: (back ?? answerShowsAt(frames, lastTitle, run.start)) - 1 };
     problems.push({
       where, at: lastTitle + 1, blocking: true,
       note: 'The clue is a picture with no words. Write the clue for it (the clip plays beside it).',
@@ -508,8 +512,16 @@ export function readEpisode(shown, { categories = null } = {}) {
     if (!board) return f;
     boards.push(board.names.join('|'));
     if (board.left) left.push({ s: f.s, left: board.left });
-    return { ...f, board: Boolean(board.left), lines: f.lines.filter((l) => !board.parts.has(l)) };
+    return { ...f, board: Boolean(board.left), headed: true, lines: f.lines.filter((l) => !board.parts.has(l)) };
   });
+
+  /* The host, when his desk has no plate to read: what is on his shirt
+     ("ZERO BOTHERS GIVEN"), which is on screen far more than anything else
+     but is never a card. A frame with nothing but such words is him. */
+  const onFrames = new Map();
+  for (const f of frames) if (!f.headed) for (const line of new Set(f.lines)) onFrames.set(line, (onFrames.get(line) ?? 0) + 1);
+  const always = new Set([...onFrames].filter(([, n]) => n > Math.max(30, frames.length * 0.03)).map(([line]) => line));
+  frames = frames.map((f) => (!f.headed && f.lines.length && f.lines.every((l) => always.has(l)) && !cardOn(f) ? { ...f, host: true } : f));
 
   // The end of the last clue: Final's wager card, or its title.
   const finalFrom = frames.find((f) => f.s > (left.at(-1)?.s ?? 0) && (finalSeen(f) || f.lines.some((l) => /^WAGER\b/.test(l))))?.s;
