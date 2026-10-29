@@ -25,7 +25,8 @@ const TOPIC_NAMES = {
 };
 
 const ROWS = [
-  { key: 'house', name: 'Disney Jeopardy', note: "From Inside the Magic's show" },
+  // Every episode the show has: a series is the shelf people scroll to the end of.
+  { key: 'house', name: 'Disney Jeopardy', note: "From Inside the Magic's show", limit: 48 },
   { key: 'featured', name: 'Featured', note: 'Picked by hand' },
   { key: 'popular', name: 'Popular', note: 'Most played' },
   { key: 'new', name: 'New this week', note: 'Just published' },
@@ -86,6 +87,48 @@ function Card({ board, onOpen }) {
   );
 }
 
+/**
+ * A row as one line that scrolls sideways, the way a streaming shelf does.
+ * Arrows page it on a pointer that hovers; a finger just swipes. Each arrow
+ * shows only while there is more that way.
+ */
+function Rail({ children }) {
+  const track = useRef(null);
+  const [more, setMore] = useState({ back: false, on: false });
+
+  const measure = useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    setMore({ back: el.scrollLeft > 4, on: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+  }, []);
+
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure, children]);
+
+  // A page at a time, less a card's worth so the next page starts with one already seen.
+  const page = (direction) => {
+    const el = track.current;
+    el?.scrollBy({ left: direction * el.clientWidth * 0.85, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="bb-rail">
+      {more.back && (
+        <button className="plain-btn bb-rail-arrow is-back" onClick={() => page(-1)} aria-label="Scroll back">‹</button>
+      )}
+      <div className="bb-rail-track" ref={track} onScroll={measure}>
+        {children}
+      </div>
+      {more.on && (
+        <button className="plain-btn bb-rail-arrow is-on" onClick={() => page(1)} aria-label="Scroll on">›</button>
+      )}
+    </div>
+  );
+}
+
 export default function BoardsBrowsePage() {
   usePageTitle('Community Boards');
   const navigate = useNavigate();
@@ -107,7 +150,7 @@ export default function BoardsBrowsePage() {
          questions and a single endpoint answering all of them would be a
          parameter that changes what the response means. */
       const results = await Promise.all(
-        ROWS.map((row) => browse({ row: row.key, topic, q: query, limit: 12 }, token))
+        ROWS.map((row) => browse({ row: row.key, topic, q: query, limit: row.limit ?? 24 }, token))
       );
       const loaded = ROWS
         .map((row, i) => ({ ...row, ...results[i] }))
@@ -263,11 +306,11 @@ export default function BoardsBrowsePage() {
                 <h2>{row.name}</h2>
                 <span className="bb-row-note">{row.note}</span>
               </div>
-              <div className="bb-cards">
+              <Rail>
                 {row.boards.map((board) => (
                   <Card key={board.slug} board={board} onOpen={(slug) => navigate(`/boards/${slug}`)} />
                 ))}
-              </div>
+              </Rail>
             </section>
           ))
         )}
