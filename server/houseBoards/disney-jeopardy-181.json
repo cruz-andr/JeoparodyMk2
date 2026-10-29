@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 181), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-181.jpg",
+  "watch": {
+    "youtube": "5SEdjgqITV4",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 88,
+        "pause": 102
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 353,
+        "pause": 380
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 566,
+        "pause": 576
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 764,
+        "pause": 792
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 1049,
+        "pause": 1059
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 117,
+        "pause": 129
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 396,
+        "pause": 416
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 598,
+        "pause": 605
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 802,
+        "pause": 811
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 1078,
+        "pause": 1089
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 153,
+        "pause": 167
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 427,
+        "pause": 441.3
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 620,
+        "pause": 641
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 833,
+        "pause": 853
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 1108,
+        "pause": 1126
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 184,
+        "pause": 196
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 462,
+        "pause": 485
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 660,
+        "pause": 673.3
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 862,
+        "pause": 881
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 1146,
+        "pause": 1163
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 239,
+        "pause": 284
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 498,
+        "pause": 523
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 680,
+        "pause": 718
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 898,
+        "pause": 938
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1178,
+        "pause": 1202
+      }
+    ],
+    "final": {
+      "at": 1354,
+      "pause": 1361
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "Fantasia 2000 made history by becoming the first feature-length animated film to debut exclusively in this format",
       "question": "What is IMAX?"
     }
-  },
-  "cover": "disney-jeopardy-181.jpg"
+  }
 }

@@ -314,6 +314,7 @@ function readClue(frames, run, stretch, problems, where) {
     response: response.text,
     at: card?.start ?? seg.from + 1,
     answerAt: run?.start ?? null,
+    cardEnd: card?.end ?? null,
     clip: null,
   };
   const unanswered = (after) => {
@@ -733,6 +734,27 @@ function media(clip, youtube) {
   return { mediaType: 'youtube', mediaData: youtube, youtubeStart: clip.start, youtubeEnd: clip.end, audioOnly: Boolean(clip.audio) };
 }
 
+/**
+ * When, playing the episode, to stop for a response: a second before the
+ * show puts the answer up. With no answer bar, just after the picture's clip
+ * or the card, before the answer is shown or sung.
+ */
+export function pauseFor(cl) {
+  // A picture's clip ends before the answers are shown (Final's four stills, then each one played).
+  const pictured = cl.clip && !cl.clip.audio ? cl.clip.end + 0.3 : Infinity;
+  if (cl.answerAt != null) return Math.max(cl.at, Math.min(cl.answerAt - 1, pictured));
+  // No answer bar: after the clip if there is one (a poster zoomed in on), else after the card.
+  return Math.max(cl.at, pictured !== Infinity ? pictured : (cl.cardEnd ?? cl.at + 4) + 0.3);
+}
+
+/** The episode as the board's watch-along timeline: when each clue is on, and when to stop for it. */
+function watchAlong(read, youtube) {
+  const clues = read.cells.flatMap((col, column) => col.map((cl, row) => cl && { column, row, at: cl.at, pause: pauseFor(cl) }))
+    .filter(Boolean);
+  const f = read.final;
+  return { youtube, clues, final: f ? { at: f.at, pause: pauseFor(f) } : null };
+}
+
 const blank = { options: null, mediaType: null, mediaData: null, youtubeStart: null, youtubeEnd: null, audioOnly: false, altText: null };
 
 /**
@@ -794,6 +816,7 @@ export function draftBoard(read, { youtube = null, names = [], show = null, desc
     topic,
     featured: false,
     board: { version: 1, categories, ...(finalJeopardy ? { finalJeopardy } : {}) },
+    ...(youtube ? { watch: watchAlong(read, youtube) } : {}),
   };
 
   // Where each review item is, said the way a person finds it.

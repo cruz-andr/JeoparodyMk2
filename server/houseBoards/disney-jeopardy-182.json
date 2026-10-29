@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 182), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-182.jpg",
+  "watch": {
+    "youtube": "ZqRxMueYxY4",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 123,
+        "pause": 136
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 329,
+        "pause": 343
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 510,
+        "pause": 533
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 720,
+        "pause": 734
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 932,
+        "pause": 958
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 149,
+        "pause": 165
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 357,
+        "pause": 367
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 545,
+        "pause": 560
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 745,
+        "pause": 766
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 976,
+        "pause": 1003
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 196,
+        "pause": 233
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 382,
+        "pause": 409
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 576,
+        "pause": 592.3
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 787,
+        "pause": 805
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 1030,
+        "pause": 1058
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 267,
+        "pause": 278
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 434,
+        "pause": 447
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 625,
+        "pause": 639
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 817,
+        "pause": 845
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 1077,
+        "pause": 1094
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 288,
+        "pause": 299
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 471,
+        "pause": 484
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 647,
+        "pause": 672
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 852,
+        "pause": 871
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1113,
+        "pause": 1132
+      }
+    ],
+    "final": {
+      "at": 1262,
+      "pause": 1265
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "Tarzan transforms from a boy to an adult during this song in the film",
       "question": "What is Son of Man?"
     }
-  },
-  "cover": "disney-jeopardy-182.jpg"
+  }
 }

@@ -227,6 +227,17 @@ check('a Final whose answer is only shown in clips is still Final, with its resp
 check('an episode named only in a caption is known by it, but only as a last resort',
   ep181.read.episode === null && ep181.read.mentioned === 181);
 
+// ---------- watching along: when to stop for each clue ----------
+
+const watch188 = ep188.file.watch;
+const pauseAt = (w, column, row) => w.clues.find((c) => c.column === column && c.row === row).pause;
+check('every square is timed, for the video it plays from', watch188.youtube === 'LX_MS_sy4yg' && watch188.clues.length === 25);
+check('a clue stops a second before its answer bar', pauseAt(watch188, 0, 0) === 111, String(pauseAt(watch188, 0, 0)));
+check('a zoomed-in poster stops as the zoom ends, before the poster is shown whole',
+  zoomed.every(([, end], row) => pauseAt(watch188, 4, row) === end + 0.3), JSON.stringify(watch188.clues.filter((c) => c.column === 4)));
+const fj186watch = ep186.file.watch.final;
+check("a Final of pictures stops when they end, not after the answers are shown", fj186watch.pause === 1256.3, JSON.stringify(fj186watch));
+
 const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
 check('names given are the names used', told.names.join('') === 'ABCDE');
 

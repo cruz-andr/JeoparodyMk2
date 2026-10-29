@@ -52,6 +52,34 @@ export function publishHouseBoards(db, dir) {
   });
 }
 
+const SECONDS = (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n < 6 * 3600;
+
+/**
+ * The episode to watch along with, as the file gives it, checked and kept
+ * as JSON: { youtube, clues: [{ column, row, at, pause }], final: { at, pause } }.
+ * `at` is when the clue is on screen and `pause` when the video stops for a
+ * response, just before the show gives it. Null when the file has none.
+ */
+function readWatch(watch, board) {
+  if (watch === undefined || watch === null) return null;
+  const problem = (why) => { throw new Error(`watch: ${why}`); };
+  if (!/^[\w-]{11}$/.test(String(watch.youtube ?? ''))) problem('youtube is not a video id');
+  if (!Array.isArray(watch.clues)) problem('clues is not a list');
+  const clues = watch.clues.map((c) => {
+    const column = board.categories[c?.column];
+    if (!column || !column.questions[c.row]) problem(`no square at column ${c?.column}, row ${c?.row}`);
+    if (!SECONDS(c.at) || !SECONDS(c.pause) || c.pause < c.at) problem(`times for column ${c.column}, row ${c.row} are wrong`);
+    return { column: c.column, row: c.row, at: c.at, pause: c.pause };
+  });
+  let final = null;
+  if (watch.final) {
+    if (!board.finalJeopardy) problem('final, but the board has no Final Jeopardy');
+    if (!SECONDS(watch.final.at) || !SECONDS(watch.final.pause) || watch.final.pause < watch.final.at) problem('final times are wrong');
+    final = { at: watch.final.at, pause: watch.final.pause };
+  }
+  return JSON.stringify({ youtube: watch.youtube, clues, final });
+}
+
 /** The board's cover as the data URL boards keep, or undefined when the file names none. */
 function readCover(dir, name) {
   if (name === undefined || name === null) return undefined;
@@ -82,9 +110,10 @@ function publishOne(db, slug, file, dir) {
   const names = board.categories.map((c) => c.name.trim()).filter(Boolean).join('\u0000');
   // A file that names no cover leaves whatever cover the board has alone.
   const cover = readCover(dir, file.cover);
+  const watch = readWatch(file.watch, board);
 
   const existing = db.prepare(`
-    SELECT id, owner_id, title, description, topic, data, featured, cover_image FROM boards WHERE slug = ?
+    SELECT id, owner_id, title, description, topic, data, featured, cover_image, watch FROM boards WHERE slug = ?
   `).get(slug);
 
   if (existing && existing.owner_id !== HOUSE_USER_ID) {
@@ -94,18 +123,19 @@ function publishOne(db, slug, file, dir) {
   if (!existing) {
     db.prepare(`
       INSERT INTO boards (id, slug, owner_id, title, description, topic, data, clue_count,
-                          category_names, category_count, visibility, published_at, featured, cover_image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', datetime('now'), ?, ?)
+                          category_names, category_count, visibility, published_at, featured, cover_image, watch)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'public', datetime('now'), ?, ?, ?)
     `).run(
       uuidv4(), slug, HOUSE_USER_ID, title, description, topic, data, countClues(board),
-      names, board.categories.length, featured, cover ?? null
+      names, board.categories.length, featured, cover ?? null, watch
     );
     return 'published';
   }
 
   const same = existing.title === title && existing.description === description
     && existing.topic === topic && existing.data === data && existing.featured === featured
-    && (cover === undefined || existing.cover_image === cover);
+    && (cover === undefined || existing.cover_image === cover)
+    && existing.watch === watch;
   if (same) return 'unchanged';
 
   // A new version of the same board: its plays and its link are kept.
@@ -113,13 +143,13 @@ function publishOne(db, slug, file, dir) {
     UPDATE boards
     SET title = ?, description = ?, topic = ?, data = ?, clue_count = ?,
         category_names = ?, category_count = ?, visibility = 'public', featured = ?,
-        cover_image = COALESCE(?, cover_image),
+        cover_image = COALESCE(?, cover_image), watch = ?,
         published_at = COALESCE(published_at, datetime('now')),
         version = version + 1, updated_at = datetime('now')
     WHERE id = ?
   `).run(
     title, description, topic, data, countClues(board), names, board.categories.length, featured,
-    cover ?? null, existing.id
+    cover ?? null, watch, existing.id
   );
   return 'updated';
 }

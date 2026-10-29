@@ -101,6 +101,9 @@ export async function initializeDatabase() {
     /* Put in the Featured row by the site itself: a house board's file says
        so (services/houseBoards.js). FEATURED_SLUGS still picks any other. */
     ['boards', 'featured', 'INTEGER NOT NULL DEFAULT 0'],
+    /* A house board's episode, to watch along with: its video and when each
+       clue is on it (services/houseBoards.js). JSON, or NULL. */
+    ['boards', 'watch', 'TEXT'],
     // Google's profile picture, when they sign in that way.
     ['users', 'avatar_url', 'TEXT'],
     /* The archive. game_history was created as one row per room with the

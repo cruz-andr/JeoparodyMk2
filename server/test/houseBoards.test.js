@@ -140,6 +140,20 @@ await test('a cover that is not an image beside the board, or is too large, stop
   fs.rmSync(join(DIR, 'disney-night-42.json'));
 });
 
+await test("an episode's watch-along timeline is kept with it, and a bad one stops the board", () => {
+  const watch = { youtube: 'aMS9UidTUUY', clues: [{ column: 0, row: 0, at: 98, pause: 111 }], final: { at: 1130, pause: 1166 } };
+  write('disney-night-43', file({ watch }));
+  assert.equal(results()['disney-night-43'], 'published');
+  assert.deepEqual(JSON.parse(row('disney-night-43').watch), watch);
+  assert.equal(results()['disney-night-43'], 'unchanged');
+
+  write('disney-night-43', file({ watch: { ...watch, clues: [{ column: 9, row: 0, at: 1, pause: 2 }] } }));
+  assert.match(results()['disney-night-43'], /no square at column 9/);
+  write('disney-night-43', file({ watch: { ...watch, youtube: 'not a video' } }));
+  assert.match(results()['disney-night-43'], /not a video id/);
+  fs.rmSync(join(DIR, 'disney-night-43.json'));
+});
+
 await test('no folder, or an empty one, publishes nothing', () => {
   assert.deepEqual(publishHouseBoards(db, join(here, 'no-such-folder')), []);
   assert.deepEqual(publishHouseBoards(db, null), []);

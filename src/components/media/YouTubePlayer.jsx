@@ -1,32 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { loadYouTubeApi } from './youtubeApi';
 import './YouTubePlayer.css';
-
-let ytApiLoaded = false;
-let ytApiLoading = false;
-const ytApiCallbacks = [];
-
-function loadYouTubeApi() {
-  if (ytApiLoaded) return Promise.resolve();
-  if (ytApiLoading) {
-    return new Promise((resolve) => ytApiCallbacks.push(resolve));
-  }
-
-  ytApiLoading = true;
-  return new Promise((resolve) => {
-    ytApiCallbacks.push(resolve);
-
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-
-    window.onYouTubeIframeAPIReady = () => {
-      ytApiLoaded = true;
-      ytApiLoading = false;
-      ytApiCallbacks.forEach((cb) => cb());
-      ytApiCallbacks.length = 0;
-    };
-  });
-}
 
 const YouTubePlayer = forwardRef(function YouTubePlayer(
   {

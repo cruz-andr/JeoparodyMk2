@@ -320,6 +320,8 @@ router.get('/:slug', optionalAuth, (req, res, next) => {
       board,
       isOwner: row.owner_id === req.user?.userId,
       adaptedFrom,
+      // One of the show's episodes, to play along with as it plays.
+      watch: row.watch ? JSON.parse(row.watch) : null,
     });
   } catch (err) {
     next(err);

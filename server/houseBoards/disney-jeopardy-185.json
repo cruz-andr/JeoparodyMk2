@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 185), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-185.jpg",
+  "watch": {
+    "youtube": "CciUgiaQo1Q",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 80,
+        "pause": 95
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 333,
+        "pause": 341
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 506,
+        "pause": 525
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 694,
+        "pause": 704
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 906,
+        "pause": 937
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 139,
+        "pause": 152
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 362,
+        "pause": 389
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 537,
+        "pause": 564
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 722,
+        "pause": 751
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 961,
+        "pause": 999
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 212,
+        "pause": 227
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 423,
+        "pause": 439
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 570,
+        "pause": 599
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 769,
+        "pause": 788
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 1022,
+        "pause": 1061
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 257,
+        "pause": 272
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 463,
+        "pause": 473
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 612,
+        "pause": 643
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 804,
+        "pause": 817
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 1078,
+        "pause": 1114
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 282,
+        "pause": 295
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 479,
+        "pause": 494
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 651,
+        "pause": 670
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 823,
+        "pause": 842
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1125,
+        "pause": 1137
+      }
+    ],
+    "final": {
+      "at": 1252,
+      "pause": 1256
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "While training Hercules and flying on Pegasus, Phil says this after hearing a distant scream: \"sounds like your basic D.I.D.\" this is what D.I.D. stands for",
       "question": "What is Damsel in Distress?"
     }
-  },
-  "cover": "disney-jeopardy-185.jpg"
+  }
 }

@@ -41,6 +41,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const BoardsMinePage = lazy(() => import('./pages/BoardsMinePage'));
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const BoardEditPage = lazy(() => import('./pages/BoardEditPage'));
+const WatchAlongPage = lazy(() => import('./pages/WatchAlongPage'));
 const BoardsBrowsePage = lazy(() => import('./pages/BoardsBrowsePage'));
 const GuidelinesPage = lazy(() => import('./pages/GuidelinesPage'));
 
@@ -90,6 +91,7 @@ const routes = [
   { path: '/boards/mine', element: <BoardsMinePage /> },
   { path: '/boards/:slug', element: <BoardPage /> },
   { path: '/boards/:slug/edit', element: <BoardEditPage /> },
+  { path: '/boards/:slug/watch', element: <WatchAlongPage /> },
   { path: '/guidelines', element: <GuidelinesPage /> },
 
   /* Last, and matched only when nothing above did. */

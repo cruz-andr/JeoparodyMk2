@@ -289,6 +289,17 @@ export default function BoardPage() {
               {/* Drawn, not the ▶ character, which some systems show as a colour emoji. */}
               <span className="bp-play-mark" aria-hidden="true"><svg viewBox="0 0 10 12" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M0 0L10 6L0 12Z" /></svg></span> Play
             </button>
+            {/* One of the show's episodes can be played with the episode itself
+                running, stopping for each answer. */}
+            {board.watch && (
+              <button
+                className="plain-btn bp-watch"
+                disabled={!playable}
+                onClick={() => navigate(`/boards/${slug}/watch`)}
+              >
+                Watch along
+              </button>
+            )}
             {/* A private room plays it together. Not a private board: everyone
                 in the room would be sent its clues. */}
             {board.visibility !== 'private' && (

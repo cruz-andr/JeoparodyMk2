@@ -3,6 +3,166 @@
   "description": "From Inside the Magic's Disney Jeopardy (Episode 183), hosted by Bryan Perri.",
   "topic": "disney",
   "featured": false,
+  "cover": "disney-jeopardy-183.jpg",
+  "watch": {
+    "youtube": "CvDOvOxn4FI",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 83,
+        "pause": 100
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 388,
+        "pause": 401
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 524,
+        "pause": 545
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 713,
+        "pause": 735
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 942,
+        "pause": 968
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 133,
+        "pause": 149
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 412,
+        "pause": 424
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 559,
+        "pause": 569
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 815,
+        "pause": 816
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 976,
+        "pause": 1017
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 192,
+        "pause": 201.3
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 435,
+        "pause": 441
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 582,
+        "pause": 592
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 838,
+        "pause": 849
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 1034,
+        "pause": 1059
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 242,
+        "pause": 266.3
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 452,
+        "pause": 476
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 607,
+        "pause": 618.3
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 863,
+        "pause": 877
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 1072,
+        "pause": 1085.3
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 322,
+        "pause": 337.3
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 482,
+        "pause": 501
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 654,
+        "pause": 672.3
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 893,
+        "pause": 906
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1113,
+        "pause": 1130
+      }
+    ],
+    "final": {
+      "at": 1226,
+      "pause": 1261
+    }
+  },
   "board": {
     "version": 1,
     "categories": [
@@ -337,6 +497,5 @@
       "answer": "The name of the clade's 3-legged dog",
       "question": "What is Legend?"
     }
-  },
-  "cover": "disney-jeopardy-183.jpg"
+  }
 }
