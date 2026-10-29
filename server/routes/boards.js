@@ -261,10 +261,13 @@ router.get('/', optionalAuth, (req, res, next) => {
         : 'ORDER BY b.published_at DESC';
     }
     if (q) {
-      /* Title or author. Searching inside `data` would mean a full scan over
-         every clue on every board on every keystroke. */
-      where.push('(b.title LIKE ? OR u.username LIKE ?)');
-      params.push(`%${q}%`, `%${q}%`);
+      /* Title, author, or a category's name ("mulan" finds the board with a
+         MULAN column): category_names is kept on the row for the cards, so
+         this is as cheap as the title. category_match, in config/database.js,
+         reads it, since LIKE cannot. Searching inside `data` would mean a
+         full scan over every clue on every board on every keystroke. */
+      where.push('(b.title LIKE ? OR u.username LIKE ? OR category_match(b.category_names, ?))');
+      params.push(`%${q}%`, `%${q}%`, q);
     }
 
     const rows = getDatabase().prepare(`

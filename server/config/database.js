@@ -48,6 +48,12 @@ export function getDatabase() {
 
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
+    /* boards.category_names holds the names joined by NUL, and SQLite's own
+       text functions (LIKE among them) stop reading at the first NUL: only
+       the first category could ever be searched. This reads all of them. */
+    db.function('category_match', { deterministic: true }, (names, q) => (
+      names != null && String(names).toLowerCase().split('\u0000').some((name) => name.includes(String(q).toLowerCase())) ? 1 : 0
+    ));
   }
   return db;
 }

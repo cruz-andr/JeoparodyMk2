@@ -188,7 +188,7 @@ export default function BoardsBrowsePage() {
           <input
             className="bb-search"
             value={typed}
-            placeholder="Search boards, or a player"
+            placeholder="Search boards, categories, or a player"
             aria-label="Search Community Boards"
             onChange={(e) => onType(e.target.value)}
           />
