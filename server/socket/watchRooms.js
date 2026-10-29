@@ -10,7 +10,9 @@
  * everyone's, with a wager, as it is on the show.
  *
  * Whoever starts the room drives it: play, pause, and a square on the board
- * to go to that clue. If they leave, the next player in drives.
+ * to go to that clue. As in a multiplayer game, a right answer takes the
+ * board: whoever got the last one right drives. If they leave, the next
+ * player in drives.
  *
  * Plain JavaScript over injected time and messages, so the test runs it
  * with a hand-wound clock and no sockets.
@@ -303,6 +305,8 @@ export function createWatchRooms({
       const points = scored(cur.stop, verdict.correct, staked);
       player.score += points;
       cur.answers.set(playerId, { correct: verdict.correct, points, given: text });
+      // Right takes the board, as it does in a multiplayer game.
+      if (!final && verdict.correct) room.hostId = playerId;
       if (final) {
         if (!settleIfAllIn(room)) tell(room);
       } else {
@@ -327,6 +331,9 @@ export function createWatchRooms({
       const player = room?.players.get(playerId);
       if (!result || !player || result.correct || result.passed) return;
       player.score += -result.points * 2;
+      // Nobody else had it, so "I had it" takes the board too.
+      const others = Object.entries(room.last.results).some(([id, r]) => id !== playerId && r.correct);
+      if (room.last.key !== 'final' && !others && room.players.get(playerId).connected) room.hostId = playerId;
       room.last.results[playerId] = { ...result, correct: true, points: -result.points, overruled: true };
       tell(room);
     },

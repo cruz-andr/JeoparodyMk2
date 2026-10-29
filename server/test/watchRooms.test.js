@@ -189,6 +189,29 @@ await test('Final is everyone\'s: a wager no bigger than the score, and a player
   assert.equal(last().players.find((p) => p.id === 'ada').score, 400);
 });
 
+await test('right takes the board: the last one right drives, as in multiplayer', async () => {
+  const { rooms, advance, last } = harness();
+  const code = await rooms.create({ slug: 'ep', player: ada });
+  rooms.join({ code, player: bo });
+  rooms.control({ code, playerId: 'ada', action: 'play' });
+  advance(20_000);
+  rooms.buzz({ code, playerId: 'bo', key: '0:0' });
+  rooms.answer({ code, playerId: 'bo', key: '0:0', given: 'trident' });
+  assert.equal(last().hostId, 'bo');
+  rooms.control({ code, playerId: 'ada', action: 'clue', column: 1, row: 1 });
+  assert.notEqual(last().clock.position, 90, 'Ada no longer picks');
+  rooms.control({ code, playerId: 'bo', action: 'clue', column: 1, row: 1 });
+  assert.equal(last().clock.position, 90, 'Bo picks the next clue');
+  advance(10_000);
+  rooms.buzz({ code, playerId: 'ada', key: '1:1' });
+  rooms.answer({ code, playerId: 'ada', key: '1:1', given: 'a muppet band' });
+  assert.equal(last().hostId, 'bo', 'wrong does not take it');
+  rooms.buzz({ code, playerId: 'bo', key: '1:1' });
+  rooms.answer({ code, playerId: 'bo', key: '1:1', given: 'nobody' });
+  rooms.overrule({ code, playerId: 'ada', key: '1:1' });
+  assert.equal(last().hostId, 'ada', '"I had it" with nobody else right takes it');
+});
+
 await test('"I had it" turns a wrong right, once', async () => {
   const { rooms, advance, last } = harness();
   const code = await rooms.create({ slug: 'ep', player: ada });
