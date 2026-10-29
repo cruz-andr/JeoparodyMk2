@@ -344,12 +344,11 @@ button.bb-foot-link {
   background: #050a24;
 }
 
-/* The art sits to the right and fades into the page on the left and at the
-   foot, so the words over it stay on dark ground whatever the picture is. */
+/* The art runs the full width and fades into the page only at its foot,
+   where the words sit, so they stay on dark ground whatever the picture is. */
 .bp-hero-art {
   position: absolute;
-  inset: 0 0 0 auto;
-  width: min(100%, 78%);
+  inset: 0;
 }
 .bp-hero-art img,
 .bp-hero-board {
@@ -370,9 +369,11 @@ button.bb-foot-link {
   content: '';
   position: absolute;
   inset: 0;
+  /* Darker at the foot for the words, and a little everywhere: a cover is
+     often a title card in white letters of its own. */
   background:
-    linear-gradient(90deg, #050a24 0%, rgba(5, 10, 36, 0.85) 22%, rgba(5, 10, 36, 0) 62%),
-    linear-gradient(0deg, #050a24 0%, rgba(5, 10, 36, 0.6) 28%, rgba(5, 10, 36, 0) 60%);
+    linear-gradient(0deg, #050a24 0%, rgba(5, 10, 36, 0.82) 30%, rgba(5, 10, 36, 0.35) 55%, rgba(5, 10, 36, 0) 75%),
+    rgba(5, 10, 36, 0.28);
 }
 
 .bp-hero-text {
@@ -393,6 +394,7 @@ button.bb-foot-link {
   font-size: 0.82rem;
   letter-spacing: 2px;
   color: var(--jeopardy-gold-light);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.8);
 }
 
 .bp-title {
@@ -405,7 +407,7 @@ button.bb-foot-link {
   line-height: 0.9;
   letter-spacing: -0.5px;
   color: var(--text-primary);
-  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.7), 0 2px 28px rgba(0, 0, 0, 0.75);
 }
 
 .bp-meta { margin-bottom: 12px; }
