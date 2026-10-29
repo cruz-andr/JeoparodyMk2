@@ -1,7 +1,7 @@
 /**
  * The video board reader, run on Episode 40 as the Mac read it, against the
  * board that was transcribed from the same video by hand and is on the site,
- * on Episode 21, for the ways a show can trip it, and on Episodes 188, 187 and 186,
+ * on Episode 21, for the ways a show can trip it, and on Episodes 188 to 181,
  * the newer show.
  * Run with: node scripts/video-board.test.js
  *
@@ -125,6 +125,8 @@ check('"Listen up" plays the song under its card, as sound only, until the answe
   songs.every((q, i) => q.audioOnly && q.mediaType === 'youtube'
     && Math.abs(q.youtubeStart - heard[i][0]) <= 1 && q.youtubeEnd === heard[i][1]),
   JSON.stringify(songs.map((q) => [q.youtubeStart, q.youtubeEnd, q.audioOnly])));
+check('"get this song mix started" names a song: its card is not a sound to play',
+  !ep21.file.board.categories[0].questions[3].mediaType, JSON.stringify(ep21.file.board.categories[0].questions[3]));
 const shown = ep21.file.board.categories.flatMap((c) => c.questions).filter((q) => q.mediaType && !q.audioOnly);
 check('footage after the host has talked is the answer being shown, not a clip to play first',
   shown.length === 0, shown.map((q) => q.answer).join(' · '));
@@ -193,6 +195,37 @@ check('with no answer bar to come, the lyrics sung straight off the card are the
 const fj186 = ep186.file.board.finalJeopardy;
 check("a Final of pictures plays the pictures, and stops when the host is back, before the answers are shown",
   fj186.category === 'FANTASIA' && fj186.youtubeStart === 1228 && fj186.youtubeEnd === 1256, JSON.stringify(fj186));
+
+// ---------- Episodes 184, 183 and 181: short cards, fan banners, choices, a Final with no answer bar ----------
+
+const ep = (n, youtube) => {
+  const read = readEpisode(parseOcr(readFileSync(at(`./video-board/fixtures/episode-${n}.ocr.jsonl`), 'utf8')));
+  return { read, ...draftBoard(read, { youtube, names, show: 'Disney Jeopardy!', topic: 'disney' }) };
+};
+const ep184 = ep(184, '5Oeqwgn0e_k');
+check('a short card with a date on it is a card, its Cyrillic twin letters ("EPCOТ") put back',
+  ep184.file.board.categories[3].questions[3].answer === 'May 5th, 2005 Epcot', ep184.file.board.categories[3].questions[3].answer);
+check('"singing this song" names a song, so its card is not played as a sound',
+  !ep184.file.board.categories[4].questions[4].mediaType);
+
+const ep183 = ep(183, 'CvDOvOxn4FI');
+const tarzan = ep183.file.board.categories[0].questions;
+check("a fan's banner and the name under it are not the clue",
+  /^This song won Phil Collins/.test(tarzan[0].answer) && /^During the credits/.test(tarzan[2].answer), tarzan[0].answer);
+check('a picture listed with its choices offers them for the clue, and plays the picture with them on it',
+  /Choices: The Jungle Book, The Princess & the Frog, 101 Dalmatians$/.test(ep183.file.board.categories[4].questions[0].answer)
+  && ep183.file.board.categories[4].questions[0].youtubeEnd - ep183.file.board.categories[4].questions[0].youtubeStart > 5,
+  ep183.file.board.categories[4].questions[0].answer);
+check('no host seen is not the host at second 0', !ep183.problems.some((p) => /0:01 to/.test(p.note)));
+
+const ep181 = ep(181, '5SEdjgqITV4');
+check("a fan's name on the banner itself (\"FAN CLUE: AVI\") costs the card no line",
+  /^Legend has it that/i.test(ep181.file.board.categories[0].questions[1].answer), ep181.file.board.categories[0].questions[1].answer);
+check('a Final whose answer is only shown in clips is still Final, with its response left to write',
+  ep181.file.board.finalJeopardy?.category === 'FANTASIA 2000' && ep181.file.board.finalJeopardy.question.startsWith(TODO)
+  && ep181.problems.some((p) => p.where === 'Final Jeopardy' && p.blocking));
+check('an episode named only in a caption is known by it, but only as a last resort',
+  ep181.read.episode === null && ep181.read.mentioned === 181);
 
 const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
 check('names given are the names used', told.names.join('') === 'ABCDE');

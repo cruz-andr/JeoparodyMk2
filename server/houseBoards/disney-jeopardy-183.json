@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 183",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 183), hosted by Bryan Perri.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "TARZAN MUSIC",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "This song won Phil Collins the academy award for Best Original Song in 2000",
+            "question": "What is You'll Be in My Heart?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Fill in the lyrics from You'll Be in My Heart: \"for one so small, you",
+            "question": "What is Seem So Strong?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "During the credits, *NSYNC joined Phil Collins to sing an acapella version of this song from the film",
+            "question": "What is Trashin' the Camp?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "In the Strangers Like Me scene, Jane can be seen drawing two different times. Name what Jane was drawing each time",
+            "question": "What is Tarzan and a Bird?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "During Two Worlds, Kerchak and Kala's baby is terminated by the leopard after chasing this type of animal into the jungle",
+            "question": "What is a Frog?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "PIRATES 3: AT WORLD'S END",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The first time we see Jack in the film, this is what he's attempting to eat",
+            "question": "What is Peanut?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Elizabeth and the rest of the pirates start off the film in this city",
+            "question": "What is Singapore?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "What Jack is holding when Davy Jones stabs Will Turner",
+            "question": "What is Davy's Heart?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Norrington's story ends when he loses a battle with this character",
+            "question": "Who is Bootstrap Bill?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Barbossa's piece of eight when meeting with the other pirate lords at Shipwreck Cove",
+            "question": "What is Ragetti's Eye?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "FALLING",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the character taking this fall",
+            "question": "Who is Gaston?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 192,
+            "youtubeEnd": 201,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the character taking this fall",
+            "question": "Who is Hades?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 435,
+            "youtubeEnd": 441,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the character taking this fall",
+            "question": "Who is Yzma?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 582,
+            "youtubeEnd": 592,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Name the character taking this fall",
+            "question": "Who are Basil and Ratigan?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 838,
+            "youtubeEnd": 849,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the character taking this fall",
+            "question": "Who is Cody?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 1034,
+            "youtubeEnd": 1059,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "WRONG MAPS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Something is wrong with this map of the park. What is it?",
+            "question": "What is Everest's Location?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 242,
+            "youtubeEnd": 266,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Something is wrong with this map of the park. What is it?",
+            "question": "What is Cars Land Was Missing?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 452,
+            "youtubeEnd": 476,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Something is wrong with this map of the park. What is it?",
+            "question": "What is Flipped Mexico & Canada?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 607,
+            "youtubeEnd": 618,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Something is wrong with this map of the park. What is it?",
+            "question": "What is Jungle Cruise Was Moved?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 863,
+            "youtubeEnd": 877,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Something is wrong with this map of the park. What is it?",
+            "question": "What is Space Mountain Was in the Wrong Spot?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 1072,
+            "youtubeEnd": 1085,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "COLOR PALETTES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "This color palette is from which film: The Jungle Book, The Princess & the Frog or 101 Dalmatians?",
+            "question": "What is the Jungle Book?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 322,
+            "youtubeEnd": 337,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "This color palette is from which film: Pinocchio, The Hunchback of Notre Dame or Ratatouille?",
+            "question": "What is Ratatouille?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 482,
+            "youtubeEnd": 501,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "This color palette is from which film: Aladdin, Monsters, Inc. or Tarzan?",
+            "question": "What is Aladdin?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 654,
+            "youtubeEnd": 672,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "This color palette is from which film: Meet the Robinsons, Toy Story or Coco?",
+            "question": "What is Coco?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 893,
+            "youtubeEnd": 906,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "This color palette is from which film: Frozen 2, Inside Out or WALL-E?",
+            "question": "What is Inside Out?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "CvDOvOxn4FI",
+            "youtubeStart": 1113,
+            "youtubeEnd": 1130,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "STRANGE WORLD",
+      "answer": "The name of the clade's 3-legged dog",
+      "question": "What is Legend?"
+    }
+  },
+  "cover": "disney-jeopardy-183.jpg"
+}

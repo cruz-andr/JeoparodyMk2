@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 184",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 184), hosted by Bryan Perri.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "STRANGE WORLD",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Jaeger and Searcher Clade went this many years without seeing each other at the start of the film",
+            "question": "What is 25 Years?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The acid lake the venture flies over turns out to be this part of a lving creature",
+            "question": "What is Stomach?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "This game that Ethan loves has an objective of living harmoniously with your environment",
+            "question": "What is Primal Outpost?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Searcher's mom has moved on to this man, after assuming Jaeger had died",
+            "question": "Who is Sheldon?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "For his 2nd birthday, Searcher received this gift from his dad",
+            "question": "What is Machete?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "PIRATES 4: ON STRANGER TIDES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "At the start of the film, this character pretends to be Jack Sparrow to recruit a crew",
+            "question": "Who is Angelica?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The name of Blackbeard's ship",
+            "question": "What is Queen Anne's Revenge?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Finish the Sparrow quote: \"you know that feeling you get sometimes, when you're standing in a high place, the sudden urge to jump?",
+            "question": "What is \"I Don't Have It\"?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "According to Blackbeard, this type of mermaid tear is most potent",
+            "question": "What is Tears of Joy?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "This dame makes a cameo appearance in the film and has her earring stolen by Captain Jack",
+            "question": "Who is Judi Dench?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "TRANSIT",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the 2012 academy award winning Disney short film that starts and ends on an elevated train platform",
+            "question": "What is Paperman?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "This Pixar film features a Transit system named Wetro. Wetro trains run on water contained on bridges and tunnels",
+            "question": "What is Elemental?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the film this animated subway scene is from",
+            "question": "What is Fantasia 2000?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5Oeqwgn0e_k",
+            "youtubeStart": 561,
+            "youtubeEnd": 579,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Metro, a Cars spin-off film based on trains, was shelved after this studio (producer of Planes) shut down.",
+            "question": "What is Disneytoon Studios?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "In Soul, 22 (in Joe's body), get mesmerized by a musician on a New York City subway platform and puts apiece of this type of food in his guitar case rather than money",
+            "question": "What is Bagel?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "HAPPY ANNIVERSARY",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "April 7th, 2006 Animal Kingdom",
+            "question": "What is Expedition Everest?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "May 28th, 2014 Magic Kingdom",
+            "question": "What is Seven Dwarfs Mine Train?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "May 31st, 2008 Hollywood Studios",
+            "question": "What is Toy Story (Midway) Mania?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "May 5th, 2005 Epcot",
+            "question": "What is Soarin'?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "April 11th, 2003 Disneyland park",
+            "question": "What is the Many Adventures of Winnie the Pooh?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "QUEENS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the film that opens on this shot",
+            "question": "What is Spider-Man?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "5Oeqwgn0e_k",
+            "youtubeStart": 268,
+            "youtubeEnd": 288,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "If you want to watch an Evil Queen named Regina, put on this multi-season ABC show focused on Disney fairytales",
+            "question": "What is Once Upon a Time?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Elsa's age on her coronation day in Frozen",
+            "question": "What is 21?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Queen Narisa is an antagonist in this Disney film",
+            "question": "What is Enchanted?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "In Wish, Queen Amaya surprisingly joins Asha and her minions in singing this song within a castle room",
+            "question": "What is Knowing What I Know Now?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "FINDING NEMO",
+      "answer": "Answer ray's question to Nemo with what Nemo is about to attempt to say",
+      "question": "What is Anemone (or Sea Anemone)?"
+    }
+  },
+  "cover": "disney-jeopardy-184.jpg"
+}
