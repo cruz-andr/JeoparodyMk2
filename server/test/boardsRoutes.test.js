@@ -380,9 +380,11 @@ await test('a finished board goes public', async () => {
   const create = await api('/', { method: 'POST', token: ada, body: { title: 'The Cold War' } });
   published = create.data.slug;
 
+  const board = fullBoard();
+  board.categories[2].name = 'THE BERLIN AIRLIFT';
   await api(`/${published}`, {
     method: 'PUT', token: ada,
-    body: { board: fullBoard(), topic: 'history', description: 'Nineteen forty-five onwards.' },
+    body: { board, topic: 'history', description: 'Nineteen forty-five onwards.' },
   });
   const { status, data } = await api(`/${published}/visibility`, {
     method: 'PUT', token: ada, body: { visibility: 'public' },
@@ -407,11 +409,16 @@ await test('list responses do not carry the board or the cover', async () => {
   assert.equal(card.hasCover, false);
 });
 
-await test('search finds a board by title and by author', async () => {
+await test('search finds a board by title, by author, and by a category', async () => {
   const byTitle = await api('/?q=cold');
   assert.ok(byTitle.data.boards.some((b) => b.slug === published));
   const byAuthor = await api('/?q=ada');
   assert.ok(byAuthor.data.boards.some((b) => b.slug === published));
+  // Not the first category: the names are stored joined by NUL, where LIKE stops reading.
+  const byCategory = await api(`/?q=${encodeURIComponent('berlin airlift')}`);
+  assert.ok(byCategory.data.boards.some((b) => b.slug === published), 'a category name should find its board');
+  const miss = await api('/?q=nothing-is-called-this');
+  assert.ok(!miss.data.boards.some((b) => b.slug === published));
 });
 
 await test('the topic filter excludes other topics', async () => {
