@@ -1,9 +1,9 @@
 /**
  * Watching along: when the video stops, and what a skip costs.
- * Run with: node src/utils/watchAlong.test.js
+ * Run with: node server/test/watchAlong.test.js
  */
 import assert from 'node:assert/strict';
-import { reached, scored, stopsFor } from './watchAlong.js';
+import { reached, scored, stopsFor } from '../shared/watchAlong.js';
 
 let passed = 0;
 const failures = [];
