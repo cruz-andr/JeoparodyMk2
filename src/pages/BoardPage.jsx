@@ -286,7 +286,8 @@ export default function BoardPage() {
               disabled={!playable}
               onClick={() => navigate('/singleplayer', { state: { board: board.board, boardSlug: slug, title: board.title } })}
             >
-              <span className="bp-play-mark" aria-hidden="true">&#9654;</span> Play
+              {/* Drawn, not the ▶ character, which some systems show as a colour emoji. */}
+              <span className="bp-play-mark" aria-hidden="true"><svg viewBox="0 0 10 12" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false"><path d="M0 0L10 6L0 12Z" /></svg></span> Play
             </button>
             {/* A private room plays it together. Not a private board: everyone
                 in the room would be sent its clues. */}
