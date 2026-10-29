@@ -422,7 +422,7 @@ function readFinal(frames, run, after, problems) {
   }
   const final = {
     category: category.text, lines: card?.lines ?? [], response: response.text,
-    at: card?.start ?? lastTitle + 1, answerAt: run.start, clip: null,
+    at: card?.start ?? lastTitle + 1, answerAt: run.start, cardEnd: card?.end ?? null, clip: null,
   };
   if (!response.sure) problems.push({ where, at: run.start, note: 'The response was read two ways; check it against the video.' });
 
@@ -735,16 +735,16 @@ function media(clip, youtube) {
 }
 
 /**
- * When, playing the episode, to stop for a response: a second before the
- * show puts the answer up. With no answer bar, just after the picture's clip
- * or the card, before the answer is shown or sung.
+ * When, playing the episode, to stop for a response: as the card goes, or
+ * after the picture's clip. Off the card come the players' guesses and often
+ * the answer itself, in the film (Pain and Panic turning into snakes), before
+ * the answer bar; never later than a second before that bar.
  */
 export function pauseFor(cl) {
   // A picture's clip ends before the answers are shown (Final's four stills, then each one played).
-  const pictured = cl.clip && !cl.clip.audio ? cl.clip.end + 0.3 : Infinity;
-  if (cl.answerAt != null) return Math.max(cl.at, Math.min(cl.answerAt - 1, pictured));
-  // No answer bar: after the clip if there is one (a poster zoomed in on), else after the card.
-  return Math.max(cl.at, pictured !== Infinity ? pictured : (cl.cardEnd ?? cl.at + 4) + 0.3);
+  const pictured = cl.clip && !cl.clip.audio ? cl.clip.end + 0.3 : null;
+  const gone = pictured ?? (cl.cardEnd ?? cl.at + 4) + 0.3;
+  return Math.max(cl.at, cl.answerAt != null ? Math.min(cl.answerAt - 1, gone) : gone);
 }
 
 /** The episode as the board's watch-along timeline: when each clue is on, and when to stop for it. */
