@@ -45,7 +45,8 @@ const HOUSE = join(here, '../../server/houseBoards');
 
 // What every board from the show says about itself.
 const SHOW = {
-  name: 'Disney 100 Jeopardy',
+  // The first hundred episodes were Disney 100 Jeopardy; past a hundred, the show is Disney Jeopardy!
+  name: (episode) => (episode && episode <= 100 ? 'Disney 100 Jeopardy' : 'Disney Jeopardy!'),
   topic: 'disney',
   slug: (episode) => `disney-jeopardy-${episode}`,
   description: (episode) => `From Inside the Magic's Disney Jeopardy (Episode ${episode}), hosted by Bryan Perri. Used with permission.`,
@@ -118,6 +119,25 @@ async function fetchCover(youtube, to) {
   return false;
 }
 
+/**
+ * The episode's number, from the top corner of its thumbnail ("#21", "188"):
+ * the newer episodes never put it on screen.
+ */
+async function readThumbnail(cover) {
+  const dir = mkdtempSync(join(tmpdir(), 'video-board-cover-'));
+  try {
+    copyFileSync(cover, join(dir, '00001.jpg'));
+    const { stdout } = await promisify(execFile)('osascript', ['-l', 'JavaScript', join(here, 'ocr.jxa'), dir, '1', '1']);
+    const boxes = parseOcr(stdout)[0]?.boxes ?? [];
+    const corner = boxes.find((b) => b.y < 0.15 && b.x > 0.75 && /^#?\d{1,4}$/.test(b.text));
+    return corner ? Number(corner.text.replace('#', '')) : null;
+  } catch {
+    return null;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 function writeReview(out, file, problems, read) {
   const blocking = problems.filter((p) => p.blocking);
   const lines = [
@@ -158,15 +178,17 @@ async function draft() {
   const { text, frames } = await readVideo(resolve(video), out, fresh);
   const read = readEpisode(parseOcr(text), { categories });
   const names = parseNames(readFileSync(join(here, 'names.txt'), 'utf8'));
+  const cover = youtube && await fetchCover(youtube, join(out, 'cover.jpg')) ? 'cover.jpg' : null;
+  read.episode ??= cover ? await readThumbnail(join(out, cover)) : null;
   const { file, problems } = draftBoard(read, {
     youtube,
     names,
-    show: SHOW.name,
+    show: SHOW.name(read.episode),
     topic: SHOW.topic,
     description: read.episode ? SHOW.description(read.episode) : null,
   });
   if (!youtube) problems.unshift({ where: 'The board', at: 0, note: 'No --youtube was given, so clip clues have nothing to play.' });
-  if (youtube && await fetchCover(youtube, join(out, 'cover.jpg'))) file.cover = 'cover.jpg';
+  if (cover) file.cover = cover;
   else problems.push({ where: 'The cover', at: 0, note: 'No YouTube thumbnail was fetched, so the board will have no cover.' });
 
   // The frames each item is on, for whoever checks it.

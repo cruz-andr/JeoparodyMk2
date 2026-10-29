@@ -1,0 +1,342 @@
+{
+  "title": "Disney Jeopardy!: Episode 188",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 188), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "ROGER RABBIT",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Eddie's brother died after Judge Doom kills him with this musical instrument",
+            "question": "What is Piano?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Eddie takes photos of Jessica and Marvin doing this in private",
+            "question": "What is Playing Patty Cake?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "While Eddie is falling off a skyscraper next to Mickey Mouse and Bugs Bunny, Bugs gives him a spare ____",
+            "question": "What is Spare Tire?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "The year the film takes place",
+            "question": "What is 1947?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Betty Boop tells Eddie that work has been slow since this happened",
+            "question": "What is Cartoon Went to Color?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "PRINCES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Prince Phillip first meets his future wife Aurora while she is doing this",
+            "question": "What is Sleeping/Being a Baby?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Who Prince Edward marries at the end of Enchanted",
+            "question": "What is Nancy?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "When Tiana forces Naveen to help with dinner, he attempts to mince this vegetable in the forest",
+            "question": "What is Mushroom?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "After initially attempting to model Aladdin after Michael J Fox, Disney studio executives had animators redesign the character while using this famous actor as their inspiration",
+            "question": "What is Tom Cruise?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "This Disney prince mentions that he didn't fall for the princess of Glowerhaven",
+            "question": "What is Prince Eric?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "IT'S YOUR LINE",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Play the role of an iconic Disney character and say their upcoming line",
+            "question": "What is Without a Little Music?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 194,
+            "youtubeEnd": 219,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Play the role of an iconic Disney character and say their upcoming line",
+            "question": "What is I Don't Do That Tongue Thing?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 383,
+            "youtubeEnd": 398,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Play the role of an iconic Disney character and say their upcoming line",
+            "question": "What is If the Boot Fits?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 561,
+            "youtubeEnd": 579,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Play the role of an iconic Disney character and say their upcoming line",
+            "question": "What is You Hesitated?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 719,
+            "youtubeEnd": 738,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Play the role of an iconic Disney character and say their upcoming line",
+            "question": "What is in Song Form?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 915,
+            "youtubeEnd": 939,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "RIDE/QUEUE MUSIC",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Listen to the Ride/Queue Music and identify the attraction it's associated to",
+            "question": "What is Haunted Mansion?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 248,
+            "youtubeEnd": 261,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Listen to the Ride/Queue Music and identify the attraction it's associated to",
+            "question": "What is Seven Dwarfs Mine Train?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 410,
+            "youtubeEnd": 423,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Listen to the Ride/Queue Music and identify the attraction it's associated to",
+            "question": "What is Spaceship Earth?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 598,
+            "youtubeEnd": 612,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Listen to the Ride/Queue Music and identify the attraction it's associated to",
+            "question": "What is Flight of Passage?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 753,
+            "youtubeEnd": 767,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Listen to the Ride/Queue Music and identify the attraction it's associated to",
+            "question": "What is the Seas with Nemo & Friends?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 950,
+            "youtubeEnd": 963,
+            "audioOnly": true,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "ZOOMED-IN POSTERS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the film from this zoomed-in poster",
+            "question": "What is Onward?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 283,
+            "youtubeEnd": 291,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the film from this zoomed-in poster",
+            "question": "What is Winnie the Pooh?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 438,
+            "youtubeEnd": 448,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the film from this zoomed-in poster",
+            "question": "What is The Rescuers Down Under?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 626,
+            "youtubeEnd": 638,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Name the film from this zoomed-in poster",
+            "question": "What is The Good Dinosaur?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 777,
+            "youtubeEnd": 786,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the film from this zoomed-in poster",
+            "question": "What is Robin Hood?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LX_MS_sy4yg",
+            "youtubeStart": 984,
+            "youtubeEnd": 991,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "ZOOTOPIA 2",
+      "answer": "After voicing a character in 2004's Home on the Range, Patrick Warburton went on to voice this same type of animal in Zootopia 2",
+      "question": "What is a horse?"
+    }
+  },
+  "cover": "disney-jeopardy-188.jpg"
+}

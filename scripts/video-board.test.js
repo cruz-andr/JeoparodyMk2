@@ -1,7 +1,8 @@
 /**
  * The video board reader, run on Episode 40 as the Mac read it, against the
  * board that was transcribed from the same video by hand and is on the site,
- * and on Episode 21, for the ways a show can trip it.
+ * on Episode 21, for the ways a show can trip it, and on Episode 188, the
+ * newer show.
  * Run with: node scripts/video-board.test.js
  *
  * The wording will not match letter for letter (the hand copy fixed the
@@ -135,6 +136,33 @@ const fj21 = ep21.file.board.finalJeopardy;
 check("Final's category is its own card, not the clue's first line, and its clue is the words",
   fj21.category === 'AVATAR' && /^In 2009's Avatar/.test(fj21.answer) && !fj21.mediaType, JSON.stringify(fj21));
 check('nothing left to review', ep21.problems.length === 0, ep21.problems.map((p) => `${p.where}: ${p.note}`).join(' · '));
+
+// ---------- Episode 188: the newer show, where not every answer is on screen ----------
+
+const read188 = readEpisode(parseOcr(readFileSync(at('./video-board/fixtures/episode-188.ocr.jsonl'), 'utf8')));
+const ep188 = draftBoard(read188, { youtube: 'LX_MS_sy4yg', names, show: 'Disney Jeopardy!', topic: 'disney' });
+const cats188 = ep188.file.board.categories;
+check('the board, not the answers, keeps count: all 25 clues, the poster ones with no answer bar too',
+  cats188.map((c) => c.name).join('|') === "ROGER RABBIT|PRINCES|IT'S YOUR LINE|RIDE/QUEUE MUSIC|ZOOMED-IN POSTERS"
+  && cats188[0].questions[1].question === 'What is Playing Patty Cake?' && cats188[1].questions[1].question === 'What is Nancy?',
+  cats188.map((c) => c.questions.map((q) => q.question).join(', ')).join(' · '));
+const posters = cats188[4].questions;
+const zoomed = [[283, 291], [438, 448], [626, 638], [777, 786], [984, 991]];
+check('a poster zoomed in on, straight off the board, is the clue, played up to the poster shown whole',
+  posters.every((q, i) => q.mediaType === 'youtube' && !q.audioOnly
+    && Math.abs(q.youtubeStart - zoomed[i][0]) <= 2 && q.youtubeEnd === zoomed[i][1]),
+  JSON.stringify(posters.map((q) => [q.youtubeStart, q.youtubeEnd])));
+check('the words it then shows are offered for the response a person writes',
+  ep188.problems.some((p) => p.where === 'ZOOMED-IN POSTERS $200' && /ONWARD/.test(p.note))
+  && ep188.problems.some((p) => p.where === 'ROGER RABBIT $800' && /HOLLYWOOD 1947/.test(p.note)));
+check('ride music plays under its card, even with the host back before the answer',
+  cats188[3].questions.every((q) => q.audioOnly && q.youtubeStart >= 248), JSON.stringify(cats188[3].questions.map((q) => [q.youtubeStart, q.youtubeEnd])));
+check('a scene to finish the line of is a clip', cats188[2].questions.every((q) => q.mediaType === 'youtube' && !q.audioOnly));
+check('a word read three ways does not lose its line, and a blank of dots is a blank',
+  /^Prince Phillip first meets/.test(cats188[1].questions[0].answer) && /spare ____$/.test(cats188[0].questions[2].answer),
+  cats188[1].questions[0].answer);
+check('Final, with its title over two lines',
+  ep188.file.board.finalJeopardy.category === 'ZOOTOPIA 2' && /Patrick Warburton/.test(ep188.file.board.finalJeopardy.answer));
 
 const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
 check('names given are the names used', told.names.join('') === 'ABCDE');

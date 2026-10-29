@@ -76,7 +76,7 @@ const capitals = (s) => (s.match(/[A-Z]/g) ?? []).length;
 const FURNITURE = /JEOPARDY|^\s*\S*\s*\d+\s*POINTS?\b|\bROUND\s*$|^[•·*]/i;
 
 // The cards are plain type. A letter from outside it ("SƠUU") is a misreading.
-const CARD_TYPE = /^[\x20-\x7E‘’“”…–—]+$/;
+const CARD_TYPE = /^[\x20-\x7E‘’“”…–—•·]+$/;
 
 // The host at his desk: its plate, "DisNEy JEOPARDY" as it is read.
 const DESK = /^D\S*\s+JEOPARDY$/i;
@@ -94,6 +94,8 @@ const CARD_LETTERS = 12;
 /* A card has a line of three words at least. Stray words ("ANSIVEI ARIE AND",
    an answer fading in) do not. */
 function cardOn(frame, also = () => true) {
+  // A poster has its own words in capitals ("HIP HIP POOHRAY!") among lower case ones. A card is all capitals.
+  if (frame.lines.filter((line) => /[a-z]{2}/.test(line)).length >= 2 && !atDesk(frame)) return null;
   const lines = frame.lines.filter((line) => cardLine(line) && !/^ANS/.test(line) && also(line));
   const enough = lines.reduce((n, line) => n + letters(line), 0) >= CARD_LETTERS;
   return enough && lines.some((line) => line.split(/\s+/).length >= 3) ? lines : null;
@@ -132,6 +134,8 @@ const HEADER_BAND = 0.3;
  * name read as two lines ("BIG" over "THUNDER") put back together. Null on
  * any other frame. It needs where each line sits, which ocr.jxa gives.
  */
+const VALUE = /^\$?(200|400|600|800|1000)$/;
+
 function boardOn(frame, columns) {
   const top = frame.boxes.filter((b) => b.x !== null && b.y < HEADER_BAND
     && cardLine(b.text) && b.text.split(/\s+/).length <= 3);
@@ -144,9 +148,15 @@ function boardOn(frame, columns) {
     else groups.push([b]);
   }
   if (groups.length !== columns) return null;
+  // Its squares still to play: each value under the column it sits nearest.
+  const centres = groups.map((g) => g.reduce((n, b) => n + mid(b), 0) / g.length);
+  const column = (b) => centres.reduce((best, x, i) => (Math.abs(x - mid(b)) < Math.abs(centres[best] - mid(b)) ? i : best), 0);
+  const squares = new Set(frame.boxes.filter((b) => b.x !== null && VALUE.test(b.text))
+    .map((b) => `${column(b)}:${VALUE.exec(b.text)[1]}`));
   return {
     names: groups.map((g) => g.sort((p, q) => p.y - q.y).map((b) => b.text).join(' ')),
     parts: new Set(top.map((b) => b.text)),
+    left: squares.size,
   };
 }
 
@@ -177,28 +187,36 @@ function answerRuns(frames) {
  * Words that say a clue is about something on screen, or something to hear.
  * Only with one of these does a stretch with no text become the clue's clip.
  */
-const SHOWN = /\b(SEEN|SHOWN|PICTURED|WATCH)\b|\bTHIS (SCENE|CLIP|IMAGE|PICTURE)\b/;
+const SHOWN = /\b(SEEN|SHOWN|PICTURED|WATCH|UPCOMING LINE|NEXT LINE)\b|\bTHIS (SCENE|CLIP|IMAGE|PICTURE)\b/;
 const HEARD = /\b(HEAR|HEARD|LISTEN)\b|\bTHIS (SONG|SOUND|VOICE)\b/;
 
 /**
  * The card before an answer: the run of card frames nearest before it,
  * after the last answer. Its text is the reading most of them agree on.
  */
-function cardBefore(frames, from, to, also) {
+function cardBefore(frames, from, to, also, { first = false } = {}) {
   const shown = frames.filter((f) => f.s > from && f.s < to)
     .map((f) => ({ s: f.s, lines: cardOn(f, also) }))
     .filter((f) => f.lines);
-  if (!shown.length) return null;
-  const run = [shown.at(-1)];
-  for (let i = shown.length - 2; i >= 0 && run[0].s - shown[i].s <= 4; i--) run.unshift(shown[i]);
-  /* A line on fewer than half the card's frames is something passing over
-     it (the score, "YUUU"), not the card. */
-  const seen = new Map();
-  for (const f of run) for (const line of new Set(f.lines)) seen.set(line, (seen.get(line) ?? 0) + 1);
-  const steady = (line) => seen.get(line) >= run.length / 2;
-  const { text, sure } = vote(run.map((f) => ({ text: f.lines.filter(steady).join('\n') })).filter((r) => r.text));
-  if (!text) return null;
-  return { lines: text.split('\n'), sure, start: run[0].s, end: run.at(-1).s };
+  // Runs of card frames, a few seconds' gap allowed. A card is up for seconds: one frame is a title flying past.
+  const runs = [];
+  for (const f of shown) {
+    if (runs.length && f.s - runs.at(-1).at(-1).s <= 4) runs.at(-1).push(f);
+    else runs.push([f]);
+  }
+  const run = runs.filter((r) => r.length >= 2).at(first ? 0 : -1);
+  if (!run) return null;
+  /* The card has as many lines as most of its frames read: a frame with one
+     more has something passing over it (the score, "YUUU"), one with fewer
+     is the card flying in. Each line is then the reading most of those
+     frames agree on, so one word read three ways ("FUTURE", "FOTURE",
+     "FOTORE") does not cost the line. */
+  const counts = new Map();
+  for (const f of run) counts.set(f.lines.length, (counts.get(f.lines.length) ?? 0) + 1);
+  const size = [...counts].sort((a, b) => b[1] - a[1])[0][0];
+  const like = run.filter((f) => f.lines.length === size);
+  const lines = Array.from({ length: size }, (_, i) => vote(like.map((f) => ({ text: f.lines[i] }))));
+  return { lines: lines.map((l) => l.text), sure: lines.every((l) => l.sure), start: run[0].s, end: run.at(-1).s };
 }
 
 /** The first second after `from` with an answer starting to show, however badly read ("ANSIVEI"). */
@@ -206,32 +224,95 @@ function answerShowsAt(frames, from, to) {
   return frames.find((f) => f.s > from && f.s <= to && f.lines.some((l) => /^.?ANS|N?SWER\s*:/.test(l)))?.s ?? to;
 }
 
-function readClue(frames, run, after, problems, where) {
-  const card = cardBefore(frames, after, run.start);
-  const response = vote(run.readings);
+const said = (f) => letters(f.lines.join(''));
+
+/**
+ * Footage straight off the board, with no card: a picture to name (a poster
+ * zoomed in on). It runs until the host is back, or until the screen fills
+ * with words, which is the picture shown whole: the answer.
+ */
+function pictureAfter(frames, from, to) {
+  const shown = frames.filter((f) => f.s > from && f.s < to);
+  const start = shown.find((f) => !f.board && !atDesk(f));
+  if (!start) return null;
+  const base = Math.max(...shown.filter((f) => f.s >= start.s && f.s <= start.s + 1).map(said));
+  const stop = shown.find((f) => f.s > start.s && (f.board || atDesk(f) || answerOn(f) || said(f) > base + 8));
+  const end = (stop?.s ?? to) - 1;
+  return end - start.s >= 2 ? { start: start.s, end } : null;
+}
+
+/** The words on the first stretch of footage after `from`: where an answer with no answer bar is said. */
+function shownText(frames, from, to) {
+  const run = [];
+  for (const f of frames) {
+    if (f.s <= from || f.s >= to) continue;
+    if (f.board || atDesk(f) || !said(f)) {
+      if (run.length) break;
+      continue;
+    }
+    run.push(f);
+  }
+  const seen = new Map();
+  for (const f of run) for (const line of new Set(f.lines)) if (letters(line) >= 3) seen.set(line, (seen.get(line) ?? 0) + 1);
+  return [...seen].filter(([, n]) => n >= 2).map(([line]) => line).slice(0, 6);
+}
+
+/**
+ * One clue: the stretch from the board it was picked from (`seg.from`) to
+ * the board after it (`seg.to`), with its answer `run` in it if the answer
+ * was put on screen.
+ */
+function readClue(frames, run, seg, problems, where) {
+  const to = run?.start ?? seg.to;
+  /* Picked off the board, a clue's card flies out of its square straight
+     away. When what comes first is footage instead, the clue is a picture,
+     and words later on (the poster shown whole) are its answer, not a card. */
+  const opening = seg.fromBoard ? frames.filter((f) => f.s > seg.from && f.s < to && !f.board).slice(0, 3) : [];
+  const pictured = opening.length > 0 && !opening.some((f) => cardOn(f));
+  const card = pictured ? null : cardBefore(frames, seg.from, to, undefined, { first: Boolean(seg.fromBoard) });
+  const response = run ? vote(run.readings) : { text: null, sure: true };
   const clue = {
     lines: card?.lines ?? [],
     response: response.text,
-    at: card?.start ?? run.start,
-    answerAt: run.start,
+    at: card?.start ?? seg.from + 1,
+    answerAt: run?.start ?? null,
     clip: null,
   };
+  const unanswered = (after) => {
+    if (run) return;
+    const says = shownText(frames, after, seg.to);
+    problems.push({
+      where, at: after + 1, blocking: true,
+      note: `No answer was put on screen. Write the response${says.length ? `; the screen after the clue reads: ${says.join(' / ')}` : ''}.`,
+    });
+  };
   if (!card) {
-    problems.push({ where, at: run.start, blocking: true, note: 'No clue card was found before this answer.' });
+    clue.clip = pictureAfter(frames, seg.from, to);
+    clue.at = clue.clip?.start ?? clue.at;
+    problems.push({
+      where, at: clue.at, blocking: true,
+      note: clue.clip
+        ? `The clue is a picture with no words, played as its clip (${clock(clue.clip.start)} to ${clock(clue.clip.end)}). Write the clue for it.`
+        : 'No clue card was found.',
+    });
+    unanswered(clue.clip?.end ?? seg.from);
     return clue;
   }
   if (!card.sure) problems.push({ where, at: card.start, note: 'The clue text was read two ways; check it against the video.' });
   if (!response.sure) problems.push({ where, at: run.start, note: 'The response was read two ways; check it against the video.' });
+  unanswered(card.end);
 
   const text = card.lines.join(' ');
   const seen = SHOWN.test(text);
   const heard = HEARD.test(text);
-  const answerAt = answerShowsAt(frames, card.end, run.start);
+  let answerAt = answerShowsAt(frames, card.end, to);
+  // With no answer on screen, the clue is over when the board is back.
+  if (!run) answerAt = frames.find((f) => f.s > card.end && f.s < answerAt && f.board)?.s ?? answerAt;
 
   /* A sound to name plays under its card, which stays up until the answer
      ("LISTEN UP AND NAME THE DISNEY CHANNEL SHOW"). */
-  if (heard && !seen && answerAt - card.end <= 2) {
-    clue.clip = { start: card.start, end: answerAt - 1, audio: true };
+  if (heard && !seen && (answerAt - card.end <= 2 || card.end - card.start >= 6)) {
+    clue.clip = { start: card.start, end: answerAt - card.end <= 2 ? answerAt - 1 : card.end, audio: true };
     return clue;
   }
 
@@ -242,13 +323,15 @@ function readClue(frames, run, after, problems, where) {
   const between = frames.filter((f) => f.s > card.end && f.s < answerAt);
   const lastDesk = between.findLast(atDesk)?.s ?? null;
   const offScreen = answerAt - card.end - 1;
-  if (lastDesk === null && offScreen >= 4 && (seen || heard)) {
+  // Footage with no word on the card to say so is a clip when it is long: a scene to finish, not a moment's cutaway.
+  if (lastDesk === null && offScreen >= ((seen || heard) ? 4 : 8)) {
     clue.clip = { start: card.end + 1, end: answerAt - 1 };
-  } else if (lastDesk === null && offScreen >= 8) {
-    problems.push({
-      where, at: card.end + 1,
-      note: `The screen leaves the card for ${offScreen}s before the answer (${clock(card.end + 1)} to ${clock(answerAt - 1)}). If that is a clip, add it.`,
-    });
+    if (!seen && !heard) {
+      problems.push({
+        where, at: card.end + 1,
+        note: `Footage straight off the card (${clock(card.end + 1)} to ${clock(answerAt - 1)}) plays as the clue's clip. Check it does not give the answer away.`,
+      });
+    }
   } else if (seen && answerAt - lastDesk - 1 >= 4) {
     problems.push({
       where, at: lastDesk + 1,
@@ -338,8 +421,50 @@ function placeNames(names, columnText) {
  *
  * @param categories  names to use instead of reading them off the cards
  */
+/** "FINAL" over "JEOPARDY", as the newer board has its title, read as the one title. */
+function joinFinal(frame) {
+  const i = frame.lines.findIndex((l, n) => /^FINAL$/i.test(l) && /^JEOPARDY$/i.test(frame.lines[n + 1] ?? ''));
+  if (i === -1) return frame;
+  const lines = [...frame.lines];
+  lines.splice(i, 2, 'FINAL JEOPARDY');
+  return { ...frame, lines, boxes: frame.boxes.filter((b) => !/^(FINAL|JEOPARDY)$/i.test(b.text)) };
+}
+
+/**
+ * Where each clue was played: from the board it was picked off to the board
+ * after it, told by how many squares the board has left. Not every clue puts
+ * its answer on screen (a zoomed-in poster is answered by the poster), so the
+ * board, which comes back after every clue, is what keeps count.
+ *
+ * `boards` is every frame the board is on with its squares left. A count on
+ * two frames running is trusted; one on a single frame is a square caught
+ * mid zoom. Returns a stretch for each clue, or null where the board was
+ * never seen with that many squares (two clues then share one stretch).
+ */
+function boardStretches(boards, target, end) {
+  const steady = [];
+  boards.forEach((b, i) => {
+    const next = boards[i + 1];
+    const last = steady.at(-1);
+    if (last && last.left === b.left && b.s - last.to <= 3) last.to = b.s;
+    else if (next && next.left === b.left && next.s - b.s <= 2) steady.push({ left: b.left, from: b.s, to: b.s });
+  });
+  const stretches = [];
+  for (let k = 0; k < target; k++) {
+    const left = target - k;
+    const at = steady.filter((b) => b.left === left).at(-1);
+    if (!at) {
+      stretches.push(null);
+      continue;
+    }
+    const next = steady.find((b) => b.from > at.to && b.left < left);
+    stretches.push({ from: at.to, to: next?.from ?? end, fromBoard: true });
+  }
+  return stretches;
+}
+
 export function readEpisode(shown, { categories = null } = {}) {
-  let frames = shown;
+  let frames = shown.map(joinFinal);
   const problems = [];
   const all = frames.flatMap((f) => f.lines);
   const episode = Number(all.map((l) => /EPISODE\s+(\d+)/i.exec(l)?.[1]).find(Boolean)) || null;
@@ -349,42 +474,80 @@ export function readEpisode(shown, { categories = null } = {}) {
   const finalSeen = (f) => f.lines.some((l) => FINAL.test(l));
   const finalTitle = frames.find((f) => runs.length && f.s > runs[0].start && finalSeen(f));
   const finalIndex = finalTitle ? runs.findIndex((r) => r.start > finalTitle.s) : -1;
-  const played = finalIndex === -1 ? runs : runs.slice(0, finalIndex);
+  const answered = finalIndex === -1 ? runs : runs.slice(0, finalIndex);
 
-  const columns = categories?.length || said || (played.length > 25 ? 6 : 5);
+  const columns = categories?.length || said || (answered.length > 25 ? 6 : 5);
   const target = columns * POINTS.length;
 
   // The board's names are read, then taken off the frame: they are not a clue.
   const boards = [];
+  const left = [];
   frames = frames.map((f) => {
     const board = boardOn(f, columns);
     if (!board) return f;
     boards.push(board.names.join('|'));
-    return { ...f, lines: f.lines.filter((l) => !board.parts.has(l)) };
+    if (board.left) left.push({ s: f.s, left: board.left });
+    return { ...f, board: Boolean(board.left), lines: f.lines.filter((l) => !board.parts.has(l)) };
   });
-  if (played.length !== target) {
+
+  // The end of the last clue: Final's wager card, or its title.
+  const finalFrom = frames.find((f) => f.s > (left.at(-1)?.s ?? 0) && (finalSeen(f) || f.lines.some((l) => /^WAGER\b/.test(l))))?.s;
+  const stretches = boardStretches(left, target, finalFrom ?? frames.at(-1)?.s ?? 0);
+  // A board missed between two clues leaves one stretch with both answers in it: it ends after the first.
+  for (let i = 1; i < stretches.length; i++) {
+    const before = stretches[i - 1];
+    if (stretches[i] || !before) continue;
+    const inside = answered.filter((x) => x.start > before.from && x.start < before.to);
+    /* With one answer between them (a poster has none), the board caught
+       once, on a single frame, between the two clues is where they part. */
+    const between = left.find((b) => b.s > before.from + 5 && b.s < before.to - 5);
+    const split = inside.length >= 2 ? inside[0].end : between?.s;
+    if (split === undefined) continue;
+    stretches[i] = { from: split, to: before.to, fromBoard: inside.length < 2 };
+    before.to = split + 1;
+  }
+
+  /* Each clue's answer is the answer run in its stretch. Where the board
+     was missed, so a stretch is not known, the answer runs fall back on
+     order: the next one not yet used. */
+  const cells = Array.from({ length: columns }, () => new Array(POINTS.length).fill(null));
+  const used = new Set();
+  let lost = 0;
+  stretches.forEach((seg, i) => {
+    const c = i % columns, r = Math.floor(i / columns);
+    const where = { column: c, row: r };
+    if (!seg) {
+      const run = answered.find((x) => !used.has(x) && x.start > (stretches[i - 1]?.from ?? -1));
+      if (!run) {
+        lost++;
+        return;
+      }
+      used.add(run);
+      const from = Math.max(stretches[i - 1]?.from ?? -1, [...used].filter((x) => x.end < run.start).at(-1)?.end ?? -1);
+      cells[c][r] = readClue(frames, run, { from, to: run.start }, problems, where);
+      return;
+    }
+    const mine = answered.filter((x) => x.start > seg.from && x.start < seg.to && !used.has(x));
+    mine.forEach((x) => used.add(x));
+    const run = mine.length ? { start: mine[0].start, end: mine.at(-1).end, readings: mine.flatMap((x) => x.readings) } : null;
+    cells[c][r] = readClue(frames, run, seg, problems, where);
+  });
+  if (lost || stretches.every((x) => !x)) {
     problems.push({
-      where: 'The board', at: played[0]?.start ?? 0, blocking: true,
-      note: `Found ${played.length} clues before Final Jeopardy, where a ${columns} category board has ${target}.`,
+      where: 'The board', at: answered[0]?.start ?? 0, blocking: true,
+      note: `Found ${target - lost} of the ${target} clues a ${columns} category board has. Check the board was read.`,
     });
   }
 
-  // Played in order: every $200 across the board, then every $400, and so on.
-  const cells = Array.from({ length: columns }, () => new Array(POINTS.length).fill(null));
-  played.slice(0, target).forEach((run, i) => {
-    const c = i % columns, r = Math.floor(i / columns);
-    cells[c][r] = readClue(frames, run, i ? played[i - 1].end : -1, problems, { column: c, row: r });
-  });
-
   const final = finalIndex === -1 ? null
-    : readFinal(frames, runs[finalIndex], played.at(-1)?.end ?? -1, problems);
+    : readFinal(frames, runs[finalIndex], (finalFrom ?? finalTitle.s) - 1, problems);
   if (!final) problems.push({ where: 'Final Jeopardy', at: 0, note: 'No Final Jeopardy was found. The board will have none.' });
 
   let names;
   if (categories) {
     names = categories.map((n) => n.trim().toUpperCase());
   } else {
-    const firstCard = cells[0][0]?.at ?? played[0]?.start ?? 0;
+    const firstCard = cells[0][0]?.at ?? answered[0]?.start ?? 0;
     const cards = findCategories(frames, 0, firstCard, columns);
     const onBoard = vote(boards.map((text) => ({ text }))).text?.split('|');
     if (onBoard) {
@@ -451,7 +614,9 @@ function joinCard(card) {
     else out += (/\d/.test(label) === /\d/.test(prev) ? ', ' : '. ') + line;
     prev = label;
   }
-  out = out.replace(/\s+/g, ' ').replace(/:\s*:/g, ':').trim();
+  out = out.replace(/\s+/g, ' ').replace(/:\s*:/g, ':').trim()
+    // A blank drawn as dots is read as dots and bullets ("HIM A SPARE ...•").
+    .replace(/\.*[•·][.•·]*|\.{4,}/g, '____');
   // The blank is a line on the card, which is not text to read.
   if (/^FILL IN THE BLANK/i.test(out) && !/_/.test(out)) out += ' ____';
   return out;
