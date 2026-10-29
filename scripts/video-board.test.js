@@ -1,8 +1,8 @@
 /**
  * The video board reader, run on Episode 40 as the Mac read it, against the
  * board that was transcribed from the same video by hand and is on the site,
- * on Episode 21, for the ways a show can trip it, and on Episode 188, the
- * newer show.
+ * on Episode 21, for the ways a show can trip it, and on Episodes 188 and 187,
+ * the newer show.
  * Run with: node scripts/video-board.test.js
  *
  * The wording will not match letter for letter (the hand copy fixed the
@@ -163,6 +163,23 @@ check('a word read three ways does not lose its line, and a blank of dots is a b
   cats188[1].questions[0].answer);
 check('Final, with its title over two lines',
   ep188.file.board.finalJeopardy.category === 'ZOOTOPIA 2' && /Patrick Warburton/.test(ep188.file.board.finalJeopardy.answer));
+
+// ---------- Episode 187: lyrics, a Daily Double, and Final over three films ----------
+
+const ep187 = draftBoard(readEpisode(parseOcr(readFileSync(at('./video-board/fixtures/episode-187.ocr.jsonl'), 'utf8'))),
+  { youtube: 'S-XkcKpUFKc', names, show: 'Disney Jeopardy!', topic: 'disney' });
+const cats187 = ep187.file.board.categories;
+check('"ANSWER THIS QUESTION" on a card is the card, not an answer fading in',
+  /begins to answer this question from the Evil Queen/.test(cats187[4].questions[0].answer), cats187[4].questions[0].answer);
+check("Final's category, three films on three lines, is the category, and its clue is the words",
+  ep187.file.board.finalJeopardy.category === 'LADY & THE TRAMP, ENCANTO, ROGER RABBIT'
+  && /^Coincidentally/.test(ep187.file.board.finalJeopardy.answer) && !ep187.file.board.finalJeopardy.mediaType,
+  JSON.stringify(ep187.file.board.finalJeopardy));
+check('lyrics filled in over a clip are offered in reading order',
+  ep187.problems.some((p) => p.where === 'SIGN-OFF KARAOKE $200' && /JASMINE: A WONDROUS PLACE \/ TOGETHER: FOR YOU AND ME/.test(p.note)));
+check('the Daily Double screens are not taken for a picture clue: the card after the wager is the clue',
+  /^Sing the very last lines of Go the Distance/.test(cats187[2].questions[2].answer) && !cats187[2].questions[2].mediaType,
+  cats187[2].questions[2].answer);
 
 const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
 check('names given are the names used', told.names.join('') === 'ABCDE');

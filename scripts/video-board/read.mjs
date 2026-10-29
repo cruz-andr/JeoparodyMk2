@@ -96,7 +96,9 @@ const CARD_LETTERS = 12;
 function cardOn(frame, also = () => true) {
   // A poster has its own words in capitals ("HIP HIP POOHRAY!") among lower case ones. A card is all capitals.
   if (frame.lines.filter((line) => /[a-z]{2}/.test(line)).length >= 2 && !atDesk(frame)) return null;
-  const lines = frame.lines.filter((line) => cardLine(line) && !/^ANS/.test(line) && also(line));
+  // A line starting "ANS" is an answer fading in ("ANSIVEI ARIE AND"), unless it reads on, with no colon, as a sentence ("ANSWER THIS QUESTION FROM THE").
+  const fading = (line) => /^ANS/.test(line) && (line.includes(':') || line.split(/\s+/).length < 4);
+  const lines = frame.lines.filter((line) => cardLine(line) && !fading(line) && also(line));
   const enough = lines.reduce((n, line) => n + letters(line), 0) >= CARD_LETTERS;
   return enough && lines.some((line) => line.split(/\s+/).length >= 3) ? lines : null;
 }
@@ -252,8 +254,19 @@ function shownText(frames, from, to) {
     }
     run.push(f);
   }
+  /* Read as the screen has it: words on one level are one line, left to
+     right. Lyrics filled in over a clip come one word to a box. */
+  const rows = (f) => {
+    const out = [];
+    for (const b of [...f.boxes].sort((p, q) => p.y - q.y)) {
+      const row = out.at(-1);
+      if (row && b.y - row[0].y < 0.02) row.push(b);
+      else out.push([b]);
+    }
+    return out.map((row) => row.sort((p, q) => (p.x ?? 0) - (q.x ?? 0)).map((b) => b.text).join(' '));
+  };
   const seen = new Map();
-  for (const f of run) for (const line of new Set(f.lines)) if (letters(line) >= 3) seen.set(line, (seen.get(line) ?? 0) + 1);
+  for (const f of run) for (const line of new Set(rows(f))) if (letters(line) >= 3) seen.set(line, (seen.get(line) ?? 0) + 1);
   return [...seen].filter(([, n]) => n >= 2).map(([line]) => line).slice(0, 6);
 }
 
@@ -262,8 +275,12 @@ function shownText(frames, from, to) {
  * the board after it (`seg.to`), with its answer `run` in it if the answer
  * was put on screen.
  */
-function readClue(frames, run, seg, problems, where) {
-  const to = run?.start ?? seg.to;
+function readClue(frames, run, stretch, problems, where) {
+  const to = run?.start ?? stretch.to;
+  /* A Daily Double puts its own screens between the board and the card, then
+     asks for a wager: the clue starts after the wager card. */
+  const wager = frames.findLast((f) => f.s > stretch.from && f.s < to && f.lines.some((l) => /DAILY DOUBLE/.test(l)));
+  const seg = wager ? { ...stretch, from: wager.s, fromBoard: false } : stretch;
   /* Picked off the board, a clue's card flies out of its square straight
      away. When what comes first is footage instead, the clue is a picture,
      and words later on (the poster shown whole) are its answer, not a card. */
@@ -349,23 +366,27 @@ const FINAL = /^FINAL\s+JEOPARDY/i;
 
 function readFinal(frames, run, after, problems) {
   const where = 'Final Jeopardy';
-  /* The category is the line under the title card, as most frames read it.
-     The clue comes up under the same title, so a frame with more than the
-     one line under it is the clue, not the category ("AVATAR", in the film's
+  /* The category is the lines under the title card, as most frames read
+     them: a name, or a few ("LADY & THE TRAMP, / ENCANTO, / ROGER RABBIT"),
+     each short. The clue comes up under the same title in long lines, so a
+     frame with those is the clue, not the category ("AVATAR", in the film's
      own lettering, is up for three seconds; its clue for forty). */
+  const under = (g) => g.lines.slice(g.i + 1).filter(cardLine);
   const titled = frames.filter((f) => f.s > after && f.s < run.start)
     .map((f) => ({ s: f.s, i: f.lines.findIndex((l) => FINAL.test(l)), lines: f.lines }))
     .filter((f) => f.i !== -1 && f.lines[f.i + 1] && cardLine(f.lines[f.i + 1]))
     .filter((f, _, all) => {
-      const alone = (g) => g.lines.slice(g.i + 1).filter(cardLine).length === 1;
-      return alone(f) || !all.some(alone);
+      const named = (g) => under(g).length <= 4 && under(g).every((l) => l.split(/\s+/).length <= 5);
+      return named(f) || !all.some(named);
     });
-  const category = vote(titled.map((f) => ({ text: f.lines[f.i + 1] })));
+  const category = vote(titled.map((f) => ({ text: f.lines.some((l, n) => n > f.i && l.split(/\s+/).length > 5) ? f.lines[f.i + 1] : under(f).join('\n') })));
+  const categoryLines = new Set(category.text?.split('\n') ?? []);
+  if (category.text) category.text = category.text.replace(/\n/g, ' ');
   const lastTitle = titled.at(-1)?.s ?? after;
   if (!category.text) problems.push({ where, at: run.start, blocking: true, note: 'The category was not found.' });
 
   const card = cardBefore(frames, lastTitle, run.start,
-    (line) => !FINAL.test(line) && line !== category.text && !/WAGER/.test(line));
+    (line) => !FINAL.test(line) && !categoryLines.has(line) && !/WAGER/.test(line));
   const response = vote(run.readings);
   const final = {
     category: category.text, lines: card?.lines ?? [], response: response.text,
