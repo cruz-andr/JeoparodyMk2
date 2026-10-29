@@ -19,28 +19,6 @@
 }
 .board-gone p { color: var(--text-secondary); margin: 0; }
 
-/* ---- the head ---- */
-.board-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 22px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid rgba(242, 236, 224, 0.12);
-}
-
-.board-head-text { flex: 1; min-width: 0; }
-
-.board-title {
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 900;
-  font-size: clamp(1.7rem, 4.4vw, 2.5rem);
-  line-height: 0.92;
-  letter-spacing: -0.3px;
-  margin: 0 0 10px;
-  color: var(--jeopardy-gold);
-}
-
 .board-by {
   display: flex;
   align-items: center;
@@ -72,70 +50,12 @@
   background: var(--text-muted);
 }
 
-.board-desc {
-  margin: 0 0 10px;
-  max-width: 58ch;
-  color: var(--text-primary);
-  line-height: 1.5;
-  font-size: 0.96rem;
-}
-
 .board-adapted {
-  margin: 0;
+  margin: 0 0 6px;
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
 .board-adapted a { color: var(--jeopardy-gold-light); }
-
-/* ---- the six categories ---- */
-.board-cats {
-  list-style: none;
-  margin: 22px 0 26px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  background: rgba(242, 236, 224, 0.1);
-  border: 1px solid rgba(242, 236, 224, 0.1);
-}
-
-.board-cats li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 14px;
-  background: #050a24;
-}
-
-.board-cat-name {
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-weight: 800;
-  font-size: 0.95rem;
-  letter-spacing: 0.4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.board-cat-count {
-  font-family: var(--font-board);
-  text-transform: uppercase;
-  font-size: 0.68rem;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-/* ---- actions ---- */
-.board-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
 
 /* Everything about how it looks is in button.quiet-action. Only the size is
    particular to this screen. */
@@ -255,10 +175,6 @@ button.board-action { padding: 12px 16px; font-size: 0.8rem; }
 button.board-link-copy { padding: 11px 15px; font-size: 0.74rem; }
 
 @media (max-width: 640px) {
-  .board-head { gap: 16px; flex-direction: column; }
-  .board-cats { grid-template-columns: 1fr; }
-  .board-actions { flex-direction: column; align-items: stretch; }
-  .board-actions .btn-primary,
   button.board-action { width: 100%; }
 }
 
@@ -416,4 +332,198 @@ button.bb-foot-link {
   font-size: 0.88rem;
   line-height: 1.5;
   color: var(--text-secondary);
+}
+
+/* ---- the hero: the cover as a poster, the title and the way in over it ---- */
+.bp-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(360px, 46vw, 560px);
+  overflow: hidden;
+  background: #050a24;
+}
+
+/* The art runs the full width and fades into the page only at its foot,
+   where the words sit, so they stay on dark ground whatever the picture is. */
+.bp-hero-art {
+  position: absolute;
+  inset: 0;
+}
+.bp-hero-art img,
+.bp-hero-board {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.bp-hero-art img { object-fit: cover; object-position: center top; }
+.bp-hero-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8% 10%;
+  background: linear-gradient(165deg, #141c78, #0a0f42);
+}
+.bp-hero-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Darker at the foot for the words, and a little everywhere: a cover is
+     often a title card in white letters of its own. */
+  background:
+    linear-gradient(0deg, #050a24 0%, rgba(5, 10, 36, 0.82) 30%, rgba(5, 10, 36, 0.35) 55%, rgba(5, 10, 36, 0) 75%),
+    rgba(5, 10, 36, 0.28);
+}
+
+.bp-hero-text {
+  position: relative;
+  width: 100%;
+  /* The same column as .board-main under it, so the title and the
+     categories start on one line. */
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 24px 30px;
+}
+
+.bp-kicker {
+  margin: 0 0 8px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  color: var(--jeopardy-gold-light);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.8);
+}
+
+.bp-title {
+  max-width: 14ch;
+  margin: 0 0 14px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: clamp(2.4rem, 7vw, 4.6rem);
+  line-height: 0.9;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.7), 0 2px 28px rgba(0, 0, 0, 0.75);
+}
+
+.bp-meta { margin-bottom: 12px; }
+
+.bp-desc {
+  max-width: 54ch;
+  margin: 0 0 20px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
+
+.bp-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+button.bp-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 30px;
+  font-size: 1.05rem;
+}
+.bp-play-mark { font-size: 0.85em; }
+
+/* The other ways to play are words, not boxes: one big way in, then the rest. */
+button.bp-more-way {
+  padding: 6px 0;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+button.bp-more-way:hover:not(:disabled),
+button.bp-more-way:focus-visible { border-bottom-color: var(--jeopardy-gold); outline: none; }
+button.bp-more-way:disabled { opacity: 0.45; cursor: default; }
+
+/* ---- sections under it ---- */
+.bp-section { margin-top: 26px; }
+
+.bp-section h2 {
+  margin: 0 0 12px;
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.8px;
+}
+
+/* The categories, as a show lists its episodes. */
+.bp-episodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+.bp-episodes li {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 4px;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.1);
+}
+
+.bp-ep-num {
+  flex: 0 0 2ch;
+  font-family: var(--font-board);
+  font-weight: 900;
+  font-size: 1.7rem;
+  line-height: 1;
+  text-align: center;
+  color: var(--text-muted);
+}
+.bp-episodes li.is-final .bp-ep-num { color: var(--jeopardy-gold); }
+
+.bp-ep-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.bp-ep-name {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 1.02rem;
+  letter-spacing: 0.4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-ep-holds {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+.bp-more { margin-bottom: 8px; }
+
+@media (max-width: 640px) {
+  /* On a phone the poster sits above the words rather than behind them. */
+  .bp-hero { display: block; min-height: 0; }
+  .bp-hero-art { position: relative; inset: auto; width: 100%; aspect-ratio: 16 / 9; }
+  .bp-hero-art::after {
+    background: linear-gradient(0deg, #050a24 0%, rgba(5, 10, 36, 0) 45%);
+  }
+  .bp-hero-text { padding: 0 16px 22px; margin-top: -28px; }
+  .bp-title { max-width: none; }
+  button.bp-play { width: 100%; justify-content: center; }
+  .bp-ep-num { font-size: 1.4rem; }
 }
