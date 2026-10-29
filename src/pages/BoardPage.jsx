@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useUserStore } from '../stores';
 import {
-  copyBoard, coverUrl, getBoard, reportBoard, setCover, setVisibility,
+  browse, copyBoard, coverUrl, getBoard, reportBoard, setCover, setVisibility,
 } from '../services/api/boardsService';
 import { CLUE_COUNT, clueTarget, publishProblem, REPORT_REASONS } from '@shared/boardFormat.js';
 import { compressImage } from '../utils/imageCompressor';
 import BoardMiniature from '../components/boards/BoardMiniature';
+import { Card, Rail } from '../components/boards/Shelf';
+import { TOPIC_NAMES } from './BoardsBrowsePage';
 import '../components/boards/BoardsChrome.css';
 import './BoardPage.css';
 
@@ -19,6 +21,50 @@ const CHOICES = [
   { key: 'unlisted', name: 'Anyone with the link', note: 'Send it to your room. Not listed, not searchable.' },
   { key: 'public', name: 'In Community Boards', note: 'Anyone can find it, play it, and make their own copy.' },
 ];
+
+/* What a category holds, without saying a word of it: the way a show's
+   episode list tells you what is in an episode and not how it ends. */
+function holds(category) {
+  const qs = category.questions.filter((q) => q.answer?.trim() && q.question?.trim());
+  const clips = qs.filter((q) => q.mediaType === 'youtube' && !q.audioOnly).length;
+  const sounds = qs.filter((q) => q.mediaType === 'youtube' && q.audioOnly).length;
+  const pictures = qs.filter((q) => q.mediaType === 'image').length;
+  return [
+    `${qs.length} ${qs.length === 1 ? 'clue' : 'clues'}`,
+    clips && `${clips} ${clips === 1 ? 'clip' : 'clips'}`,
+    sounds && `${sounds} to listen to`,
+    pictures && `${pictures} ${pictures === 1 ? 'picture' : 'pictures'}`,
+  ].filter(Boolean).join(' \u00b7 ');
+}
+
+/**
+ * Below a board, more to play: the rest of the series for one of the show's
+ * episodes (the house's boards, newest first), or more on the same topic.
+ */
+function More({ board, slug, token, onOpen }) {
+  const series = !board.author;
+  const [boards, setBoards] = useState(null);
+
+  useEffect(() => {
+    let live = true;
+    const ask = series
+      ? browse({ row: 'house', limit: 48 }, token)
+      : browse({ row: 'popular', topic: board.topic ?? undefined, limit: 24 }, token);
+    ask.then((r) => live && setBoards((r.boards ?? []).filter((b) => b.slug !== slug)))
+      .catch(() => live && setBoards([]));
+    return () => { live = false; };
+  }, [series, board.topic, slug, token]);
+
+  if (!boards?.length) return null;
+  return (
+    <section className="bp-section bp-more">
+      <h2>{series ? 'More episodes' : 'More like this'}</h2>
+      <Rail>
+        {boards.map((b) => <Card key={b.slug} board={b} onOpen={onOpen} />)}
+      </Rail>
+    </section>
+  );
+}
 
 export default function BoardPage() {
   const { slug } = useParams();
@@ -165,6 +211,14 @@ export default function BoardPage() {
     }
   };
 
+  /* One of the show's episodes is titled the way a series is: the show in
+     big letters, the episode over it ("Disney Jeopardy!: Episode 188").
+     Anybody else's board is its own title, over what it is about. */
+  const [show, part] = !board.author && board.title?.includes(': ')
+    ? [board.title.slice(0, board.title.indexOf(': ')), board.title.slice(board.title.indexOf(': ') + 2)]
+    : [board.title, null];
+  const kicker = part ?? TOPIC_NAMES[board.topic] ?? null;
+
   const notReady = board.isOwner
     ? publishProblem({ title: board.title, board: board.board, topic: board.topic })
     : null;
@@ -186,107 +240,125 @@ export default function BoardPage() {
         <span className="boards-top-spacer" />
       </header>
 
-      <main className="boards-body board-main">
-        <div className="board-head">
-          <BoardMiniature
-            board={board.board}
-            size="large"
-            label={`${written} of ${total} clues written`}
-          />
+      {/* The cover is the poster: across the top, the way a film's page opens
+          on its key art, with the title and the way in over it. */}
+      <section className={`bp-hero ${board.hasCover ? 'has-cover' : ''}`}>
+        <div className="bp-hero-art" aria-hidden="true">
+          {board.hasCover ? (
+            <img src={`${coverUrl(slug)}?v=${board.version}`} alt="" />
+          ) : (
+            <span className="bp-hero-board">
+              <BoardMiniature board={board.board} size="cover" label="" />
+            </span>
+          )}
+        </div>
 
-          <div className="board-head-text">
-            <h1 className="board-title">{board.title || 'Untitled board'}</h1>
+        <div className="bp-hero-text">
+          {kicker && <p className="bp-kicker">{kicker}</p>}
+          <h1 className="bp-title board-title">{show || 'Untitled board'}</h1>
 
-            <p className="board-by">
-              {board.author?.signature ? (
-                <img
-                  className="board-sig"
-                  src={board.author.signature}
-                  alt={board.author.username}
-                />
-              ) : null}
-              {/* The site's own boards have no author to name. */}
-              {board.author?.username && (
-                <>
-                  <span>@{board.author.username}</span>
-                  <span className="board-by-sep" />
-                </>
-              )}
-              <span>{written} of {total} clues</span>
-              {board.visibility === 'public' && (
-                <>
-                  <span className="board-by-sep" />
-                  <span>{board.plays.toLocaleString()} {board.plays === 1 ? 'play' : 'plays'}</span>
-                </>
-              )}
-            </p>
-
-            {board.description && <p className="board-desc">{board.description}</p>}
-
-            {board.adaptedFrom && (
-              <p className="board-adapted">
-                Adapted from {board.adaptedFrom.slug ? (
-                  <a href={`/boards/${board.adaptedFrom.slug}`}>
-                    {board.adaptedFrom.title || 'a board'}
-                  </a>
-                ) : (
-                  board.adaptedFrom.title || 'a board'
-                )} by @{board.adaptedFrom.username}
-              </p>
+          <p className="board-by bp-meta">
+            {board.author?.signature ? (
+              <img className="board-sig" src={board.author.signature} alt={board.author.username} />
+            ) : null}
+            {/* The site's own boards have no author to name. */}
+            {board.author?.username && (
+              <>
+                <span>@{board.author.username}</span>
+                <span className="board-by-sep" />
+              </>
             )}
+            <span>{written} of {total} clues</span>
+            {board.visibility === 'public' && (
+              <>
+                <span className="board-by-sep" />
+                <span>{board.plays.toLocaleString()} {board.plays === 1 ? 'play' : 'plays'}</span>
+              </>
+            )}
+          </p>
+
+          {board.description && <p className="bp-desc">{board.description}</p>}
+
+          {/* board-actions: the browser suites find the Play button by it. */}
+          <div className="board-actions bp-actions">
+            <button
+              className="btn-primary bp-play"
+              disabled={!playable}
+              onClick={() => navigate('/singleplayer', { state: { board: board.board, boardSlug: slug, title: board.title } })}
+            >
+              <span className="bp-play-mark" aria-hidden="true">&#9654;</span> Play
+            </button>
+            {/* A private room plays it together. Not a private board: everyone
+                in the room would be sent its clues. */}
+            {board.visibility !== 'private' && (
+              <button
+                className="plain-btn bp-more-way board-play-friends"
+                disabled={!playable}
+                onClick={() => navigate('/multiplayer', { state: { board: { slug, title: board.title } } })}
+              >
+                Play with friends
+              </button>
+            )}
+            <button
+              className="plain-btn bp-more-way"
+              disabled={!playable}
+              onClick={() => navigate('/host', { state: { board: board.board, boardSlug: slug } })}
+            >
+              Host it in a room
+            </button>
+            {board.isOwner ? (
+              <button className="plain-btn bp-more-way" onClick={() => navigate(`/boards/${slug}/edit`)}>
+                Edit
+              </button>
+            ) : board.visibility === 'public' && isAuthenticated ? (
+              <button className="plain-btn bp-more-way" onClick={makeCopy} disabled={busy}>
+                Make my own copy
+              </button>
+            ) : null}
           </div>
         </div>
+      </section>
 
-        <ol className="board-cats">
-          {board.board.categories.map((category, i) => (
-            <li key={i}>
-              <span className="board-cat-name">{category.name || 'Unnamed'}</span>
-              <span className="board-cat-count">
-                {category.questions.filter((q) => q.answer?.trim() && q.question?.trim()).length} of 5
-              </span>
-            </li>
-          ))}
-        </ol>
+      <main className="boards-body board-main">
+        {board.adaptedFrom && (
+          <p className="board-adapted">
+            Adapted from {board.adaptedFrom.slug ? (
+              <a href={`/boards/${board.adaptedFrom.slug}`}>
+                {board.adaptedFrom.title || 'a board'}
+              </a>
+            ) : (
+              board.adaptedFrom.title || 'a board'
+            )} by @{board.adaptedFrom.username}
+          </p>
+        )}
 
-        <div className="board-actions">
-          <button
-            className="btn-primary"
-            disabled={!playable}
-            onClick={() => navigate('/singleplayer', { state: { board: board.board, boardSlug: slug, title: board.title } })}
-          >
-            Play it solo
-          </button>
-          {/* A private room plays it together. Not a private board: everyone
-              in the room would be sent its clues. */}
-          {board.visibility !== 'private' && (
-            <button
-              className="plain-btn quiet-action board-action board-play-friends"
-              disabled={!playable}
-              onClick={() => navigate('/multiplayer', { state: { board: { slug, title: board.title } } })}
-            >
-              Play with friends
-            </button>
-          )}
-          <button
-            className="plain-btn quiet-action board-action"
-            disabled={!playable}
-            onClick={() => navigate('/host', { state: { board: board.board, boardSlug: slug } })}
-          >
-            Host it in a room
-          </button>
-          {board.isOwner ? (
-            <button
-              className="plain-btn quiet-action board-action"
-              onClick={() => navigate(`/boards/${slug}/edit`)}
-            >
-              Edit
-            </button>
-          ) : board.visibility === 'public' && isAuthenticated ? (
-            <button className="plain-btn quiet-action board-action" onClick={makeCopy} disabled={busy}>
-              Make my own copy
-            </button>
-          ) : null}
-        </div>
+        {/* The categories as a show's episodes: numbered, named, and what is
+            in each, never what it asks. */}
+        <section className="bp-section">
+          <h2>Categories</h2>
+          <ol className="bp-episodes">
+            {board.board.categories.map((category, i) => (
+              <li key={i}>
+                <span className="bp-ep-num">{i + 1}</span>
+                <span className="bp-ep-text">
+                  <span className="bp-ep-name">{category.name || 'Unnamed'}</span>
+                  <span className="bp-ep-holds">{holds(category)}</span>
+                </span>
+              </li>
+            ))}
+            {board.board.finalJeopardy?.category?.trim() && (
+              <li className="is-final">
+                <span className="bp-ep-num">F</span>
+                <span className="bp-ep-text">
+                  <span className="bp-ep-name">{board.board.finalJeopardy.category}</span>
+                  <span className="bp-ep-holds">Final Jeopardy</span>
+                </span>
+              </li>
+            )}
+          </ol>
+        </section>
+
+        <More board={board} slug={slug} token={token} onOpen={(next) => navigate(`/boards/${next}`)} />
 
         {/* Quiet, at the bottom, and only on a board that is actually public
             and not yours. A report button on an unlisted board would be a
