@@ -48,6 +48,20 @@ test('a trailing parenthetical is an alternate name', () => {
   right('the Count of Monte Cristo', 'Edmond Dantes (The Count of Monte Cristo)');
 });
 
+test("the thing without whose it is, as a judge would take it", () => {
+  right('trident', "What is Poseidon's Trident?");
+  right('Poseidons Trident', "What is Poseidon's Trident?");
+  wrong('nest', "What is Crow's Nest?");
+  wrong('revenge', "What is Queen Anne's Revenge?");
+});
+
+test('a last name for a person asked for by "Who is", never the first name alone', () => {
+  right('Dunst', 'Who is Kirsten Dunst?');
+  right('Kirsten Dunst', 'Who is Kirsten Dunst?');
+  wrong('Kirsten', 'Who is Kirsten Dunst?');
+  wrong('Chum', 'Who are Anchor & Chum?');
+});
+
 test('a trailing parenthetical that only explains is not an alternate', () => {
   right('Nagano', 'Nagano, Japan (this past winter)');
   wrong('this past winter', 'Nagano, Japan (this past winter)');

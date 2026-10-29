@@ -130,9 +130,33 @@ function expand(text) {
   return forms;
 }
 
+/**
+ * What a judge lets a player leave off, beyond what the response's own
+ * brackets say:
+ *
+ *   - whose it is, when the thing itself is named: "Trident" for "Poseidon's
+ *     Trident". Only a one-word owner and a thing of five letters or more,
+ *     so "Nest" is still not "Crow's Nest", nor "Revenge" Queen Anne's.
+ *   - the first name of a person the response asks for by "Who is": "Dunst"
+ *     for "Who is Kirsten Dunst?". Boards written that way (the site's own)
+ *     name a person by both; a J-Archive response never says "Who is".
+ */
+function leftOff(response) {
+  const text = tidy(response).replace(/[?.!]+$/, '');
+  const asked = /^(who|what)\s+(?:is|are|was|were)\s+(.+)$/i.exec(text);
+  const subject = asked ? asked[2] : text;
+  if (/[()/,]/.test(subject)) return [];
+  const forms = [];
+  const owned = /^(?:the\s+)?([A-Za-z-]+)['’]s?\s+(.+)$/i.exec(subject);
+  if (owned && owned[2].replace(/[^A-Za-z]/g, '').length >= 5) forms.push(owned[2]);
+  const named = subject.split(/\s+/);
+  if (asked && /^who$/i.test(asked[1]) && named.length === 2 && !/^(and|&)$/i.test(named[1])) forms.push(named[1]);
+  return forms;
+}
+
 /** The forms of a board response the grader accepts, for display or tests. */
 export function acceptedForms(response) {
-  return [...new Set(expand(response))].filter((f) => words(f).length > 0);
+  return [...new Set([...expand(response), ...leftOff(response)])].filter((f) => words(f).length > 0);
 }
 
 // ------------------------------------------------------------ words
