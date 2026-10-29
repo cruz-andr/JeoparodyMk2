@@ -12,7 +12,8 @@
  *   --fresh                  read the video again rather than reuse the last reading
  *
  * It writes board.json (the draft), review.md (what to check, with the
- * second to find it at in the video) and look/ (the frames those are on).
+ * second to find it at in the video), look/ (the frames those are on) and
+ * cover.jpg (the video's YouTube thumbnail, the board's cover).
  * Fix board.json by hand, or run again with --categories; a TODO left in it
  * stops it publishing.
  *
@@ -21,7 +22,8 @@
  *   --featured      put it in the Featured row
  *   --replace       overwrite a house board already at that slug
  *
- * Publishing writes server/houseBoards/<slug>.json; the board goes up when
+ * Publishing writes server/houseBoards/<slug>.json, and its cover beside it
+ * as <slug>.jpg; the board goes up when
  * that is merged and deployed. Mac only: the text recognition is the Mac's
  * own. Needs ffmpeg (brew install ffmpeg, or FFMPEG=/path/to/ffmpeg).
  */
@@ -98,6 +100,24 @@ async function readVideo(video, out, fresh) {
   return { text, frames };
 }
 
+/**
+ * The video's YouTube thumbnail as the board's cover, 800 wide like a cover
+ * put up from the board page. False when there is none to fetch.
+ */
+async function fetchCover(youtube, to) {
+  for (const size of ['maxresdefault', 'hqdefault']) {
+    const res = await fetch(`https://i.ytimg.com/vi/${youtube}/${size}.jpg`).catch(() => null);
+    if (!res?.ok) continue;
+    const raw = `${to}.full.jpg`;
+    writeFileSync(raw, Buffer.from(await res.arrayBuffer()));
+    const made = spawnSync(process.env.FFMPEG || 'ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', raw,
+      '-vf', 'scale=800:-2', '-q:v', '4', to]);
+    rmSync(raw, { force: true });
+    if (made.status === 0) return true;
+  }
+  return false;
+}
+
 function writeReview(out, file, problems, read) {
   const blocking = problems.filter((p) => p.blocking);
   const lines = [
@@ -146,6 +166,8 @@ async function draft() {
     description: read.episode ? SHOW.description(read.episode) : null,
   });
   if (!youtube) problems.unshift({ where: 'The board', at: 0, note: 'No --youtube was given, so clip clues have nothing to play.' });
+  if (youtube && await fetchCover(youtube, join(out, 'cover.jpg'))) file.cover = 'cover.jpg';
+  else problems.push({ where: 'The cover', at: 0, note: 'No YouTube thumbnail was fetched, so the board will have no cover.' });
 
   // The frames each item is on, for whoever checks it.
   if (frames) {
@@ -198,8 +220,17 @@ function publish() {
   const target = join(HOUSE, `${slug}.json`);
   if (existsSync(target) && !replace) fail(`${slug} is already a house board. --replace to overwrite it.`);
 
-  writeFileSync(target, `${JSON.stringify({ ...file, featured: featured || Boolean(file.featured), board }, null, 2)}\n`);
-  console.log(`Wrote server/houseBoards/${slug}.json.`);
+  // The cover goes beside the board, named for it.
+  let cover;
+  if (file.cover) {
+    const from = resolve(dirname(path), file.cover);
+    if (!existsSync(from)) fail(`The cover ${from} is missing. Take "cover" out of board.json to publish without one.`);
+    cover = `${slug}${extname(from).toLowerCase()}`;
+    copyFileSync(from, join(HOUSE, cover));
+  }
+
+  writeFileSync(target, `${JSON.stringify({ ...file, featured: featured || Boolean(file.featured), cover, board }, null, 2)}\n`);
+  console.log(`Wrote server/houseBoards/${slug}.json${cover ? ` and its cover, ${cover}` : ''}.`);
   console.log(`It goes up at /boards/${slug} once that is merged and deployed.`);
 }
 

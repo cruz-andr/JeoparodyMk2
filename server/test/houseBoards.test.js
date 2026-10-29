@@ -112,6 +112,34 @@ await test("a slug that is somebody's own board is never touched", () => {
   assert.equal(b.visibility, 'private');
 });
 
+await test('a cover named by the file goes up with it, and changing it is a new version', () => {
+  const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+  fs.writeFileSync(join(DIR, 'disney-night-41.jpg'), jpg);
+  write('disney-night-41', file({ cover: 'disney-night-41.jpg' }));
+  assert.equal(results()['disney-night-41'], 'published');
+  assert.equal(row('disney-night-41').cover_image, `data:image/jpeg;base64,${jpg.toString('base64')}`);
+  assert.equal(results()['disney-night-41'], 'unchanged');
+
+  fs.writeFileSync(join(DIR, 'disney-night-41.jpg'), Buffer.from([0xff, 0xd8, 0x00, 0xff, 0xd9]));
+  assert.equal(results()['disney-night-41'], 'updated');
+
+  // A file that names none leaves the cover as it is.
+  write('disney-night-41', file());
+  assert.equal(results()['disney-night-41'], 'unchanged');
+  assert.ok(row('disney-night-41').cover_image);
+  fs.rmSync(join(DIR, 'disney-night-41.json'));
+});
+
+await test('a cover that is not an image beside the board, or is too large, stops that board', () => {
+  write('disney-night-42', file({ cover: '../secret.jpg' }));
+  assert.match(results()['disney-night-42'], /not an image file beside the board/);
+  fs.writeFileSync(join(DIR, 'disney-night-42.png'), Buffer.alloc(600 * 1024));
+  write('disney-night-42', file({ cover: 'disney-night-42.png' }));
+  assert.match(results()['disney-night-42'], /too large/);
+  assert.equal(row('disney-night-42'), undefined);
+  fs.rmSync(join(DIR, 'disney-night-42.json'));
+});
+
 await test('no folder, or an empty one, publishes nothing', () => {
   assert.deepEqual(publishHouseBoards(db, join(here, 'no-such-folder')), []);
   assert.deepEqual(publishHouseBoards(db, null), []);

@@ -1,6 +1,7 @@
 /**
  * The video board reader, run on Episode 40 as the Mac read it, against the
- * board that was transcribed from the same video by hand and is on the site.
+ * board that was transcribed from the same video by hand and is on the site,
+ * and on Episode 21, for the ways a show can trip it.
  * Run with: node scripts/video-board.test.js
  *
  * The wording will not match letter for letter (the hand copy fixed the
@@ -91,8 +92,8 @@ check("Bluey's $1000 plays the grannies clip, from the end of the card to the an
   JSON.stringify([grannies.youtubeStart, grannies.youtubeEnd]));
 const clips = mine.categories.flatMap((cat) => cat.questions).filter((q) => q.mediaType);
 check('and it is the only clip: the host talking is not one', clips.length === 1, `${clips.length} clips`);
-check('the eleven seconds off the parks card are put to a person instead',
-  problems.some((p) => p.where === 'BIG THUNDER MOUNTAIN $600' && /leaves the card/.test(p.note)));
+check('the eleven seconds off the parks card are the host at his desk, so not a clip and not a question',
+  !mine.categories[3].questions[2].mediaType && !problems.some((p) => p.where === 'BIG THUNDER MOUNTAIN $600' && /screen|host|clip/.test(p.note)));
 
 const fj = mine.finalJeopardy;
 check('Final Jeopardy: its category and response',
@@ -112,6 +113,28 @@ check('written, it passes every check the server makes on a house board',
   !todosIn(finished).length
   && validateBoardStructure(finished.board, { topic: 'disney' }).valid
   && publishProblem({ title: finished.title, board: normalizeBoard(finished.board, { topic: 'disney' }), topic: 'disney' }) === null);
+
+// ---------- Episode 21: songs, reveals, and Final with a logo ----------
+
+const ep21 = draftBoard(readEpisode(parseOcr(readFileSync(at('./video-board/fixtures/episode-21.ocr.jsonl'), 'utf8'))),
+  { youtube: 'aMS9UidTUUY', names, show: 'Disney 100 Jeopardy', topic: 'disney' });
+const songs = ep21.file.board.categories[2].questions;
+const heard = [[221, 231], [403, 413], [565, 579], [759, 770], [954, 970]];
+check('"Listen up" plays the song under its card, as sound only, until the answer',
+  songs.every((q, i) => q.audioOnly && q.mediaType === 'youtube'
+    && Math.abs(q.youtubeStart - heard[i][0]) <= 1 && q.youtubeEnd === heard[i][1]),
+  JSON.stringify(songs.map((q) => [q.youtubeStart, q.youtubeEnd, q.audioOnly])));
+const shown = ep21.file.board.categories.flatMap((c) => c.questions).filter((q) => q.mediaType && !q.audioOnly);
+check('footage after the host has talked is the answer being shown, not a clip to play first',
+  shown.length === 0, shown.map((q) => q.answer).join(' · '));
+const princess = ep21.file.board.categories[4].questions[2];
+check('an answer sliding in over the desk ("NSWER:") does not hide the card before it',
+  /^Ron Clements and John Musker/.test(princess.answer) && /Princess/.test(princess.question), princess.answer);
+check('"WHATIS" is read as "What is"', ep21.file.board.categories[3].questions[3].question === 'Who is Rod Serling?');
+const fj21 = ep21.file.board.finalJeopardy;
+check("Final's category is its own card, not the clue's first line, and its clue is the words",
+  fj21.category === 'AVATAR' && /^In 2009's Avatar/.test(fj21.answer) && !fj21.mediaType, JSON.stringify(fj21));
+check('nothing left to review', ep21.problems.length === 0, ep21.problems.map((p) => `${p.where}: ${p.note}`).join(' · '));
 
 const told = readEpisode(frames, { categories: ['A', 'B', 'C', 'D', 'E'] });
 check('names given are the names used', told.names.join('') === 'ABCDE');

@@ -1,0 +1,342 @@
+{
+  "title": "Disney 100 Jeopardy: Episode 21",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 21), hosted by Bryan Perri. Used with permission.",
+  "topic": "disney",
+  "featured": false,
+  "cover": "disney-jeopardy-21.jpg",
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "BEFORE & AFTER",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Jiminy Cricket sings and George Lucas’ 1977 film-turned multi-billion dollar franchise",
+            "question": "What is When You Wish Upon a Star Wars?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Let’s go steal the Declaration of Independence and meet up with Jim Hawkins on the way",
+            "question": "What is National Treasure Planet?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "The original version of the hang glider attraction and some fine dining atop a deluxe monorail resort",
+            "question": "What is Soarin' Over California Grill?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Yao, Ling, & Mulan get this song mix started while two siblings finish it off",
+            "question": "What is a Girl Worth Fighting for the First Time in Forever?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Ewan McGregor’s all grown up and Disney’s 1973 animated film featuring anthropomorphic animals",
+            "question": "What is Christopher Robin Hood?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "BEAUTY & THE BEAST",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The one area of the castle Belle is told she is forbidden from",
+            "question": "What is the West Wing?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "The reason the prince is cursed into a hideous beast in the film's first scene",
+            "question": "What is He Didn't Let a Suspicious Old Lady into His House?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "When Gaston was a ‘lad’ he ate this many eggs per morning. He now eats an extra dozen since he’s fully grown",
+            "question": "What is Four Dozen (48)?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Gaston tells Belle that they'll have this many kids together, boys specifically",
+            "question": "What is 6 or 7?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Along with making history as the first feature-length animated film to be nominated for Best Picture, Beauty and the Beast scored an incredible 3 out of the 5 nominees for Best Original Song when these 3 songs were nominated",
+            "question": "What are Beauty and the Beast, Belle & Be Our Guest?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "DISNEY CHANNEL THEME SONGS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Listen up and name the Disney Channel show",
+            "question": "What is Kim Possible?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "aMS9UidTUUY",
+            "youtubeStart": 221,
+            "youtubeEnd": 231,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Listen up and name the Disney Channel show",
+            "question": "What is Even Stevens?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "aMS9UidTUUY",
+            "youtubeStart": 403,
+            "youtubeEnd": 413,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Listen up and name the Disney Channel show",
+            "question": "What is Phineas and Ferb?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "aMS9UidTUUY",
+            "youtubeStart": 566,
+            "youtubeEnd": 579,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Listen up and name the Disney Channel show",
+            "question": "What is Lizzie McGuire?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "aMS9UidTUUY",
+            "youtubeStart": 759,
+            "youtubeEnd": 770,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Listen up and name the Disney Channel show",
+            "question": "What is Shake It Up?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "aMS9UidTUUY",
+            "youtubeStart": 955,
+            "youtubeEnd": 970,
+            "audioOnly": true,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "TOWER OF TERROR",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "California Adventure’s version of the attraction closed after nearly 13 years and was rebranded into this Marvel-themed thriller",
+            "question": "What is Guardians of the Galaxy: Mission Breakout?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "A straight-to-VHS film focused on the Tower of Terror was released in 1997, starring this actress as Anna, the niece of the movie’s main character",
+            "question": "Who is Kirsten Dunst?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "While there are currently three versions of the attraction (not including Mission: Breakout) found throughout the world, only the one in this Disney park features a storyline not focused on The Twilight Zone",
+            "question": "What is Tokyo DisneySea?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Mark Silverman, a terrific voice artist, lends his voice to the attraction as he dubs over the pre-show video that showcases this man, the host of the original Twilight Zone",
+            "question": "Who is Rod Serling?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "According to the pre-show video on that fateful night in 1939, this many people were inside the elevator when it was struck by lightning",
+            "question": "What is Five?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "HIDDEN ‘DISNEYS’",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "This royal couple make a quick appearance as they enter the castle for Elsa’s coronation in 2013’s Frozen",
+            "question": "Who are Flynn & Rapunzel?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Surprise, surprise, guess which Disney princess can be spotted reading a book in the streets of France during 1997’s The Hunchback of Notre Dame",
+            "question": "Who is Belle?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Ron Clements and John Musker have directed over 10% of Disney’s feature animated films, so it’s no surprise that they included the Magic Carpet from Aladdin in the title sequence of this film that they also co-directed",
+            "question": "What is The Princess and the Frog?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "In 2016’s Moana, look closely towards the end of Maui’s “You’re Welcome” song and you’ll spot this character from The Little Mermaid",
+            "question": "What is Flounder?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "At the beginning of The Little Mermaid, Ariel fails to show up for her concert. Not only was King Triton disappointed, but so was everyone in attendance, including these three characters who you wouldn’t expect to see under the sea",
+            "question": "Who are Mickey, Donald & Goofy?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "AVATAR",
+      "answer": "In 2009’s Avatar, the Resources Development Administration (RDA) is pushing the Na’vi out of their own home in an attempt to mine this lucrative substance",
+      "question": "What is unobtainium?"
+    }
+  }
+}

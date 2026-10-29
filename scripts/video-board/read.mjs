@@ -52,13 +52,18 @@ export function clock(s) {
 
 // ── Reading a frame ─────────────────────────────────────────
 
-const ANSWER = /ANSWER\s*:\s*(.+)$/;
+/* "NSWER:" is the answer sliding in over the host's desk, its first letter
+   lost against the plate. */
+const ANSWER = /N?SWER\s*:\s*(.+)$/;
 
 function answerOn(frame) {
   for (const line of frame.lines) {
     const m = ANSWER.exec(line);
-    // "HANSWER:" is the card fading in. It counts, for less.
-    if (m) return { text: m[1].trim(), clean: line.startsWith('ANSWER') };
+    if (!m) continue;
+    // "WHATIS": the space is narrow on the card and sometimes read as none.
+    const text = m[1].trim().replace(/^(WHO|WHAT|WHERE|WHEN)(IS|ARE|WAS|WERE)\b/, '$1 $2');
+    // "HANSWER:" is the card fading in, "NSWER:" sliding in. They count, for less.
+    return { text, clean: line.startsWith('ANSWER:') || line.startsWith('ANSWER ') };
   }
   return null;
 }
@@ -72,6 +77,10 @@ const FURNITURE = /JEOPARDY|^\s*\S*\s*\d+\s*POINTS?\b|\bROUND\s*$|^[•·*]/i;
 
 // The cards are plain type. A letter from outside it ("SƠUU") is a misreading.
 const CARD_TYPE = /^[\x20-\x7E‘’“”…–—]+$/;
+
+// The host at his desk: its plate, "DisNEy JEOPARDY" as it is read.
+const DESK = /^D\S*\s+JEOPARDY$/i;
+const atDesk = (frame) => frame.lines.some((line) => DESK.test(line));
 
 /** A line that could be part of a clue card: capitals, and not furniture. */
 function cardLine(line) {
@@ -165,11 +174,11 @@ function answerRuns(frames) {
 }
 
 /*
- * Words that say a clue is about something on screen. Only with one of these
- * does a stretch with no text become the clue's clip: the parks clue is also
- * off screen for eleven seconds, while the host talks.
+ * Words that say a clue is about something on screen, or something to hear.
+ * Only with one of these does a stretch with no text become the clue's clip.
  */
-const SHOWN = /\b(SEEN|SHOWN|PICTURED|HEAR|HEARD|LISTEN|WATCH)\b|\bTHIS (SCENE|CLIP|SONG|SOUND|VOICE|IMAGE|PICTURE)\b/;
+const SHOWN = /\b(SEEN|SHOWN|PICTURED|WATCH)\b|\bTHIS (SCENE|CLIP|IMAGE|PICTURE)\b/;
+const HEARD = /\b(HEAR|HEARD|LISTEN)\b|\bTHIS (SONG|SOUND|VOICE)\b/;
 
 /**
  * The card before an answer: the run of card frames nearest before it,
@@ -194,7 +203,7 @@ function cardBefore(frames, from, to, also) {
 
 /** The first second after `from` with an answer starting to show, however badly read ("ANSIVEI"). */
 function answerShowsAt(frames, from, to) {
-  return frames.find((f) => f.s > from && f.s <= to && f.lines.some((l) => /^.?ANS/.test(l)))?.s ?? to;
+  return frames.find((f) => f.s > from && f.s <= to && f.lines.some((l) => /^.?ANS|N?SWER\s*:/.test(l)))?.s ?? to;
 }
 
 function readClue(frames, run, after, problems, where) {
@@ -214,16 +223,38 @@ function readClue(frames, run, after, problems, where) {
   if (!card.sure) problems.push({ where, at: card.start, note: 'The clue text was read two ways; check it against the video.' });
   if (!response.sure) problems.push({ where, at: run.start, note: 'The response was read two ways; check it against the video.' });
 
-  const offScreen = run.start - card.end - 1;
-  const cued = SHOWN.test(card.lines.join(' '));
-  if (offScreen >= 4 && cued) {
-    clue.clip = { start: card.end + 1, end: answerShowsAt(frames, card.end, run.start) - 1 };
-  } else if (offScreen >= 8) {
+  const text = card.lines.join(' ');
+  const seen = SHOWN.test(text);
+  const heard = HEARD.test(text);
+  const answerAt = answerShowsAt(frames, card.end, run.start);
+
+  /* A sound to name plays under its card, which stays up until the answer
+     ("LISTEN UP AND NAME THE DISNEY CHANNEL SHOW"). */
+  if (heard && !seen && answerAt - card.end <= 2) {
+    clue.clip = { start: card.start, end: answerAt - 1, audio: true };
+    return clue;
+  }
+
+  /* Off the card, the host at his desk is him talking, and footage after he
+     has talked is the answer being shown: the Mulan clip after "GET THIS SONG
+     MIX STARTED" is the song it names. A clip is footage straight off the
+     card. */
+  const between = frames.filter((f) => f.s > card.end && f.s < answerAt);
+  const lastDesk = between.findLast(atDesk)?.s ?? null;
+  const offScreen = answerAt - card.end - 1;
+  if (lastDesk === null && offScreen >= 4 && (seen || heard)) {
+    clue.clip = { start: card.end + 1, end: answerAt - 1 };
+  } else if (lastDesk === null && offScreen >= 8) {
     problems.push({
       where, at: card.end + 1,
-      note: `The screen leaves the card for ${offScreen}s before the answer (${clock(card.end + 1)} to ${clock(run.start - 1)}). If that is a clip, add it.`,
+      note: `The screen leaves the card for ${offScreen}s before the answer (${clock(card.end + 1)} to ${clock(answerAt - 1)}). If that is a clip, add it.`,
     });
-  } else if (cued) {
+  } else if (seen && answerAt - lastDesk - 1 >= 4) {
+    problems.push({
+      where, at: lastDesk + 1,
+      note: `The host talks, then footage plays into the answer (${clock(lastDesk + 1)} to ${clock(answerAt - 1)}). That is usually the answer being shown; if it is the clue's clip, add it.`,
+    });
+  } else if (seen) {
     problems.push({ where, at: card.start, note: 'The clue talks about something shown, but no clip was found. Check for a picture.' });
   }
   return clue;
@@ -235,10 +266,17 @@ const FINAL = /^FINAL\s+JEOPARDY/i;
 
 function readFinal(frames, run, after, problems) {
   const where = 'Final Jeopardy';
-  // The category is the line under the title card, as most frames read it.
+  /* The category is the line under the title card, as most frames read it.
+     The clue comes up under the same title, so a frame with more than the
+     one line under it is the clue, not the category ("AVATAR", in the film's
+     own lettering, is up for three seconds; its clue for forty). */
   const titled = frames.filter((f) => f.s > after && f.s < run.start)
     .map((f) => ({ s: f.s, i: f.lines.findIndex((l) => FINAL.test(l)), lines: f.lines }))
-    .filter((f) => f.i !== -1 && f.lines[f.i + 1] && cardLine(f.lines[f.i + 1]));
+    .filter((f) => f.i !== -1 && f.lines[f.i + 1] && cardLine(f.lines[f.i + 1]))
+    .filter((f, _, all) => {
+      const alone = (g) => g.lines.slice(g.i + 1).filter(cardLine).length === 1;
+      return alone(f) || !all.some(alone);
+    });
   const category = vote(titled.map((f) => ({ text: f.lines[f.i + 1] })));
   const lastTitle = titled.at(-1)?.s ?? after;
   if (!category.text) problems.push({ where, at: run.start, blocking: true, note: 'The category was not found.' });
@@ -448,7 +486,7 @@ export function parseNames(text) {
 function media(clip, youtube) {
   if (!clip) return {};
   if (!youtube) return null;
-  return { mediaType: 'youtube', mediaData: youtube, youtubeStart: clip.start, youtubeEnd: clip.end, audioOnly: false };
+  return { mediaType: 'youtube', mediaData: youtube, youtubeStart: clip.start, youtubeEnd: clip.end, audioOnly: Boolean(clip.audio) };
 }
 
 const blank = { options: null, mediaType: null, mediaData: null, youtubeStart: null, youtubeEnd: null, audioOnly: false, altText: null };
