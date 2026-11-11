@@ -1,0 +1,501 @@
+{
+  "title": "Disney Jeopardy!: Halloween (Episode 188)",
+  "description": "From Inside the Magic's Disney Jeopardy (Episode 188), hosted by Bryan Perri.",
+  "topic": "disney",
+  "featured": false,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "ZOOTOPIA 2",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Nick and Judy drop this item when climbing the mountain to Honeymoon Lodge",
+            "question": "What is Carrot Pen?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Nick Wilde dreams of sipping this punny, coconut-based tropical beverage while visiting Outback Island",
+            "question": "What is Pina Koala?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "The name of the fake identity Mr. Big gives Judy",
+            "question": "What is Trudy Cabbagepatch?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "This music festival is taking place in the desert next to the weather wall power control room",
+            "question": "What is Burning Mammal?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "After making Nick and Judy eat grub, Jesús laughs and orders himself one of these",
+            "question": "What is Scone?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "WHO'S NERVOUS? NOT!!",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Listen to the audio clip and identify the nervous character",
+            "question": "What is Rex?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 139,
+            "youtubeEnd": 149,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Listen to the audio clip and identify the nervous character",
+            "question": "What is Fear?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 361,
+            "youtubeEnd": 372,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Listen to the audio clip and identify the nervous character",
+            "question": "What is Flounder?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 543,
+            "youtubeEnd": 556,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Listen to the audio clip and identify the nervous character",
+            "question": "What is Tantor?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 722,
+            "youtubeEnd": 731,
+            "audioOnly": true,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Listen to the audio clip and identify the nervous character",
+            "question": "Who is Humpty Dumpty?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 906,
+            "youtubeEnd": 918,
+            "audioOnly": true,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "YOU DON'T LOOK LIKE A VILLAIN",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Name the Disney villain played by the actor pictured",
+            "question": "What is Ursula?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 186,
+            "youtubeEnd": 199,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "Name the Disney villain played by the actor pictured",
+            "question": "What is Le Fou?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 397,
+            "youtubeEnd": 417,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Name the Disney villain played by the actor pictured",
+            "question": "What is Queen of Hearts?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 574,
+            "youtubeEnd": 588,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "Name the Disney villain played by the actor pictured",
+            "question": "What is Horace?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 743,
+            "youtubeEnd": 760,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Name the Disney villain played by the actor pictured",
+            "question": "Who is Drizella?",
+            "options": null,
+            "mediaType": "youtube",
+            "mediaData": "LAh_WcLp86s",
+            "youtubeStart": 932,
+            "youtubeEnd": 943,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "PARK-HOPPING HAUNTS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Ghost Galaxy was the name of a temporary seasonal overlay of this iconic Disney attraction",
+            "question": "What is Space Mountain?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "From 2017-2024 Jack Sparrow battled ghost pirates in this show at Disneyland",
+            "question": "What is Fantasmic?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "During the attraction's pre-show, the ghost child in Walt Disney World's Tower of Terror is holding this when she enters the elevator",
+            "question": "What is Mickey Mouse?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "This ride now includes Disney's most recent installation of the Pepper's Ghost effect found in a garage scene in this refurbished attraction",
+            "question": "What is Test Track?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "From the bayous of the south to the historic Hudson Valley, these two states provide the fictional settings for Disney's U.S. Haunted Mansion attractions.",
+            "question": "What is Louisiana & New York?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      },
+      {
+        "name": "DCOM MOVIE DESCRIPTIONS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "On her 13th birthday, Marnie learns that she comes from a witch family and must help her mother and grandmother save this place, which is also the name of the movie",
+            "question": "What is Halloweentown?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 400,
+            "answer": "\"undead\" students from another town are integrated into Seabrook High School where they struggle to coexist with their human peers in this 2018 film",
+            "question": "What is Zombies?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 600,
+            "answer": "Tia and Tamera star as twin witches who were separated at birth",
+            "question": "What is Twitches?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 800,
+            "answer": "17-year-old Pete works as the assistant manager at the local movie theatre, where rumor has it that a \"phantom\" haunts the cinema",
+            "question": "What is Phantom of the Megaplex?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          },
+          {
+            "points": 1000,
+            "answer": "Friends agree to help reunite a 3,000-year-old mummy with his lost love in the first ever Disney Channel original film",
+            "question": "What is Under Wraps?",
+            "options": null,
+            "mediaType": null,
+            "mediaData": null,
+            "youtubeStart": null,
+            "youtubeEnd": null,
+            "audioOnly": false,
+            "altText": null
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "ATLANTIS",
+      "answer": "The character of Milo Thatch was voiced by this famous actor",
+      "question": "What is Michael J. Fox?"
+    }
+  },
+  "watch": {
+    "youtube": "LAh_WcLp86s",
+    "clues": [
+      {
+        "column": 0,
+        "row": 0,
+        "at": 94,
+        "pause": 105.3
+      },
+      {
+        "column": 0,
+        "row": 1,
+        "at": 320,
+        "pause": 335.3
+      },
+      {
+        "column": 0,
+        "row": 2,
+        "at": 517,
+        "pause": 529
+      },
+      {
+        "column": 0,
+        "row": 3,
+        "at": 686,
+        "pause": 703
+      },
+      {
+        "column": 0,
+        "row": 4,
+        "at": 869,
+        "pause": 883
+      },
+      {
+        "column": 1,
+        "row": 0,
+        "at": 139,
+        "pause": 149.3
+      },
+      {
+        "column": 1,
+        "row": 1,
+        "at": 361,
+        "pause": 372.3
+      },
+      {
+        "column": 1,
+        "row": 2,
+        "at": 543,
+        "pause": 556
+      },
+      {
+        "column": 1,
+        "row": 3,
+        "at": 722,
+        "pause": 731
+      },
+      {
+        "column": 1,
+        "row": 4,
+        "at": 906,
+        "pause": 918
+      },
+      {
+        "column": 2,
+        "row": 0,
+        "at": 186,
+        "pause": 199
+      },
+      {
+        "column": 2,
+        "row": 1,
+        "at": 397,
+        "pause": 417.3
+      },
+      {
+        "column": 2,
+        "row": 2,
+        "at": 574,
+        "pause": 588.3
+      },
+      {
+        "column": 2,
+        "row": 3,
+        "at": 743,
+        "pause": 760.3
+      },
+      {
+        "column": 2,
+        "row": 4,
+        "at": 932,
+        "pause": 943
+      },
+      {
+        "column": 3,
+        "row": 0,
+        "at": 225,
+        "pause": 240
+      },
+      {
+        "column": 3,
+        "row": 1,
+        "at": 435,
+        "pause": 449.3
+      },
+      {
+        "column": 3,
+        "row": 2,
+        "at": 618,
+        "pause": 634
+      },
+      {
+        "column": 3,
+        "row": 3,
+        "at": 775,
+        "pause": 789
+      },
+      {
+        "column": 3,
+        "row": 4,
+        "at": 965,
+        "pause": 984.3
+      },
+      {
+        "column": 4,
+        "row": 0,
+        "at": 259,
+        "pause": 276
+      },
+      {
+        "column": 4,
+        "row": 1,
+        "at": 472,
+        "pause": 490.3
+      },
+      {
+        "column": 4,
+        "row": 2,
+        "at": 650,
+        "pause": 663.3
+      },
+      {
+        "column": 4,
+        "row": 3,
+        "at": 810,
+        "pause": 824
+      },
+      {
+        "column": 4,
+        "row": 4,
+        "at": 1056,
+        "pause": 1071.3
+      }
+    ],
+    "final": {
+      "at": 1192,
+      "pause": 1198
+    }
+  },
+  "cover": "disney-jeopardy-188-halloween.jpg"
+}
