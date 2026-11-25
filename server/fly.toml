@@ -18,7 +18,11 @@ primary_region = 'ams'
 [http_service]
   internal_port = 3001
   force_https = true
-  auto_stop_machines = 'stop'
+  # Idle, the machine is suspended rather than stopped: frozen with its memory,
+  # it resumes in well under a second with today's board still built, where a
+  # stopped one booted, started Node and scraped J-Archive again before the
+  # first visitor saw anything. Billed the same as stopped (rootfs only).
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
