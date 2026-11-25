@@ -8,6 +8,7 @@ import {
 import { CLUE_COUNT, clueTarget, publishProblem, REPORT_REASONS } from '@shared/boardFormat.js';
 import { compressImage } from '../utils/imageCompressor';
 import BoardMiniature from '../components/boards/BoardMiniature';
+import { HOST_MODE } from '../config/features';
 import { Card, Rail } from '../components/boards/Shelf';
 import { TOPIC_NAMES } from './BoardsBrowsePage';
 import '../components/boards/BoardsChrome.css';
@@ -320,13 +321,15 @@ export default function BoardPage() {
                 Play with friends
               </button>
             )}
-            <button
-              className="plain-btn bp-more-way"
-              disabled={!playable}
-              onClick={() => navigate('/host', { state: { board: board.board, boardSlug: slug } })}
-            >
-              Host it in a room
-            </button>
+            {HOST_MODE && (
+              <button
+                className="plain-btn bp-more-way"
+                disabled={!playable}
+                onClick={() => navigate('/host', { state: { board: board.board, boardSlug: slug } })}
+              >
+                Host it in a room
+              </button>
+            )}
             {board.isOwner ? (
               <button className="plain-btn bp-more-way" onClick={() => navigate(`/boards/${slug}/edit`)}>
                 Edit

@@ -28,6 +28,8 @@ const FINAL_MS = 60_000;
 // A room nobody is in for this long is forgotten.
 const EMPTY_MS = 30 * 60_000;
 const MAX_PLAYERS = 12;
+/* The answer judge's longest wait (JUDGE_WAIT_MS), and a little over. */
+const JUDGE_HOLD_MS = 1750;
 
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 
@@ -45,6 +47,9 @@ export function createWatchRooms({
   setTimer = (fn, ms) => setTimeout(fn, ms),
   clearTimer = (t) => clearTimeout(t),
   random = Math.random,
+  /* The site's answer judge (services/answerJudge.js), for a response the
+     letters marked wrong. Without one the letters stand, as in tests. */
+  answerJudge = null,
 }) {
   const rooms = new Map();
 
@@ -289,28 +294,53 @@ export function createWatchRooms({
       if (final ? cur.answers.has(playerId) : !(cur.phase === 'answer' && cur.answering === playerId)) return null;
       const text = String(given ?? '').slice(0, 200);
       if (!text.trim()) return null;
+      if (cur.judging?.has(playerId)) return null; // already with the judge
       const verdict = judge(text, cur.stop.clue.question, cur.closeUsed.has(playerId));
       if (verdict.retry) {
         cur.closeUsed.add(playerId);
         return { retry: true };
       }
-      if (!final && !verdict.correct) {
-        const points = scored(cur.stop, false);
-        wrong(room, player, text);
-        return { correct: false, points };
-      }
-      const staked = final ? Math.min(Math.max(0, Math.floor(Number(wager) || 0)), Math.max(0, player.score)) : 0;
-      const points = scored(cur.stop, verdict.correct, staked);
-      player.score += points;
-      cur.answers.set(playerId, { correct: verdict.correct, points, given: text });
-      // Right takes the board, as it does in a multiplayer game.
-      if (!final && verdict.correct) room.hostId = playerId;
-      if (final) {
-        if (!settleIfAllIn(room)) tell(room);
-      } else {
-        resolve(room);
-      }
-      return { correct: verdict.correct, points };
+
+      const settle = (correct) => {
+        if (!final && !correct) {
+          const points = scored(cur.stop, false);
+          wrong(room, player, text);
+          return { correct: false, points };
+        }
+        const staked = final ? Math.min(Math.max(0, Math.floor(Number(wager) || 0)), Math.max(0, player.score)) : 0;
+        const points = scored(cur.stop, correct, staked);
+        player.score += points;
+        cur.answers.set(playerId, { correct, points, given: text });
+        // Right takes the board, as it does in a multiplayer game.
+        if (!final && correct) room.hostId = playerId;
+        if (final) {
+          if (!settleIfAllIn(room)) tell(room);
+        } else {
+          resolve(room);
+        }
+        return { correct, points };
+      };
+
+      const item = {
+        category: cur.stop.category ?? '', clue: cur.stop.clue.answer ?? '',
+        correct: cur.stop.clue.question, response: text,
+      };
+      if (verdict.correct || !answerJudge?.wouldAsk(item)) return settle(verdict.correct);
+
+      /* Wrong by the letters: the judge may know better. The clock is given
+         the judge's time on top, so a response typed at the buzzer is not
+         timed out while it is being ruled on. */
+      cur.judging ??= new Set();
+      cur.judging.add(playerId);
+      const room0 = room;
+      const held = now() + JUDGE_HOLD_MS;
+      if (cur.deadline < held) { cur.deadline = held; wake(room); }
+      return answerJudge.judge([item]).then(([correct]) => {
+        cur.judging.delete(playerId);
+        if (rooms.get(code) !== room0 || room.current !== cur) return null;
+        if (!final && !(cur.phase === 'answer' && cur.answering === playerId)) return null;
+        return settle(correct);
+      });
     },
 
     /** Final only: watch how it ends instead of answering. */

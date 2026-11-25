@@ -48,8 +48,19 @@ export function createGameActions({
   /* One event in two versions: the host's, and everyone else's. Without a
      socket layer to tell them apart, everyone gets the players' version. */
   emitSplit = (roomCode, event, _forHost, forPlayers) => emitRoom(roomCode, event, forPlayers),
+  /* The site's answer judge (services/answerJudge.js), for a typed response
+     the letters marked wrong. Without one the letters stand, as in tests. */
+  answerJudge = null,
 }) {
   const rooms = gameManager.rooms;
+
+  /* A typed response as the judge is asked about it. The house players'
+     answers are never put to the model: they are chosen right or wrong. */
+  const isPerson = (roomCode, playerId) => !rooms.get(roomCode)?.players.get(playerId)?.isBot;
+  const judgeItem = (category, clue, correct, response) => ({ category, clue, correct, response });
+  /* Whether the judge has anything to add about this one, beyond the letters. */
+  const worthJudging = (roomCode, playerId, item) =>
+    Boolean(answerJudge) && isPerson(roomCode, playerId) && answerJudge.wouldAsk(item);
 
   /* A hosted room's players are judged by the host and never need the
      responses, so they get the board and the clue without them; the host gets
@@ -147,8 +158,33 @@ export function createGameActions({
     emitRoom(roomCode, 'game:fj-show-clue', { clue, media: media ?? null });
   }
 
+  function finalItem(fj, playerId) {
+    return judgeItem(fj.category, fj.clue, fj.answer, fj.answers.get(playerId) ?? '');
+  }
+
+  /* Every answer is in. Those the letters marked wrong go to the judge first,
+     all at once, and the room is shown the reveal when it is back: each was
+     put to it as it came in (fjAnswer), so it is usually waiting already. */
   function revealFinal(roomCode) {
-    const results = gameManager.getFJResults(roomCode);
+    const fj = rooms.get(roomCode)?.gameState?.finalJeopardy;
+    if (!fj || fj.judging) return;
+    const ids = fj.results ? [] : [...fj.eligiblePlayers].filter((id) => fj.answers.has(id)
+      && worthJudging(roomCode, id, finalItem(fj, id)));
+    if (!ids.length) {
+      publishFinal(roomCode);
+      return;
+    }
+    fj.judging = true;
+    answerJudge.judge(ids.map((id) => finalItem(fj, id))).then((verdicts) => {
+      fj.judging = false;
+      // The room may have been torn down, or moved on, while the judge thought.
+      if (rooms.get(roomCode)?.gameState?.finalJeopardy !== fj) return;
+      publishFinal(roomCode, new Set(ids.filter((_, i) => verdicts[i])));
+    });
+  }
+
+  function publishFinal(roomCode, accepted = new Set()) {
+    const results = gameManager.getFJResults(roomCode, accepted);
     /* The scores are final here, so file the game now rather than at
        game:end, which only arrives if the host goes on to press "See Final
        Standings". A second archive call is a no-op. */
@@ -386,6 +422,7 @@ export function createGameActions({
       const dailyDouble = gs.isDailyDouble && gs.phase === 'dailyDoubleQuestion' && gs.currentPickerId === sessionId;
       if (!dailyDouble && gs.buzzedPlayerId !== sessionId) return null;
 
+      if (gs.judging) return null; // already with the judge
       const said = String(text ?? '').trim().slice(0, 200);
       const verdict = gameManager.gradeResponse(roomCode, sessionId, said);
       if (verdict === 'close') {
@@ -399,16 +436,32 @@ export function createGameActions({
         return { verdict };
       }
 
-      const correct = verdict === 'correct';
-      gameManager.clearAnswerTimeout(roomCode);
-      if (dailyDouble) {
-        const result = gameManager.handleDailyDoubleAnswer(roomCode, sessionId, correct);
-        if (result) emitRoom(roomCode, 'game:daily-double-result', { ...result, said });
+      const rule = (correct) => {
+        if (dailyDouble) {
+          const result = gameManager.handleDailyDoubleAnswer(roomCode, sessionId, correct);
+          if (result) emitRoom(roomCode, 'game:daily-double-result', { ...result, said });
+          return result;
+        }
+        const result = gameManager.handleAnswer(roomCode, sessionId, correct);
+        if (result) settleAnswer(roomCode, result, { said });
         return result;
-      }
-      const result = gameManager.handleAnswer(roomCode, sessionId, correct);
-      if (result) settleAnswer(roomCode, result, { said });
-      return result;
+      };
+
+      gameManager.clearAnswerTimeout(roomCode);
+      const question = gs.currentQuestion;
+      const item = judgeItem(question.category, question.answer, question.question, said);
+      if (verdict === 'correct' || !worthJudging(roomCode, sessionId, item)) return rule(verdict === 'correct');
+
+      /* Wrong by the letters: the judge may know better. The clock is
+         stopped while it thinks (at most JUDGE_WAIT_MS), and the clue is
+         held so nothing else can be typed against it. */
+      gs.judging = true;
+      return answerJudge.judge([item]).then(([correct]) => {
+        gs.judging = false;
+        // Skipped, torn down or moved on while the judge thought.
+        if (rooms.get(roomCode)?.gameState !== gs || gs.currentQuestion !== question) return null;
+        return rule(correct);
+      });
     },
 
     dailyDoubleAnswer(sessionId, roomCode, correct) {
@@ -463,6 +516,13 @@ export function createGameActions({
 
     fjAnswer(sessionId, roomCode, answer) {
       const allIn = gameManager.submitFJAnswer(roomCode, sessionId, answer);
+      /* Put to the judge now, as it is typed, so the reveal finds the
+         verdict waiting rather than asking for it then. */
+      const fj = rooms.get(roomCode)?.gameState?.finalJeopardy;
+      if (fj?.answers.has(sessionId) && !allIn) {
+        const item = finalItem(fj, sessionId);
+        if (worthJudging(roomCode, sessionId, item)) answerJudge.judge([item]);
+      }
       if (!allIn) return false;
       revealFinal(roomCode);
       return true;

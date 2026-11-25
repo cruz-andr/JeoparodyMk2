@@ -16,6 +16,8 @@ import {
 import { getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
 import { judgeTyped, CLOSE_NOTE } from '../utils/typedClue';
+import { judgeResponse } from '../services/api/judgeService';
+import { afterRevealBeat } from '../components/game/revealBeat';
 import GameBoard from '../components/game/GameBoard';
 import BoardWheel from '../components/game/BoardWheel';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -56,6 +58,8 @@ export default function DailyBoardPage() {
   // A close spelling's one free retry, per clue, as everywhere a clue is typed.
   const [note, setNote] = useState(null);
   const closeUsed = useRef(false);
+  // A response is with the judge; the box holds, greyed out, until it rules.
+  const [awaiting, setAwaiting] = useState(false);
   // The two boards are different components, not one restyled, so this cannot
   // be a media query in CSS.
   const isPhone = useMediaQuery('(max-width: 768px)');
@@ -231,8 +235,8 @@ export default function DailyBoardPage() {
      is the show's; `question` is the correct response and `answer` is the clue
      that was read out, which is the opposite of the Sixer's. */
   const submitAnswer = useCallback(
-    (given) => {
-      if (!openCell || !openQuestion) return;
+    async (given) => {
+      if (!openCell || !openQuestion || awaiting) return;
       const index = flatIndex(openCell.categoryIndex, openCell.pointIndex);
       const judged = judgeTyped(checkAnswer, given, openQuestion.question, { closeUsed: closeUsed.current });
       if (judged.retry) {
@@ -241,13 +245,19 @@ export default function DailyBoardPage() {
         return;
       }
       setNote(null);
-      const isCorrect = judged.correct;
+      /* The same beat for every ruling, and the judge for one the letters
+         missed (see revealBeat.js). */
+      setAwaiting(true);
+      const isCorrect = await afterRevealBeat(judged.correct || judgeResponse({
+        category: openQuestion.category, clue: openQuestion.answer, correct: openQuestion.question, response: given,
+      }));
+      setAwaiting(false);
       revealAnswer(SLOT, index, isCorrect, given);
       setResult({ correct: isCorrect, playerAnswer: given });
       if (isCorrect) playCorrect();
       else playWrong();
     },
-    [openCell, openQuestion, revealAnswer, playCorrect, playWrong, SLOT]
+    [openCell, openQuestion, awaiting, revealAnswer, playCorrect, playWrong, SLOT]
   );
 
   // Fuzzy matching gets things wrong, so the player has the last word.
@@ -350,6 +360,7 @@ export default function DailyBoardPage() {
           result={result}
           note={note}
           onSubmitAnswer={submitAnswer}
+          awaiting={awaiting}
           onOverride={override}
           onContinue={continueOn}
           closeLabel="Pass"

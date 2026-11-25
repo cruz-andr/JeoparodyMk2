@@ -10,6 +10,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
    around it here would be inert, and Vite says so on every build. */
 import RouteErrorPage from './pages/RouteErrorPage';
 import NotFoundPage from './pages/NotFoundPage';
+import { HOST_MODE } from './config/features';
 import './styles/globals.css';
 
 // Lazy-load all pages — each becomes its own chunk,
@@ -67,13 +68,15 @@ const routes = [
   { path: '/singleplayer', element: <SinglePlayerPage /> },
   { path: '/quickplay', element: <QuickplayPage /> },
   { path: '/multiplayer', element: <MultiplayerPage /> },
-  { path: '/host', element: <HostPage /> },
+  /* Host mode is a beta: off in production builds unless VITE_ENABLE_HOST_MODE
+     is 'true', and then /host is a 404 like any other unknown path. */
+  ...(HOST_MODE ? [{ path: '/host', element: <HostPage /> }] : []),
   { path: '/join', element: <JoinPage /> },
   { path: '/join/:roomCode', element: <JoinPage /> },
   { path: '/game/:roomCode', element: <GamePage /> },
   /* The screen behind the host in projector mode: a second window, driven by
      the host's window, that never carries an answer. */
-  { path: '/project/:roomCode', element: <ProjectorPage /> },
+  ...(HOST_MODE ? [{ path: '/project/:roomCode', element: <ProjectorPage /> }] : []),
   { path: '/highscores', element: <HighscoresPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
   { path: '/signup', element: <SignUpPage /> },

@@ -118,14 +118,4 @@ router.post('/mc-options', wrap(async (req, res) => {
   res.json(await model.generateMCOptions(response, category, clue));
 }));
 
-/** Whether a typed answer is close enough to the right one. */
-router.post('/validate', wrap(async (req, res) => {
-  const playerAnswer = line(req.body?.playerAnswer, 'playerAnswer', MAX_TEXT);
-  const correctAnswer = line(req.body?.correctAnswer, 'correctAnswer', MAX_TEXT);
-  const strictness = ['lenient', 'moderate', 'strict'].includes(req.body?.strictness)
-    ? req.body.strictness
-    : 'moderate';
-  res.json(await model.validateAnswer(playerAnswer, correctAnswer, strictness));
-}));
-
 export default router;

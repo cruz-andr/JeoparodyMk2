@@ -5,6 +5,8 @@ import ClueScreen from './ClueScreen';
 import { useAudio } from '../../hooks';
 import { finalWagerLimit, clampFinalWager } from '../../utils/wagers';
 import { checkAnswer } from '../../services/answerChecker';
+import { judgeResponse } from '../../services/api/judgeService';
+import { afterRevealBeat } from './revealBeat';
 import './FinalJeopardyModal.css';
 
 const WAGER_TIME = 30000; // 30 seconds for wager
@@ -24,6 +26,8 @@ export default function FinalJeopardyModal({
   const [playerAnswer, setPlayerAnswer] = useState('');
   const [result, setResult] = useState(null);
   const judged = useRef(false);
+  const grading = useRef(false);
+  const [awaiting, setAwaiting] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
   const { playFinalJeopardy, stopFinalJeopardy, playCorrect, playWrong } = useAudio();
 
@@ -80,26 +84,31 @@ export default function FinalJeopardyModal({
   /* Graded the moment the answer is locked in, by the same grader as every
      typed clue. Final Jeopardy has no second go at the spelling: the answer
      is written once, against the clock, as it is in a room. */
-  const grade = () => {
+  /* One the letters missed goes to the judge, and every ruling waits the
+     same beat (see revealBeat.js); the answer holds, greyed out, meanwhile. */
+  const grade = async () => {
+    if (grading.current) return;
+    grading.current = true;
+    setShowTimer(false);
     const given = playerAnswer.trim();
-    const isCorrect = given ? checkAnswer(given, correctAnswer).isCorrect : false;
+    let isCorrect = false;
+    if (given) {
+      setAwaiting(true);
+      isCorrect = await afterRevealBeat(checkAnswer(given, correctAnswer).isCorrect || judgeResponse({
+        category, clue, correct: correctAnswer, response: given,
+      }));
+      setAwaiting(false);
+    }
+    setPhase('reveal');
     if (isCorrect) playCorrect();
     else playWrong();
     const pointsChange = isCorrect ? wager : -wager;
     setResult({ isCorrect, pointsChange, newScore: currentScore + pointsChange });
   };
 
-  const handleAnswerSubmit = () => {
-    setShowTimer(false);
-    setPhase('reveal');
-    grade();
-  };
+  const handleAnswerSubmit = () => grade();
 
-  const handleAnswerTimeUp = () => {
-    setShowTimer(false);
-    setPhase('reveal');
-    grade();
-  };
+  const handleAnswerTimeUp = () => grade();
 
   // The grader is fuzzy, so the player has the last word, as on every clue.
   const handleOverride = () => {
@@ -266,12 +275,14 @@ export default function FinalJeopardyModal({
                 placeholder="What is..."
                 className="fj-answer-input"
                 autoFocus
+                readOnly={awaiting}
+                style={awaiting ? { opacity: 0.55 } : undefined}
               />
 
               <button
                 className="fj-submit-btn"
                 onClick={handleAnswerSubmit}
-                disabled={!playerAnswer.trim()}
+                disabled={!playerAnswer.trim() || awaiting}
               >
                 Submit Answer
               </button>

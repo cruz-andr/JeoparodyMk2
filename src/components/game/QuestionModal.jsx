@@ -40,6 +40,9 @@ export default function QuestionModal({
      setting there; The Board does not ask for one. Out of time, onTimeUp says
      what happened. */
   timed = false,
+  /* A typed response is with the judge: the box holds, greyed out, until
+     the verdict replaces it (see revealBeat.js). */
+  awaiting = false,
 }) {
   const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
   // Settings offers a Show timer switch that nothing was reading.
@@ -209,9 +212,10 @@ export default function QuestionModal({
                 onSubmit={onSubmitAnswer}
                 note={note}
                 hint={hint}
+                awaiting={awaiting}
               />
               {onClaim && (
-                <button type="button" className="typed-claim" onClick={onClaim}>
+                <button type="button" className="typed-claim" onClick={onClaim} disabled={awaiting}>
                   I was right
                 </button>
               )}
@@ -284,7 +288,7 @@ export default function QuestionModal({
             read, so a skip would walk away from it. And once time is up the
             Continue above is the way on. */}
         {!(typed && result) && !isDailyDouble && !timedOut && (
-          <button className="close-button" onClick={onClose}>
+          <button className="close-button" onClick={onClose} disabled={awaiting}>
             {closeLabel}
           </button>
         )}

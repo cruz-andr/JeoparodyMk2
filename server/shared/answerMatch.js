@@ -366,3 +366,16 @@ export function gradeAnswer(answer, response) {
   }
   return { verdict: 'wrong', isCorrect: false, confidence: 0, reason: 'No match' };
 }
+
+// ------------------------------------------------------------ the judge
+
+/* The longest response the answer judge (server/services/answerJudge.js)
+   puts to its model. A Jeopardy response is a few words, and a paragraph is
+   where somebody would try to talk the model round, so it is never asked
+   about one: the letters' verdict stands. */
+export const MAX_JUDGED_LENGTH = 60;
+
+export const judgeableResponse = (text) => {
+  const t = String(text ?? '').trim();
+  return t.length > 0 && t.length <= MAX_JUDGED_LENGTH;
+};

@@ -6,6 +6,7 @@ import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
 import { currentWeekBest, liveStreak, toDateString } from '../../stores/dailyLogic';
 import './MainMenu.css';
 import AppTabBar from '../common/AppTabBar';
+import { HOST_MODE } from '../../config/features';
 import ArchiveRow from './ArchiveRow';
 
 /**
@@ -20,11 +21,11 @@ const CODE_ALPHABET = /[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g;
 const CATEGORIES = [
   { id: 'sixer', label: 'The Sixer', path: '/daily', daily: true },
   { id: 'multiplayer', label: 'Multi­player', path: '/multiplayer' },
-  { id: 'host', label: 'Host\nA Game', path: '/host' },
+  { id: 'host', label: 'Host\nA Game', path: '/host', beta: true },
   { id: 'single', label: 'Single\nPlayer', path: '/singleplayer' },
   { id: 'quickplay', label: 'Quickplay', path: '/quickplay' },
   { id: 'community', label: 'Community\nBoards', path: '/boards' },
-];
+].filter((cat) => !cat.beta || HOST_MODE);
 
 /* There is no Join A Room tile. The code field further down the page already
    goes straight to /join/CODE, so the tile was a second door to the same room
@@ -210,7 +211,11 @@ export default function MainMenu() {
 
       {/* The ways to play. The Sixer leads because it is the one that changes
           every day and is the reason to come back. */}
-      <nav className="menu-categories" aria-label="Game modes">
+      <nav
+        className={`menu-categories${CATEGORIES.length % 2 ? ' odd' : ''}`}
+        style={{ '--menu-cats': CATEGORIES.length }}
+        aria-label="Game modes"
+      >
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}

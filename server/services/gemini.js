@@ -16,9 +16,12 @@
  * parsing can be tested without a key, a quota or a network.
  */
 import { AppError } from '../middleware/errorHandler.js';
+import { judgeItems, judgePrompt, verdictsFrom } from './judgePrompt.js';
 
 const MODEL = 'gemini-3-flash-preview';
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const endpointFor = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+const ENDPOINT = endpointFor(MODEL);
+
 
 /* A board has six columns. */
 const BOARD_CATEGORIES = 6;
@@ -80,14 +83,18 @@ function modelError(err) {
  * Plain fetch against the REST endpoint rather than the SDK, so the server
  * carries no new dependency for what is one POST.
  */
-async function realGenerateContent(prompt) {
+async function realGenerateContent(prompt, { model = MODEL, timeoutMs = TIMEOUT_MS, generationConfig } = {}) {
+  const endpoint = model === MODEL ? ENDPOINT : endpointFor(model);
   let response;
   try {
-    response = await fetch(ENDPOINT, {
+    response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey() },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        ...(generationConfig ? { generationConfig } : {}),
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {
     const failed = new Error(`network: ${err?.message ?? 'could not reach the model'}`);
@@ -117,12 +124,12 @@ export function useGenerateContent(fn) {
 }
 
 /** One prompt, answered and parsed, or an AppError the route can send. */
-async function ask(prompt) {
+async function ask(prompt, options) {
   if (!isConfigured()) throw new AppError(NOT_SET_UP, 503, 'AI_NOT_CONFIGURED');
 
   let text;
   try {
-    text = String(await generateContent(prompt) ?? '').trim();
+    text = String(await generateContent(prompt, options) ?? '').trim();
   } catch (err) {
     throw modelError(err);
   }
@@ -431,30 +438,25 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no extra
   return { options: [correctAnswer, ...parsed.options.slice(0, 3).map((o) => String(o ?? ''))] };
 }
 
-const STRICTNESS = {
-  lenient: 'Accept partial answers, common misspellings, and close approximations.',
-  moderate: 'Accept reasonable variations and minor misspellings, but the core answer must be correct.',
-  strict: 'Require precise, accurate responses with correct spelling of key terms.',
-};
+// ------------------------------------------------------- answer judging
 
-export async function validateAnswer(playerAnswer, correctAnswer, strictness = 'moderate') {
-  const prompt = `You are a Jeopardy answer judge. Determine if the player's response is acceptable.
-
-Correct Answer: "${correctAnswer}"
-Player Response: "${playerAnswer}"
-
-Rules:
-- In Jeopardy, players must phrase their answer as a question (What is, Who is, etc.) - be lenient on this format requirement
-- ${STRICTNESS[strictness] ?? STRICTNESS.moderate}
-
-Respond with ONLY a valid JSON object:
-{"isCorrect": true/false, "confidence": 0.0-1.0, "reason": "brief explanation"}`;
-
-  const parsed = await ask(prompt);
-  if (!parsed || typeof parsed !== 'object') throw new AppError(UNUSABLE, 502, 'AI_BAD_REPLY');
-  return {
-    isCorrect: Boolean(parsed.isCorrect),
-    confidence: Number(parsed.confidence ?? 0),
-    reason: String(parsed.reason ?? ''),
-  };
+/**
+ * The answer judge's model when JUDGE_PROVIDER is gemini (see
+ * services/judgeModel.js): responses the string match marked wrong.
+ *
+ * items: [{ category, clue, correct, response }]. Resolves to one boolean
+ * per item. Anything going wrong (no key, no credit, a slow or odd reply)
+ * rejects, and the caller keeps the string match's verdict.
+ */
+export async function judgeResponses(items, { model, timeoutMs }) {
+  const asked = judgeItems(items);
+  const prompt = judgePrompt(asked);
+  const parsed = await ask(prompt, {
+    model,
+    timeoutMs,
+    generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+  });
+  const verdicts = verdictsFrom(parsed, asked.length);
+  if (!verdicts) throw new AppError(UNUSABLE, 502, 'AI_BAD_REPLY');
+  return verdicts;
 }

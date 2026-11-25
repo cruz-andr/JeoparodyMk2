@@ -11,8 +11,9 @@ import './TypedAnswer.css';
 
 /**
  * The box. `note` says what just happened ("close") and `hint` is the shape
- * of the answer, both above it. Where the server grades, `awaiting` holds the
- * box shut on "Checking" between a submit and its answer, and `retry`
+ * of the answer, both above it. `awaiting` holds the box between a submit and
+ * its ruling: it stays where it is, greyed out, with nothing added (no
+ * spinner, no "Checking"), until the verdict takes its place. `retry`
  * changing hands it back for another go at the spelling, text kept.
  */
 export function TypedAnswerForm({ onSubmit, note = null, hint = null, awaiting = false, retry = 0 }) {
@@ -41,7 +42,8 @@ export function TypedAnswerForm({ onSubmit, note = null, hint = null, awaiting =
         </p>
       )}
       <form
-        className="typed-form"
+        className={`typed-form${checking ? ' locked' : ''}`}
+        aria-busy={checking}
         onSubmit={(e) => {
           e.preventDefault();
           const given = entry.trim();
@@ -65,10 +67,10 @@ export function TypedAnswerForm({ onSubmit, note = null, hint = null, awaiting =
           spellCheck="false"
           enterKeyHint="done"
           maxLength={200}
-          disabled={checking}
+          readOnly={checking}
         />
         <button type="submit" className="typed-submit" disabled={!entry.trim() || checking}>
-          {checking ? 'Checking…' : 'Submit'}
+          Submit
         </button>
       </form>
     </>

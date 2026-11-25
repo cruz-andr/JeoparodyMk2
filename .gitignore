@@ -40,3 +40,6 @@ e2e/shots/
 
 # Claude Code worktrees for parallel agents
 .claude/worktrees/
+
+# Keys for the judge benchmark (server/scripts/judge-bench).
+.env.bench

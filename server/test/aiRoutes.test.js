@@ -81,9 +81,6 @@ const answering = () => {
     if (prompt.includes('3 plausible but incorrect')) {
       return JSON.stringify({ options: ['Wrong 1', 'Wrong 2', 'Wrong 3', 'Wrong 4'] });
     }
-    if (prompt.includes('answer judge')) {
-      return JSON.stringify({ isCorrect: true, confidence: 0.9, reason: 'close enough' });
-    }
     if (prompt.includes('Generate Jeopardy-style questions')) {
       const names = prompt.match(/for these categories: (.*)\./)[1].split(', ');
       const values = prompt.match(/point values: (.*)\./)[1].split(', ').map(Number);
@@ -246,13 +243,6 @@ await test('mc-options: the right answer first, then exactly three wrong ones', 
   });
   assert.equal(status, 200);
   assert.deepEqual(data, { options: ['What is Right?', 'Wrong 1', 'Wrong 2', 'Wrong 3'] });
-});
-
-await test('validate: a verdict', async () => {
-  answering();
-  const { status, data } = await post('/validate', { playerAnswer: 'Mars', correctAnswer: 'What is Mars?' });
-  assert.equal(status, 200);
-  assert.deepEqual(data, { isCorrect: true, confidence: 0.9, reason: 'close enough' });
 });
 
 // ============================================================ bad input

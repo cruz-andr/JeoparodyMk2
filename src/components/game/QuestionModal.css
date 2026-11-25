@@ -234,6 +234,12 @@
   transition: color var(--transition-fast);
 }
 
+.question-modal-overlay.typed .close-button:disabled,
+.question-modal-overlay .typed-claim:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .question-modal-overlay.typed .close-button:hover {
   background: none;
   color: var(--text-primary);
