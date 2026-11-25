@@ -69,6 +69,11 @@ export function isCompleteChallenge(challenge) {
   );
 }
 
+/* The request on its way, shared: the app starts one as it loads (see
+   warmUp), and the menu or the Sixer asking a moment later joins it rather
+   than sending a second. */
+let inFlight = null;
+
 // Main function to get daily challenge (with caching)
 export async function getOrFetchDailyChallenge() {
   // Try cache first
@@ -77,16 +82,36 @@ export async function getOrFetchDailyChallenge() {
     return cached;
   }
 
-  // Fetch fresh data from backend
-  const challenge = await getDailyChallenge();
+  inFlight ??= getDailyChallenge()
+    .then((challenge) => {
+      if (!isCompleteChallenge(challenge)) {
+        throw new Error('The daily challenge came back incomplete. Try again shortly.');
+      }
+      cacheChallenge(challenge);
+      return challenge;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
 
-  if (!isCompleteChallenge(challenge)) {
-    throw new Error('The daily challenge came back incomplete. Try again shortly.');
+/**
+ * Called once as the app loads, on whatever page it opens on. The server
+ * sleeps when nobody is using it, and the first request wakes it; this makes
+ * that request now, while the page is still drawing, rather than when the
+ * menu or the Sixer gets round to asking. Without today's board cached it is
+ * that board, so it is waiting by the time it is wanted; with it cached, a
+ * bare ping, so the judge and the day's scores find the server up. Never
+ * throws: a server that is down is the pages' to report.
+ */
+export function warmUp() {
+  if (!SOCKET_URL) return;
+  if (getCachedChallenge()) {
+    fetch(`${SOCKET_URL}/health`).catch(() => {});
+    return;
   }
-
-  cacheChallenge(challenge);
-
-  return challenge;
+  getOrFetchDailyChallenge().catch(() => {});
 }
 
 /* The archive.
