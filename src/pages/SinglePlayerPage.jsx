@@ -21,6 +21,8 @@ import { finishGame } from '../services/api/gamesService';
 import { canPlayFinalJeopardy as scoreQualifiesForFinal } from '../utils/wagers';
 import { checkAnswer } from '../services/answerChecker';
 import { judgeTyped, CLOSE_NOTE } from '../utils/typedClue';
+import { judgeResponse } from '../services/api/judgeService';
+import { afterRevealBeat } from '../components/game/revealBeat';
 import { BoardHeader, Money, WheelHeader, WheelPodium, PodiumScore } from '../components/game/BoardChrome';
 import './SinglePlayerPage.css';
 
@@ -190,23 +192,37 @@ export default function SinglePlayerPage() {
   const [typedResult, setTypedResult] = useState(null);
   const [typedNote, setTypedNote] = useState(null);
   const closeUsed = useRef(false);
+  /* A response is with the judge: the box holds, greyed out, and the clock
+     running out meanwhile does not count against it. */
+  const [awaiting, setAwaiting] = useState(false);
+  const judging = useRef(false);
   useEffect(() => {
     setTypedResult(null);
     setTypedNote(null);
     closeUsed.current = false;
   }, [currentQuestion]);
 
-  const submitTyped = (given) => {
-    if (!currentQuestion || typedResult) return;
-    const judged = judgeTyped(checkAnswer, given, currentQuestion.question, { closeUsed: closeUsed.current });
+  const submitTyped = async (given) => {
+    if (!currentQuestion || typedResult || judging.current) return;
+    const question = currentQuestion;
+    const judged = judgeTyped(checkAnswer, given, question.question, { closeUsed: closeUsed.current });
     if (judged.retry) {
       closeUsed.current = true;
       setTypedNote(CLOSE_NOTE);
       return;
     }
     setTypedNote(null);
-    handleAnswerResult(judged.correct);
-    setTypedResult({ correct: judged.correct, playerAnswer: given });
+    /* The same beat for every ruling, and the judge for one the letters
+       missed (see revealBeat.js). */
+    judging.current = true;
+    setAwaiting(true);
+    const correct = await afterRevealBeat(judged.correct || judgeResponse({
+      category: question.category ?? '', clue: question.answer, correct: question.question, response: given,
+    }));
+    judging.current = false;
+    setAwaiting(false);
+    handleAnswerResult(correct);
+    setTypedResult({ correct, playerAnswer: given });
   };
 
   // The grader is fuzzy, so the player has the last word, as on The Board.
@@ -222,7 +238,7 @@ export default function SinglePlayerPage() {
 
   // Out of time: nothing either way, except a Daily Double's wager.
   const timeUpTyped = () => {
-    if (typedResult) return;
+    if (typedResult || judging.current) return;
     if (dailyDoubleWager > 0) {
       playWrong();
       markIncorrect();
@@ -562,6 +578,7 @@ export default function SinglePlayerPage() {
             result={typedResult}
             note={typedNote}
             onSubmitAnswer={submitTyped}
+            awaiting={awaiting}
             onOverride={overrideTyped}
             onContinue={handleCloseQuestion}
             onTimeUp={timeUpTyped}

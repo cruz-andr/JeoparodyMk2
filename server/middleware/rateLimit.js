@@ -131,6 +131,17 @@ export const aiLimiter = rateLimit({
   message: { error: { message: 'The AI has used up its quota for you this hour. Try again later.', code: 'AI_QUOTA' } },
 });
 
+/* The answer judge is open to anyone, because the daily games are, and is
+   only asked about a response the string match marked wrong: a Sixer is six
+   clues and The Board thirty. Two hundred an hour is a lot of daily games
+   and not much of a free model. */
+export const judgeLimiter = rateLimit({
+  ...shared,
+  windowMs: 60 * 60 * 1000,
+  max: 200,
+  message: { error: { message: 'Too many answers checked this hour. Try again later.', code: 'JUDGE_QUOTA' } },
+});
+
 /** Reads and writes have different shapes, so they get different budgets. */
 export function apiLimiter(req, res, next) {
   const read = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS';

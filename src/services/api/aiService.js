@@ -109,25 +109,3 @@ export async function generateMCOptions(correctAnswer, category, clue) {
     };
   }
 }
-
-// Validate if an answer is correct using AI
-export async function validateAnswer(playerAnswer, correctAnswer, strictness = 'moderate') {
-  try {
-    return await call('/validate', { playerAnswer, correctAnswer, strictness });
-  } catch {
-    // Fallback to simple string matching
-    const normalize = (s) => s.toLowerCase()
-      .replace(/^(what|who|where|when|why|how)\s+(is|are|was|were)\s+/i, '')
-      .replace(/[^a-z0-9]/g, '')
-      .trim();
-
-    const normalizedPlayer = normalize(playerAnswer);
-    const normalizedCorrect = normalize(correctAnswer);
-
-    return {
-      isCorrect: normalizedPlayer === normalizedCorrect,
-      confidence: normalizedPlayer === normalizedCorrect ? 1.0 : 0.0,
-      reason: 'Fallback string matching used',
-    };
-  }
-}

@@ -1083,7 +1083,9 @@ export class GameStateManager {
     return participants.every((id) => fj.answers.has(id)) ? 'reveal' : null;
   }
 
-  getFJResults(roomCode) {
+  /* `accepted`: the players whose answer the answer judge
+     (services/answerJudge.js) ruled right though the letters did not. */
+  getFJResults(roomCode, accepted = new Set()) {
     const room = this.rooms.get(roomCode);
     if (!room || !room.gameState?.finalJeopardy) return [];
 
@@ -1103,7 +1105,7 @@ export class GameStateManager {
 
       // Graded the same way as every other answer, so a typo or the question
       // form ("What is ...?") does not cost someone the game.
-      const correct = this.fuzzyMatchAnswer(answer, fj.answer).isCorrect;
+      const correct = this.fuzzyMatchAnswer(answer, fj.answer).isCorrect || accepted.has(playerId);
 
       // Calculate final score
       const previousScore = player.score || 0;
@@ -1795,8 +1797,9 @@ export class GameStateManager {
     return { results, correctIndex, nextPickerId: room.hostId };
   }
 
-  // Auto-grade typed answers using fuzzy matching
-  autoGradeAnswers(roomCode) {
+  /* Auto-grade typed answers. `accepted`: the players whose answer the answer
+     judge ruled right though the letters did not. */
+  autoGradeAnswers(roomCode, accepted = new Set()) {
     const room = this.rooms.get(roomCode);
     if (!this.ensureAnswerState(room)) return [];
 
@@ -1805,7 +1808,10 @@ export class GameStateManager {
     const results = [];
 
     for (const [playerId, { answer }] of room.gameState.typedAnswers) {
-      const gradeResult = this.fuzzyMatchAnswer(answer, correctAnswer);
+      const byLetters = this.fuzzyMatchAnswer(answer, correctAnswer);
+      const gradeResult = !byLetters.isCorrect && accepted.has(playerId)
+        ? { verdict: 'correct', isCorrect: true, confidence: 0.8, reason: 'Accepted by the judge' }
+        : byLetters;
       room.gameState.autoGradeResults.set(playerId, gradeResult);
 
       const player = room.players.get(playerId);

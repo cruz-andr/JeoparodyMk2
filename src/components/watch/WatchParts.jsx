@@ -77,11 +77,14 @@ export function AskPanel({ stop, score, onAnswer, onPass, waiting = null }) {
             placeholder="What is..."
             aria-label="Your response"
             autoComplete="off"
+            /* With the judge: held where it is, greyed out, nothing added. */
+            readOnly={busy}
+            style={busy ? { opacity: 0.55 } : undefined}
           />
           {note && <p className="wa-note">{note}</p>}
           <div className="wa-ask-do">
             <button type="submit" className="btn-primary" disabled={!given.trim() || busy}>Answer</button>
-            {onPass && <button type="button" className="plain-btn wa-word" onClick={onPass}>Pass</button>}
+            {onPass && <button type="button" className="plain-btn wa-word" onClick={onPass} disabled={busy}>Pass</button>}
             {waiting && <span className="wa-waiting">{waiting}</span>}
           </div>
         </>

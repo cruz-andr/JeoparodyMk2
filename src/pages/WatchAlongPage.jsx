@@ -6,6 +6,8 @@ import { useUserStore } from '../stores';
 import { getBoard } from '../services/api/boardsService';
 import { loadYouTubeApi } from '../components/media/youtubeApi';
 import { judgeTyped } from '../utils/typedClue';
+import { judgeResponse } from '../services/api/judgeService';
+import { afterRevealBeat } from '../components/game/revealBeat';
 import { clampFinalWager } from '../utils/wagers';
 import { reached, scored, startOf, stopsFor } from '@shared/watchAlong.js';
 import { AskPanel, StartButton, Verdict } from '../components/watch/WatchParts';
@@ -125,14 +127,21 @@ export default function WatchAlongPage() {
     goOn();
   };
 
-  const answer = (given, wager) => {
-    const verdict = judgeTyped(gradeAnswer, given, asking.clue.question, { closeUsed });
+  /* One the letters missed goes to the judge, and every ruling waits the same
+     beat (see revealBeat.js); the box holds, greyed out, meanwhile. */
+  const answer = async (given, wager) => {
+    const stop = asking;
+    const verdict = judgeTyped(gradeAnswer, given, stop.clue.question, { closeUsed });
     if (verdict.retry) {
       setCloseUsed(true);
       return verdict;
     }
-    finish(verdict.correct, given, wager);
-    return verdict;
+    const correct = await afterRevealBeat(verdict.correct || judgeResponse({
+      category: stop.category, clue: stop.clue.answer, correct: stop.clue.question, response: given,
+    }));
+    if (askingRef.current !== stop) return null; // moved on meanwhile
+    finish(correct, given, wager);
+    return { correct };
   };
 
   const pass = () => {

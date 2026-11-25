@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import { aiLimiter, apiLimiter, authLimiter, ON_FLY } from './middleware/rateLimit.js';
+import { aiLimiter, apiLimiter, authLimiter, judgeLimiter, ON_FLY } from './middleware/rateLimit.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -16,6 +16,7 @@ import roomRoutes from './routes/rooms.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import boardRoutes from './routes/boards.js';
 import aiRoutes from './routes/ai.js';
+import judgeRoutes from './routes/judge.js';
 import gameRoutes from './routes/games.js';
 import dailyRoutes from './routes/daily.js';
 
@@ -135,6 +136,9 @@ app.use('/api/daily', dailyRoutes);
    own budget sits on top of the general one because every call here is paid
    for. */
 app.use('/api/ai', aiLimiter, aiRoutes);
+
+/* Whether a typed response is right; see services/answerJudge.js. */
+app.use('/api/judge', judgeLimiter, judgeRoutes);
 
 /* Daily Challenge endpoint - scrapes J-Archive.
 

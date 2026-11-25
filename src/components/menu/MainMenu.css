@@ -155,7 +155,7 @@
 
 .menu-categories {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--menu-cats, 6), minmax(0, 1fr));
   gap: 8px;
   min-height: 118px;
 }
@@ -562,6 +562,11 @@
   /* Six tiles divide by two, so the full-width Sixer that fixed the five-tile
      hole would now make one: one across plus five is 1 + 2 + 2 + 1. Back to a
      clean 2x3. */
+
+  /* Five tiles (host mode off): the Sixer goes full width again, 1 + 2 + 2. */
+  .menu-categories.odd .menu-category.daily {
+    grid-column: 1 / -1;
+  }
 
   .menu-category {
     min-height: 88px;

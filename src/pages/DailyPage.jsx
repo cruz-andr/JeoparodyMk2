@@ -7,6 +7,8 @@ import { canPlayDate, toDateString } from '@shared/archiveWindow.js';
 import { answerHint, isArchiveRunFor, liveStreak, sixerEarned, sixerScore } from '../stores/dailyLogic';
 import { getChallengeForDate, getOrFetchDailyChallenge } from '../services/api/jeopardyService';
 import { checkAnswer } from '../services/answerChecker';
+import { judgeResponse } from '../services/api/judgeService';
+import { afterRevealBeat } from '../components/game/revealBeat';
 import { useAudio } from '../hooks';
 import QuestionModal from '../components/game/QuestionModal';
 import DailyResults from '../components/daily/DailyResults';
@@ -57,6 +59,8 @@ export default function DailyPage() {
   /* A close answer gets one free retype per try, said in this note. */
   const [note, setNote] = useState(null);
   const [closeUsed, setCloseUsed] = useState(false);
+  // A response is with the judge; the box holds, greyed out, until it rules.
+  const [awaiting, setAwaiting] = useState(false);
 
   // Parse verification code from URL (for viewing sharer's answers)
   useEffect(() => {
@@ -227,8 +231,8 @@ export default function DailyPage() {
   );
 
   const submitAnswer = useCallback(
-    (given) => {
-      if (openIndex === null) return;
+    async (given) => {
+      if (openIndex === null || awaiting) return;
       const q = questions[openIndex];
       if (!q) return;
       const { verdict } = checkAnswer(given, q.answer);
@@ -239,7 +243,15 @@ export default function DailyPage() {
         setNote('Close. Check the spelling and try again.');
         return;
       }
-      if (verdict === 'correct') {
+      /* Ruled on after the same beat every time, right or wrong, so the wait
+         gives nothing away. One the letters missed goes to the judge, which
+         may know that "Ali" is (Muhammad) Ali. See revealBeat.js. */
+      setAwaiting(true);
+      const right = await afterRevealBeat(verdict === 'correct' || judgeResponse({
+        category: q.category, clue: q.clue, correct: q.answer, response: given,
+      }));
+      setAwaiting(false);
+      if (right) {
         settle(true, given, hinted);
         return;
       }
@@ -254,7 +266,7 @@ export default function DailyPage() {
       }
       settle(false, given, true);
     },
-    [openIndex, questions, closeUsed, hinted, settle, setUserAnswer, showHint, SLOT]
+    [openIndex, awaiting, questions, closeUsed, hinted, settle, setUserAnswer, showHint, SLOT]
   );
 
   /* The grader can turn down a right answer. A player it did that to on the
@@ -415,6 +427,7 @@ export default function DailyPage() {
             typed
             result={result}
             onSubmitAnswer={submitAnswer}
+            awaiting={awaiting}
             onOverride={override}
             onContinue={continueOn}
             closeLabel="Pass"

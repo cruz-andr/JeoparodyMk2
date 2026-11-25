@@ -8,6 +8,7 @@ import { roomBoards, roomGrid } from '../services/roomBoards.js';
 import { createSessionClaims } from './sessionClaims.js';
 import { createWatchRooms } from './watchRooms.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
+import { getAnswerJudge } from '../services/answerJudge.js';
 
 const NO_MATCH_MESSAGE = 'Nobody else is looking right now.';
 
@@ -83,7 +84,9 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
     if (socketId) io.to(socketId).emit(event, payload);
   }
 
-  const actions = createGameActions({ gameManager, emitRoom, emitSplit, emitPlayer, archiveRoom });
+  /* One judge for every typed response on the site (services/answerJudge.js). */
+  const answerJudge = getAnswerJudge({ log: (m) => logInfo({ msg: m }) });
+  const actions = createGameActions({ gameManager, emitRoom, emitSplit, emitPlayer, archiveRoom, answerJudge });
 
   /* Quickplay and private rooms type their response and the server grades
      it; a player's own word on whether they were right is not taken. The
@@ -154,12 +157,26 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
     io.to(roomCode).emit('game:all-answers-in');
 
     if (room.settings?.answerMode === 'auto_grade') {
-      const gradeResults = gameManager.autoGradeAnswers(roomCode);
-      io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
-      // Refresh so the panel shows each answer with its grade attached.
-      sendTypedAnswersToHost(roomCode);
+      /* Those the letters marked wrong go to the judge first; each was put
+         to it as it was typed, so the verdicts are usually waiting. */
+      const question = room.gameState.currentQuestion;
+      const ids = [...room.gameState.typedAnswers.keys()];
+      const items = ids.map((id) => typedItem(question, room.gameState.typedAnswers.get(id)?.answer));
+      const publish = (accepted) => {
+        if (gameManager.rooms.get(roomCode)?.gameState?.currentQuestion !== question) return;
+        const gradeResults = gameManager.autoGradeAnswers(roomCode, accepted);
+        io.to(roomCode).emit('game:auto-grade-results', { results: gradeResults });
+        // Refresh so the panel shows each answer with its grade attached.
+        sendTypedAnswersToHost(roomCode);
+      };
+      if (!items.some(answerJudge.wouldAsk)) publish(new Set());
+      else answerJudge.judge(items).then((verdicts) => publish(new Set(ids.filter((_, i) => verdicts[i]))));
     }
   }
+
+  const typedItem = (question, answer) => ({
+    category: question?.category ?? '', clue: question?.answer ?? '', correct: question?.question ?? '', response: answer ?? '',
+  });
 
   /* A hosted clue waits on an answer from every player who can give one.
      Asked again when a player goes, since theirs is never coming. */
@@ -188,6 +205,7 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
       return row ? { board: JSON.parse(row.data), watch: row.watch ? JSON.parse(row.watch) : null } : null;
     },
     emitState: (code, state) => io.to(watchRoom(code)).emit('watch:state', state),
+    answerJudge,
   });
 
   // Authentication middleware
@@ -289,7 +307,9 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
       callback(socket.watchCode ? watching.buzz({ code: socket.watchCode, playerId: socket.sessionId, key }) : false);
     });
     on('watch:answer', ({ key, given, wager }, callback) => {
-      callback(socket.watchCode ? watching.answer({ code: socket.watchCode, playerId: socket.sessionId, key, given, wager }) : null);
+      /* A promise when the answer judge has been asked. */
+      Promise.resolve(socket.watchCode ? watching.answer({ code: socket.watchCode, playerId: socket.sessionId, key, given, wager }) : null)
+        .then(callback);
     });
     on('watch:pass', ({ key }) => {
       if (socket.watchCode) watching.pass({ code: socket.watchCode, playerId: socket.sessionId, key });
@@ -686,6 +706,13 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
 
         // Feed the answer through to the host's control panel as it lands.
         sendTypedAnswersToHost(roomCode);
+
+        /* Put to the judge as it is typed, so auto-grading finds the verdict
+           waiting when the last answer is in. */
+        if (room?.settings?.answerMode === 'auto_grade') {
+          const item = typedItem(room.gameState?.currentQuestion, String(answer ?? ''));
+          if (answerJudge.wouldAsk(item)) answerJudge.judge([item]);
+        }
 
         // If all answered, notify host
         if (result.allAnswered) announceAllAnswers(roomCode);
