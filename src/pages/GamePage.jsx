@@ -454,6 +454,14 @@ export default function GamePage() {
       setBuzzerWinnerReactionTime(reactionTime);  // Store reaction time to display
       setCanBuzz(false);
       setBuzzTimedOut(false);  // Server is authoritative — clear any local timeout
+      /* Buzzing in and losing the race is not a turn: the server only counts
+         the winner as having had their shot. This page used to keep the loser
+         marked as buzzed, so when the winner missed, the server opened the
+         clue to them again and their buzzer stayed off. */
+      if (playerId !== currentPlayerId) {
+        setHasAlreadyBuzzed(false);
+        hasAlreadyBuzzedRef.current = false;
+      }
       // Reset answer timer for buzzer winner
       setAnswerTimerKey(prev => prev + 1);
     });
