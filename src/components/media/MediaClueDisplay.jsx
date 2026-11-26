@@ -67,6 +67,15 @@ export default function MediaClueDisplay({
         />
       )}
 
+      {/* A stand-in picture from Wikimedia Commons is shown with its author
+          and licence, as its licence asks (server/services/cluePictures.js). */}
+      {question.mediaType === 'image' && question.mediaCredit && (
+        <p className="media-credit">
+          {question.mediaCredit.author} · {question.mediaCredit.license} ·{' '}
+          <a href={question.mediaCredit.source} target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>
+        </p>
+      )}
+
       {question.mediaType === 'youtube' && question.mediaData && (
         <>
           <YouTubePlayer

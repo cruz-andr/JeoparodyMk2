@@ -16,6 +16,15 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
+.media-credit {
+  margin: -6px 0 0;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+}
+
+.media-credit a { color: inherit; text-decoration: underline; }
+
 .media-controls {
   display: flex;
   gap: 8px;

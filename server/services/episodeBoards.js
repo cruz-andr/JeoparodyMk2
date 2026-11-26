@@ -13,6 +13,7 @@ import { toDateString } from '../shared/archiveWindow.js';
 import { buildBoard, DOUBLE_ROW_VALUES } from './dailyBuilder.js';
 import { createBoardSource, toGrid } from '../socket/quickplay.js';
 import { episodeRoomBoard } from './roomBoards.js';
+import { getCluePictures } from './cluePictures.js';
 
 /* An episode's rounds, as far as it has them. The Jeopardy round always
    builds for a day in the archive (it is that day's Board), but some aired
@@ -49,14 +50,18 @@ const airedTitle = (airDate) => (airDate
   })} Board`
   : 'A random Board');
 
-export function createEpisodeBoards({ fetchGame = fetchGameById, mode = 'archive', random = Math.random, log = () => {} } = {}) {
-  const source = createBoardSource({ mode, fetchGame, random, log });
+export function createEpisodeBoards({
+  fetchGame = fetchGameById, mode = 'archive', random = Math.random, log = () => {}, pictures = getCluePictures(),
+} = {}) {
+  const source = createBoardSource({ mode, fetchGame, random, log, pictures });
 
   return {
     async forDate(date) {
       const { gameId } = await getDailyChallenge({ date, fetchGame });
       const game = gameFromDay(await fetchGame(gameId));
       if (!game) throw new Error(`episode ${gameId} has no Jeopardy round`);
+      // Round one is that day's Board, so its pictures are usually remembered already.
+      await pictures.attach([...game.round1.questions.flat(), ...(game.round2?.questions.flat() ?? [])]);
       return episodeRoomBoard(game, { title: pickedDayTitle(date) });
     },
 
