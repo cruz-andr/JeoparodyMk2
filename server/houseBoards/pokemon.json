@@ -1,0 +1,196 @@
+{
+  "title": "Pokémon: Gotta Answer 'Em All",
+  "description": "Thirty clues on Pokémon: starters, types, legendaries, trainers, the games and the numbers every trainer knows.",
+  "topic": "games",
+  "featured": true,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "STARTERS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Ash's electric mouse partner",
+            "question": "What is Pikachu?"
+          },
+          {
+            "points": 400,
+            "answer": "The Water-type turtle you can choose in Kanto",
+            "question": "What is Squirtle?"
+          },
+          {
+            "points": 600,
+            "answer": "Charmander evolves into this",
+            "question": "What is Charmeleon?"
+          },
+          {
+            "points": 800,
+            "answer": "Bulbasaur's final evolution",
+            "question": "What is Venusaur?"
+          },
+          {
+            "points": 1000,
+            "answer": "The Fire-type starter of Pokémon Gold and Silver",
+            "question": "What is Cyndaquil?"
+          }
+        ]
+      },
+      {
+        "name": "TYPES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Water is super effective against this type",
+            "question": "What is Fire?"
+          },
+          {
+            "points": 400,
+            "answer": "Pikachu's type",
+            "question": "What is Electric?"
+          },
+          {
+            "points": 600,
+            "answer": "Gengar is part Poison and part this type",
+            "question": "What is Ghost?"
+          },
+          {
+            "points": 800,
+            "answer": "Added in Pokémon X and Y, this type is strong against Dragon",
+            "question": "What is Fairy?"
+          },
+          {
+            "points": 1000,
+            "answer": "The two types introduced in Pokémon Gold and Silver",
+            "question": "What are Dark and Steel?"
+          }
+        ]
+      },
+      {
+        "name": "LEGENDARIES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Number 150, a genetically engineered clone",
+            "question": "What is Mewtwo?"
+          },
+          {
+            "points": 400,
+            "answer": "Articuno, Zapdos and this fiery bird",
+            "question": "What is Moltres?"
+          },
+          {
+            "points": 600,
+            "answer": "The rainbow bird on the cover of Pokémon Gold",
+            "question": "What is Ho-Oh?"
+          },
+          {
+            "points": 800,
+            "answer": "The guardian of the seas on the cover of Pokémon Silver",
+            "question": "What is Lugia?"
+          },
+          {
+            "points": 1000,
+            "answer": "Number 151 in the original Pokédex",
+            "question": "What is Mew?"
+          }
+        ]
+      },
+      {
+        "name": "TRAINERS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Ash's last name in English",
+            "question": "What is Ketchum?"
+          },
+          {
+            "points": 400,
+            "answer": "The professor who hands out starters in Pallet Town",
+            "question": "Who is Professor Oak?"
+          },
+          {
+            "points": 600,
+            "answer": "The Team Rocket Pokémon who can talk",
+            "question": "Who is Meowth?"
+          },
+          {
+            "points": 800,
+            "answer": "The Pewter City Gym Leader who uses Rock types",
+            "question": "Who is Brock?"
+          },
+          {
+            "points": 1000,
+            "answer": "Team Rocket's boss, secretly the Viridian City Gym Leader",
+            "question": "Who is Giovanni?"
+          }
+        ]
+      },
+      {
+        "name": "THE GAMES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The first games in the US were Pokémon Red and this",
+            "question": "What is Blue?"
+          },
+          {
+            "points": 400,
+            "answer": "The company whose consoles every main game has come out on",
+            "question": "What is Nintendo?"
+          },
+          {
+            "points": 600,
+            "answer": "The 2016 phone game that sent players outside to catch Pokémon",
+            "question": "What is Pokémon Go?"
+          },
+          {
+            "points": 800,
+            "answer": "The region of Sword and Shield, based on Great Britain",
+            "question": "What is Galar?"
+          },
+          {
+            "points": 1000,
+            "answer": "The region of Scarlet and Violet, based on Spain and Portugal",
+            "question": "What is Paldea?"
+          }
+        ]
+      },
+      {
+        "name": "BY THE NUMBERS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The number of Gym badges you need for the Kanto League",
+            "question": "What is 8?"
+          },
+          {
+            "points": 400,
+            "answer": "The number of Pokémon you can carry in your party",
+            "question": "What is 6?"
+          },
+          {
+            "points": 600,
+            "answer": "The highest level a Pokémon can reach",
+            "question": "What is 100?"
+          },
+          {
+            "points": 800,
+            "answer": "The number of Pokémon in the original Pokédex",
+            "question": "What is 151?"
+          },
+          {
+            "points": 1000,
+            "answer": "The year Pokémon Red and Green came out in Japan",
+            "question": "What is 1996?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "WORD ORIGINS",
+      "answer": "\"Pokémon\" is short for these two English words",
+      "question": "What are pocket monsters?"
+    }
+  }
+}

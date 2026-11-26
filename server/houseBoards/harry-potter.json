@@ -1,0 +1,196 @@
+{
+  "title": "Harry Potter: The Wizarding World",
+  "description": "Thirty clues on the Harry Potter books and films: Hogwarts houses, spells, creatures, Quidditch and the cast.",
+  "topic": "film-tv",
+  "featured": true,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "HOGWARTS HOUSES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Harry, Ron and Hermione are all sorted into this house",
+            "question": "What is Gryffindor?"
+          },
+          {
+            "points": 400,
+            "answer": "Its students prize loyalty and hard work, and its mascot is the badger",
+            "question": "What is Hufflepuff?"
+          },
+          {
+            "points": 600,
+            "answer": "The Sorting Hat considered putting Harry in this house, whose common room is in the dungeons",
+            "question": "What is Slytherin?"
+          },
+          {
+            "points": 800,
+            "answer": "Luna Lovegood's house, where you enter the common room by answering a riddle",
+            "question": "What is Ravenclaw?"
+          },
+          {
+            "points": 1000,
+            "answer": "Gryffindor's resident ghost, whose head is almost, but not quite, cut off",
+            "question": "Who is Nearly Headless Nick?"
+          }
+        ]
+      },
+      {
+        "name": "SPELLS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "\"Wingardium Leviosa\" makes an object do this",
+            "question": "What is levitate?"
+          },
+          {
+            "points": 400,
+            "answer": "The disarming spell that became Harry's signature move",
+            "question": "What is Expelliarmus?"
+          },
+          {
+            "points": 600,
+            "answer": "Say this word and the tip of your wand lights up",
+            "question": "What is Lumos?"
+          },
+          {
+            "points": 800,
+            "answer": "You need a very happy memory to cast this charm, which conjures a Patronus",
+            "question": "What is Expecto Patronum?"
+          },
+          {
+            "points": 1000,
+            "answer": "Of the three Unforgivable Curses, this one lets the caster control the victim's actions",
+            "question": "What is the Imperius Curse?"
+          }
+        ]
+      },
+      {
+        "name": "MAGICAL CREATURES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Hedwig is this kind of bird",
+            "question": "What is a snowy owl?"
+          },
+          {
+            "points": 400,
+            "answer": "Hagrid's three-headed dog, set to guard the Philosopher's Stone",
+            "question": "Who is Fluffy?"
+          },
+          {
+            "points": 600,
+            "answer": "Buckbeak is one of these proud half-eagle, half-horse creatures",
+            "question": "What is a hippogriff?"
+          },
+          {
+            "points": 800,
+            "answer": "These hooded guards of Azkaban feed on happiness",
+            "question": "What are Dementors?"
+          },
+          {
+            "points": 1000,
+            "answer": "Dumbledore's pet phoenix",
+            "question": "Who is Fawkes?"
+          }
+        ]
+      },
+      {
+        "name": "THE BOOKS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "In the US, the first book is named for this magical object instead of the Philosopher's Stone",
+            "question": "What is the Sorcerer's Stone?"
+          },
+          {
+            "points": 400,
+            "answer": "Sirius Black is the title character of book three",
+            "question": "What is the Prisoner of Azkaban?"
+          },
+          {
+            "points": 600,
+            "answer": "Book four, in which Harry is entered into the Triwizard Tournament",
+            "question": "What is the Goblet of Fire?"
+          },
+          {
+            "points": 800,
+            "answer": "Book six takes its title from Severus Snape's old school nickname",
+            "question": "What is the Half-Blood Prince?"
+          },
+          {
+            "points": 1000,
+            "answer": "The final book is named for the Elder Wand, the Resurrection Stone and the Cloak of Invisibility together",
+            "question": "What are the Deathly Hallows?"
+          }
+        ]
+      },
+      {
+        "name": "QUIDDITCH",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Catching this little winged ball earns 150 points and ends the game",
+            "question": "What is the Golden Snitch?"
+          },
+          {
+            "points": 400,
+            "answer": "The position Harry plays for Gryffindor",
+            "question": "What is Seeker?"
+          },
+          {
+            "points": 600,
+            "answer": "These two heavy balls fly around trying to knock players off their brooms",
+            "question": "What are Bludgers?"
+          },
+          {
+            "points": 800,
+            "answer": "The racing broom Sirius secretly sends Harry in book three",
+            "question": "What is the Firebolt?"
+          },
+          {
+            "points": 1000,
+            "answer": "Oliver Wood plays this position, guarding the three hoops",
+            "question": "What is Keeper?"
+          }
+        ]
+      },
+      {
+        "name": "AT THE MOVIES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "He played Harry in all eight films",
+            "question": "Who is Daniel Radcliffe?"
+          },
+          {
+            "points": 400,
+            "answer": "She played Hermione Granger",
+            "question": "Who is Emma Watson?"
+          },
+          {
+            "points": 600,
+            "answer": "Alan Rickman played this Potions master",
+            "question": "Who is Severus Snape?"
+          },
+          {
+            "points": 800,
+            "answer": "He took over the role of Dumbledore after Richard Harris died",
+            "question": "Who is Michael Gambon?"
+          },
+          {
+            "points": 1000,
+            "answer": "She played the cackling Death Eater Bellatrix Lestrange",
+            "question": "Who is Helena Bonham Carter?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "ADDRESSES",
+      "answer": "Harry's first Hogwarts letter is addressed to the cupboard under the stairs at number 4 on this street",
+      "question": "What is Privet Drive?"
+    }
+  }
+}

@@ -1,0 +1,196 @@
+{
+  "title": "The Hunger Games: Welcome to Panem",
+  "description": "Thirty clues on The Hunger Games books and films: the districts, the tributes, the Capitol and the cast.",
+  "topic": "film-tv",
+  "featured": true,
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "THE DISTRICTS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Katniss and Peeta come from this coal-mining district",
+            "question": "What is District 12?"
+          },
+          {
+            "points": 400,
+            "answer": "The glittering city that rules all of Panem",
+            "question": "What is the Capitol?"
+          },
+          {
+            "points": 600,
+            "answer": "Finnick Odair's District 4 is known for this industry",
+            "question": "What is fishing?"
+          },
+          {
+            "points": 800,
+            "answer": "Cato and Clove, trained from childhood to win, come from this district",
+            "question": "What is District 2?"
+          },
+          {
+            "points": 1000,
+            "answer": "The Capitol claimed this district had been destroyed in the first rebellion",
+            "question": "What is District 13?"
+          }
+        ]
+      },
+      {
+        "name": "TRIBUTES & FRIENDS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Katniss volunteers as tribute to save this younger sister",
+            "question": "Who is Prim?"
+          },
+          {
+            "points": 400,
+            "answer": "Katniss's hunting partner back home in District 12",
+            "question": "Who is Gale?"
+          },
+          {
+            "points": 600,
+            "answer": "District 12's only living victor, he mentors Katniss and Peeta",
+            "question": "Who is Haymitch?"
+          },
+          {
+            "points": 800,
+            "answer": "The stylist who makes Katniss \"the girl on fire\"",
+            "question": "Who is Cinna?"
+          },
+          {
+            "points": 1000,
+            "answer": "The young District 11 tribute who becomes Katniss's ally",
+            "question": "Who is Rue?"
+          }
+        ]
+      },
+      {
+        "name": "THE BOOKS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "She wrote the trilogy",
+            "question": "Who is Suzanne Collins?"
+          },
+          {
+            "points": 400,
+            "answer": "The second book, set around the 75th Games",
+            "question": "What is Catching Fire?"
+          },
+          {
+            "points": 600,
+            "answer": "The third book, named for the symbol of the rebellion",
+            "question": "What is Mockingjay?"
+          },
+          {
+            "points": 800,
+            "answer": "The 2020 prequel about a young Coriolanus Snow",
+            "question": "What is The Ballad of Songbirds and Snakes?"
+          },
+          {
+            "points": 1000,
+            "answer": "The 2025 book about the Games Haymitch won",
+            "question": "What is Sunrise on the Reaping?"
+          }
+        ]
+      },
+      {
+        "name": "THE CAPITOL",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Panem's ruthless white-rose-loving president",
+            "question": "Who is President Snow?"
+          },
+          {
+            "points": 400,
+            "answer": "District 12's escort, who wishes that the odds be ever in your favor",
+            "question": "Who is Effie Trinket?"
+          },
+          {
+            "points": 600,
+            "answer": "The grinning talk-show host who interviews every tribute",
+            "question": "Who is Caesar Flickerman?"
+          },
+          {
+            "points": 800,
+            "answer": "The Head Gamemaker who pays the price after Katniss and Peeta both survive",
+            "question": "Who is Seneca Crane?"
+          },
+          {
+            "points": 1000,
+            "answer": "Every 25th Hunger Games is one of these special editions",
+            "question": "What is a Quarter Quell?"
+          }
+        ]
+      },
+      {
+        "name": "SURVIVAL",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Katniss's weapon of choice",
+            "question": "What is a bow and arrow?"
+          },
+          {
+            "points": 400,
+            "answer": "The bird on Katniss's pin, a cross of jabberjays and mockingbirds",
+            "question": "What is a mockingjay?"
+          },
+          {
+            "points": 600,
+            "answer": "The poisonous berries Katniss and Peeta threaten to eat together",
+            "question": "What is nightlock?"
+          },
+          {
+            "points": 800,
+            "answer": "Katniss drops a nest of these engineered wasps on the Careers",
+            "question": "What are tracker jackers?"
+          },
+          {
+            "points": 1000,
+            "answer": "Years before the Games, Peeta tossed Katniss burnt bread from his family's business, this kind of shop",
+            "question": "What is a bakery?"
+          }
+        ]
+      },
+      {
+        "name": "THE MOVIES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "She played Katniss Everdeen",
+            "question": "Who is Jennifer Lawrence?"
+          },
+          {
+            "points": 400,
+            "answer": "He played Peeta Mellark",
+            "question": "Who is Josh Hutcherson?"
+          },
+          {
+            "points": 600,
+            "answer": "He played Gale Hawthorne",
+            "question": "Who is Liam Hemsworth?"
+          },
+          {
+            "points": 800,
+            "answer": "He played Haymitch Abernathy",
+            "question": "Who is Woody Harrelson?"
+          },
+          {
+            "points": 1000,
+            "answer": "He played President Snow in the original films",
+            "question": "Who is Donald Sutherland?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "PANEM",
+      "answer": "The country's name comes from a Latin phrase meaning \"bread and\" these",
+      "question": "What are circuses?"
+    }
+  }
+}
