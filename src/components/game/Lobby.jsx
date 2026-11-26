@@ -1,11 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Plate, Roster, Btn, Ghost, Seg, Toggle, Rule, CodeCells, Clock } from '../studio/Studio';
 import { QUESTION_TIME_LIMITS } from '../../stores/settingsStore';
-import { ARCHIVE_DAYS, canPlayDate, shiftDate, toDateString } from '@shared/archiveWindow.js';
-
-const dayLabel = (date, today) => (date === today
-  ? 'Today'
-  : new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }));
+import { toDateString } from '@shared/archiveWindow.js';
+import DayPicker from './DayPicker';
 
 /**
  * The host's choice of board, when the room has none: a real episode, from a
@@ -14,10 +11,6 @@ const dayLabel = (date, today) => (date === today
  */
 function BoardPicker({ onPick, picking, error, isAuthenticated }) {
   const today = toDateString();
-  const days = useMemo(() => Array.from({ length: ARCHIVE_DAYS }, (_, i) => {
-    const date = shiftDate(today, -i);
-    return { date, open: canPlayDate({ date, format: 'board', today, isAuthenticated }) };
-  }), [today, isAuthenticated]);
   const [day, setDay] = useState(today);
   // Which of the two is dealing, so "Dealing" shows on the one pressed.
   const [asked, setAsked] = useState(null);
@@ -26,20 +19,8 @@ function BoardPicker({ onPick, picking, error, isAuthenticated }) {
   return (
     <div className="st-field lobby-board">
       <span className="st-field-label">Pick the board</span>
+      <DayPicker today={today} value={day} onChange={setDay} isAuthenticated={isAuthenticated} disabled={picking} />
       <div className="lobby-board-pick">
-        <select
-          className="lobby-day"
-          value={day}
-          onChange={(e) => setDay(e.target.value)}
-          aria-label="A day from the archive"
-          disabled={picking}
-        >
-          {days.map(({ date, open }) => (
-            <option key={date} value={date} disabled={!open}>
-              {dayLabel(date, today)}{open ? '' : ' (sign in)'}
-            </option>
-          ))}
-        </select>
         <Btn onClick={() => pick({ date: day })} disabled={picking}>
           {picking && asked === 'day' ? 'Dealing…' : 'Play this day'}
         </Btn>

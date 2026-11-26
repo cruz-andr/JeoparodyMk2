@@ -1044,25 +1044,75 @@
 
 .lobby-board-clear { margin-top: 8px; }
 
-/* The host's pick: a day from the archive beside its button, a random one under. */
+/* The host's pick: a day off the calendar and its button, a random one under. */
 .lobby-board-pick {
   display: flex;
   gap: 8px;
   margin-top: 8px;
 }
 
-select.lobby-day {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  padding: 9px 11px;
-  background: var(--recess);
-  border: 1px solid var(--hair-strong);
-  border-radius: 0;
-  font-family: var(--font-body);
-  font-size: 0.92rem;
+/* A month of the archive, the archive page's calendar at lobby size. */
+.day-picker { margin-top: 8px; max-width: 340px; }
+
+.day-picker-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.day-picker-month {
+  font-family: var(--font-board);
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 1px;
   color: var(--text-primary);
 }
+
+button.day-picker-step {
+  min-width: 36px;
+  min-height: 36px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--jeopardy-gold);
+}
+
+button.day-picker-step:disabled { opacity: 0.25; cursor: default; }
+
+.day-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.day-picker-head {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding-bottom: 2px;
+}
+
+button.day-picker-day {
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  background: var(--jeopardy-blue);
+  border: 1px solid transparent;
+  border-radius: 0;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+button.day-picker-day:not(:disabled):hover { border-color: rgba(214, 159, 76, 0.6); }
+button.day-picker-day.today { box-shadow: inset 0 0 0 1px rgba(242, 236, 224, 0.5); }
+button.day-picker-day.selected { background: var(--jeopardy-gold); color: var(--jeopardy-black); }
+button.day-picker-day:disabled { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); cursor: default; }
+.day-picker-day.empty { aspect-ratio: 1; }
 
 .lobby-board-random { margin: 8px 0; align-self: flex-start; }
 
