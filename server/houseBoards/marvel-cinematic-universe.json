@@ -1,0 +1,197 @@
+{
+  "title": "Marvel Cinematic Universe: Assemble",
+  "description": "Thirty clues on the Marvel movies: the Avengers, their villains, the Infinity Stones, and the actors behind the masks. Cover: Stan Lee at Comic-Con, photo by Gage Skidmore, CC BY-SA 3.0, via Wikimedia Commons.",
+  "topic": "film-tv",
+  "featured": true,
+  "cover": "marvel-cinematic-universe.jpg",
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "THE AVENGERS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Tony Stark's armored alter ego",
+            "question": "Who is Iron Man?"
+          },
+          {
+            "points": 400,
+            "answer": "Steve Rogers, frozen in ice for nearly 70 years",
+            "question": "Who is Captain America?"
+          },
+          {
+            "points": 600,
+            "answer": "Bruce Banner turns into him when he gets angry",
+            "question": "Who is the Hulk?"
+          },
+          {
+            "points": 800,
+            "answer": "Natasha Romanoff's codename",
+            "question": "Who is Black Widow?"
+          },
+          {
+            "points": 1000,
+            "answer": "Clint Barton's codename",
+            "question": "Who is Hawkeye?"
+          }
+        ]
+      },
+      {
+        "name": "VILLAINS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Thor's adopted brother, the god of mischief",
+            "question": "Who is Loki?"
+          },
+          {
+            "points": 400,
+            "answer": "He wipes out half of all life with a snap of his fingers",
+            "question": "Who is Thanos?"
+          },
+          {
+            "points": 600,
+            "answer": "He challenges T'Challa for the throne of Wakanda",
+            "question": "Who is Killmonger?"
+          },
+          {
+            "points": 800,
+            "answer": "Michael Keaton played this winged foe in Spider-Man: Homecoming",
+            "question": "Who is the Vulture?"
+          },
+          {
+            "points": 1000,
+            "answer": "Robert Redford played this senior S.H.I.E.L.D. official, secretly working for Hydra",
+            "question": "Who is Alexander Pierce?"
+          }
+        ]
+      },
+      {
+        "name": "INFINITY STONES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The Tesseract holds this stone",
+            "question": "What is the Space Stone?"
+          },
+          {
+            "points": 400,
+            "answer": "Doctor Strange keeps this stone in the Eye of Agamotto",
+            "question": "What is the Time Stone?"
+          },
+          {
+            "points": 600,
+            "answer": "Vision wears this stone on his forehead",
+            "question": "What is the Mind Stone?"
+          },
+          {
+            "points": 800,
+            "answer": "Thanos sacrifices Gamora on Vormir to get this stone",
+            "question": "What is the Soul Stone?"
+          },
+          {
+            "points": 1000,
+            "answer": "The Aether in Thor: The Dark World turns out to be this stone",
+            "question": "What is the Reality Stone?"
+          }
+        ]
+      },
+      {
+        "name": "PLACES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Thor's home realm",
+            "question": "What is Asgard?"
+          },
+          {
+            "points": 400,
+            "answer": "The hidden African nation built on vibranium",
+            "question": "What is Wakanda?"
+          },
+          {
+            "points": 600,
+            "answer": "The New York City borough Peter Parker calls home",
+            "question": "What is Queens?"
+          },
+          {
+            "points": 800,
+            "answer": "Doctor Strange's Sanctum Sanctorum is on Bleecker Street in this Manhattan neighborhood",
+            "question": "What is Greenwich Village?"
+          },
+          {
+            "points": 1000,
+            "answer": "Knowhere is built inside the severed head of one of these ancient cosmic beings",
+            "question": "What is a Celestial?"
+          }
+        ]
+      },
+      {
+        "name": "THE ACTORS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "He played Tony Stark for more than a decade",
+            "question": "Who is Robert Downey Jr.?"
+          },
+          {
+            "points": 400,
+            "answer": "He played Nick Fury, the man with the eyepatch",
+            "question": "Who is Samuel L. Jackson?"
+          },
+          {
+            "points": 600,
+            "answer": "He played T'Challa in Black Panther",
+            "question": "Who is Chadwick Boseman?"
+          },
+          {
+            "points": 800,
+            "answer": "She played Wanda Maximoff",
+            "question": "Who is Elizabeth Olsen?"
+          },
+          {
+            "points": 1000,
+            "answer": "He played Thanos through motion capture",
+            "question": "Who is Josh Brolin?"
+          }
+        ]
+      },
+      {
+        "name": "BY THE NUMBERS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The MCU began with this 2008 film",
+            "question": "What is Iron Man?"
+          },
+          {
+            "points": 400,
+            "answer": "The year The Avengers first assembled on screen",
+            "question": "What is 2012?"
+          },
+          {
+            "points": 600,
+            "answer": "Captain America: The First Avenger is mostly set during this war",
+            "question": "What is World War II?"
+          },
+          {
+            "points": 800,
+            "answer": "In 2019 Avengers: Endgame passed this film to become the highest-grossing ever, for a while",
+            "question": "What is Avatar?"
+          },
+          {
+            "points": 1000,
+            "answer": "Stan Lee, who cameoed in nearly every MCU film, died in this year",
+            "question": "What is 2018?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "COMIC BOOK COVERS",
+      "answer": "On the cover of his very first comic, in 1941, Captain America is shown punching this man",
+      "question": "Who is Adolf Hitler?"
+    }
+  }
+}

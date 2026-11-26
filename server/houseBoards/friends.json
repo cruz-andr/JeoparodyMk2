@@ -1,0 +1,197 @@
+{
+  "title": "Friends: The One with the Trivia",
+  "description": "Thirty clues on Friends: the six friends, the cast, catchphrases, places, pets and props, and the episodes you know by heart. Cover: the Central Perk couch from the show's set, by Stuart1000, public domain, via Wikimedia Commons.",
+  "topic": "film-tv",
+  "featured": true,
+  "cover": "friends.jpg",
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "THE SIX",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The paleontologist of the group",
+            "question": "Who is Ross?"
+          },
+          {
+            "points": 400,
+            "answer": "The chef, and Ross's little sister",
+            "question": "Who is Monica?"
+          },
+          {
+            "points": 600,
+            "answer": "She sings \"Smelly Cat\"",
+            "question": "Who is Phoebe?"
+          },
+          {
+            "points": 800,
+            "answer": "He plays Dr. Drake Ramoray on Days of Our Lives",
+            "question": "Who is Joey?"
+          },
+          {
+            "points": 1000,
+            "answer": "Chandler Bing's embarrassing middle name",
+            "question": "What is Muriel?"
+          }
+        ]
+      },
+      {
+        "name": "THE CAST",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "She played Rachel Green",
+            "question": "Who is Jennifer Aniston?"
+          },
+          {
+            "points": 400,
+            "answer": "He played Chandler Bing",
+            "question": "Who is Matthew Perry?"
+          },
+          {
+            "points": 600,
+            "answer": "She played Monica Geller",
+            "question": "Who is Courteney Cox?"
+          },
+          {
+            "points": 800,
+            "answer": "She played Phoebe Buffay",
+            "question": "Who is Lisa Kudrow?"
+          },
+          {
+            "points": 1000,
+            "answer": "He played Ross Geller",
+            "question": "Who is David Schwimmer?"
+          }
+        ]
+      },
+      {
+        "name": "CATCHPHRASES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Joey's pickup line: \"How you\" this?",
+            "question": "What is doin'?"
+          },
+          {
+            "points": 400,
+            "answer": "Ross yells it, again and again, while carrying a couch up the stairs",
+            "question": "What is pivot?"
+          },
+          {
+            "points": 600,
+            "answer": "Ross's defense: \"We were on a\" this!",
+            "question": "What is a break?"
+          },
+          {
+            "points": 800,
+            "answer": "Janice's three-word nasal catchphrase",
+            "question": "What is \"Oh. My. God.\"?"
+          },
+          {
+            "points": 1000,
+            "answer": "\"Joey doesn't share\" this!",
+            "question": "What is food?"
+          }
+        ]
+      },
+      {
+        "name": "PLACES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "The gang's favorite coffee house",
+            "question": "What is Central Perk?"
+          },
+          {
+            "points": 400,
+            "answer": "The city where the show is set",
+            "question": "What is New York?"
+          },
+          {
+            "points": 600,
+            "answer": "Ross marries Emily, and says the wrong name, in this city",
+            "question": "What is London?"
+          },
+          {
+            "points": 800,
+            "answer": "Ross and Rachel get drunk and married in this city",
+            "question": "What is Las Vegas?"
+          },
+          {
+            "points": 1000,
+            "answer": "Rachel works as a buyer at this New York department store before moving to Ralph Lauren",
+            "question": "What is Bloomingdale's?"
+          }
+        ]
+      },
+      {
+        "name": "PETS & PROPS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Chandler and Joey keep a duck and one of these",
+            "question": "What is a chick?"
+          },
+          {
+            "points": 400,
+            "answer": "Ross's pet capuchin monkey",
+            "question": "Who is Marcel?"
+          },
+          {
+            "points": 600,
+            "answer": "Rachel buys a hairless cat of this breed",
+            "question": "What is a Sphynx?"
+          },
+          {
+            "points": 800,
+            "answer": "Joey's beloved stuffed penguin",
+            "question": "Who is Hugsy?"
+          },
+          {
+            "points": 1000,
+            "answer": "The name Joey gives his giant white ceramic dog",
+            "question": "What is Pat?"
+          }
+        ]
+      },
+      {
+        "name": "THE ONE WITH...",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "In a Thanksgiving flashback, Joey gets his head stuck in one of these birds",
+            "question": "What is a turkey?"
+          },
+          {
+            "points": 400,
+            "answer": "Unable to find a Santa suit, Ross teaches Ben about Hanukkah dressed as this animal",
+            "question": "What is an armadillo?"
+          },
+          {
+            "points": 600,
+            "answer": "Phoebe carries triplets for this younger half-brother",
+            "question": "Who is Frank Jr.?"
+          },
+          {
+            "points": 800,
+            "answer": "Rachel hires this assistant mostly because he is cute",
+            "question": "Who is Tag?"
+          },
+          {
+            "points": 1000,
+            "answer": "Ross shows up to a date with glowing teeth after overdoing this",
+            "question": "What is teeth whitening?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "THE FINALE",
+      "answer": "In the last episode, Rachel gets off a plane that was taking her to a new job in this city",
+      "question": "What is Paris?"
+    }
+  }
+}

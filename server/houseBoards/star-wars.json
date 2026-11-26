@@ -1,0 +1,197 @@
+{
+  "title": "Star Wars: A Galaxy Far, Far Away",
+  "description": "Thirty clues on Star Wars: Jedi and Sith, planets, droids and ships, famous lines, and the people who made it. Cover: the Millennium Falcon at Galaxy's Edge, photo by U+1F360, CC BY-SA 4.0, via Wikimedia Commons.",
+  "topic": "film-tv",
+  "featured": true,
+  "cover": "star-wars.jpg",
+  "board": {
+    "version": 1,
+    "categories": [
+      {
+        "name": "JEDI & SITH",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Luke's father, who became Darth Vader",
+            "question": "Who is Anakin Skywalker?"
+          },
+          {
+            "points": 400,
+            "answer": "Small, green and wise, he says \"Do or do not. There is no try\"",
+            "question": "Who is Yoda?"
+          },
+          {
+            "points": 600,
+            "answer": "Alec Guinness played this Jedi, who trained both Anakin and Luke",
+            "question": "Who is Obi-Wan Kenobi?"
+          },
+          {
+            "points": 800,
+            "answer": "Emperor Palpatine's Sith name",
+            "question": "Who is Darth Sidious?"
+          },
+          {
+            "points": 1000,
+            "answer": "This horned Sith with a double-bladed lightsaber fights in The Phantom Menace",
+            "question": "Who is Darth Maul?"
+          }
+        ]
+      },
+      {
+        "name": "PLANETS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Luke grew up on this desert planet with two suns",
+            "question": "What is Tatooine?"
+          },
+          {
+            "points": 400,
+            "answer": "The icy planet hiding the rebel base in The Empire Strikes Back",
+            "question": "What is Hoth?"
+          },
+          {
+            "points": 600,
+            "answer": "The Ewoks live on the forest moon of this planet",
+            "question": "What is Endor?"
+          },
+          {
+            "points": 800,
+            "answer": "Princess Leia's home planet, destroyed by the Death Star",
+            "question": "What is Alderaan?"
+          },
+          {
+            "points": 1000,
+            "answer": "The swampy planet where Yoda trains Luke",
+            "question": "What is Dagobah?"
+          }
+        ]
+      },
+      {
+        "name": "DROIDS & SHIPS",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Han Solo's ship, which made the Kessel Run in less than 12 parsecs",
+            "question": "What is the Millennium Falcon?"
+          },
+          {
+            "points": 400,
+            "answer": "This beeping astromech carries Leia's plea for help",
+            "question": "Who is R2-D2?"
+          },
+          {
+            "points": 600,
+            "answer": "The golden protocol droid fluent in over six million forms of communication",
+            "question": "Who is C-3PO?"
+          },
+          {
+            "points": 800,
+            "answer": "The round orange-and-white droid that rolls into The Force Awakens",
+            "question": "Who is BB-8?"
+          },
+          {
+            "points": 1000,
+            "answer": "Bounty hunter Boba Fett's ship",
+            "question": "What is Slave I?"
+          }
+        ]
+      },
+      {
+        "name": "FAMOUS LINES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "\"No, I am your\" this",
+            "question": "What is father?"
+          },
+          {
+            "points": 400,
+            "answer": "Admiral Ackbar's warning: \"It's a\" this!",
+            "question": "What is a trap?"
+          },
+          {
+            "points": 600,
+            "answer": "Han's two-word reply when Leia says \"I love you\"",
+            "question": "What is \"I know\"?"
+          },
+          {
+            "points": 800,
+            "answer": "\"Help me, Obi-Wan Kenobi. You're my only\" this",
+            "question": "What is hope?"
+          },
+          {
+            "points": 1000,
+            "answer": "\"These aren't the\" these \"you're looking for\"",
+            "question": "What are droids?"
+          }
+        ]
+      },
+      {
+        "name": "THE CAST",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "Harrison Ford played this smuggler",
+            "question": "Who is Han Solo?"
+          },
+          {
+            "points": 400,
+            "answer": "He played Luke Skywalker",
+            "question": "Who is Mark Hamill?"
+          },
+          {
+            "points": 600,
+            "answer": "His deep voice gave Darth Vader his menace",
+            "question": "Who is James Earl Jones?"
+          },
+          {
+            "points": 800,
+            "answer": "She played Rey in the sequel trilogy",
+            "question": "Who is Daisy Ridley?"
+          },
+          {
+            "points": 1000,
+            "answer": "He played Kylo Ren",
+            "question": "Who is Adam Driver?"
+          }
+        ]
+      },
+      {
+        "name": "BEHIND THE SCENES",
+        "questions": [
+          {
+            "points": 200,
+            "answer": "He created Star Wars",
+            "question": "Who is George Lucas?"
+          },
+          {
+            "points": 400,
+            "answer": "The year the first film came out",
+            "question": "What is 1977?"
+          },
+          {
+            "points": 600,
+            "answer": "He composed the famous score",
+            "question": "Who is John Williams?"
+          },
+          {
+            "points": 800,
+            "answer": "This company bought Lucasfilm in 2012",
+            "question": "What is Disney?"
+          },
+          {
+            "points": 1000,
+            "answer": "The first film was later given this subtitle, after \"Episode IV\"",
+            "question": "What is A New Hope?"
+          }
+        ]
+      }
+    ],
+    "finalJeopardy": {
+      "category": "SPECIES",
+      "answer": "Chewbacca is one of these tall, furry natives of the planet Kashyyyk",
+      "question": "What is a Wookiee?"
+    }
+  }
+}
