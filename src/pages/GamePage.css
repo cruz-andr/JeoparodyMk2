@@ -1114,7 +1114,32 @@ button.day-picker-day.selected { background: var(--jeopardy-gold); color: var(--
 button.day-picker-day:disabled { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); cursor: default; }
 .day-picker-day.empty { aspect-ratio: 1; }
 
-.lobby-board-random { margin: 8px 0; align-self: flex-start; }
+/* A random episode: a die beside Play this day, the same height as it. */
+button.lobby-board-random {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(242, 236, 224, 0.3);
+  color: var(--jeopardy-gold);
+}
+
+button.lobby-board-random:not(:disabled):hover { box-shadow: inset 0 0 0 1px var(--jeopardy-gold); }
+button.lobby-board-random:disabled { opacity: 0.4; cursor: default; }
+/* Dealing one: the die turns while the episode is fetched. */
+button.lobby-board-random.rolling { opacity: 1; }
+button.lobby-board-random.rolling svg { animation: lobby-die-roll 0.8s linear infinite; }
+
+@keyframes lobby-die-roll { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  button.lobby-board-random.rolling svg { animation: none; }
+}
 
 .lobby-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
 

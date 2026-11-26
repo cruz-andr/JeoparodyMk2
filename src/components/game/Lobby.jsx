@@ -9,6 +9,19 @@ import DayPicker from './DayPicker';
  * day in the archive (its first round is that day's Board) or at random. A
  * community board comes from its own page, by "Play with friends".
  */
+/* A die, drawn: five pips. Drawn rather than the character, which a phone
+   renders as an emoji. */
+function Die() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+      <rect x="3" y="3" width="18" height="18" rx="3.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      {[[8, 8], [16, 8], [12, 12], [8, 16], [16, 16]].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.6" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
+
 function BoardPicker({ onPick, picking, error, isAuthenticated }) {
   const today = toDateString();
   const [day, setDay] = useState(today);
@@ -24,10 +37,17 @@ function BoardPicker({ onPick, picking, error, isAuthenticated }) {
         <Btn onClick={() => pick({ date: day })} disabled={picking}>
           {picking && asked === 'day' ? 'Dealing…' : 'Play this day'}
         </Btn>
+        <button
+          type="button"
+          className={`lobby-board-random${picking && asked === 'random' ? ' rolling' : ''}`}
+          onClick={() => pick('random')}
+          disabled={picking}
+          aria-label="A random episode"
+          title="A random episode"
+        >
+          <Die />
+        </button>
       </div>
-      <Ghost onClick={() => !picking && pick('random')} className="lobby-board-random">
-        {picking && asked === 'random' ? 'Dealing…' : 'A random episode'}
-      </Ghost>
       {error && <p className="st-error">{error}</p>}
     </div>
   );
