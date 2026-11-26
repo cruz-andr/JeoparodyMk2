@@ -1804,10 +1804,10 @@ export default function GamePage() {
                 <ClueScreen clue={currentQuestion} text={currentQuestion.answer} />
 
                 {/* The same clock the server runs: reading, then typing, and
-                    a fresh go after a close spelling. In the card's flow, under
-                    the clue, rather than pinned to a corner over the header. */}
+                    a fresh go after a close spelling. Top right, where every
+                    clue's clock is; the header above keeps clear of it. */}
                 {settings?.answerTimeLimit && (
-                  <div className="dd-clock">
+                  <div className="question-timer answer-timer">
                     <Timer
                       key={`dd-${ddTimerKey}`}
                       duration={ddClockMs

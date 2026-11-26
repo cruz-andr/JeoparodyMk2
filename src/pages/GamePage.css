@@ -416,13 +416,15 @@
 }
 
 /* A Daily Double's card, top to bottom: the badge, whose wager and how
-   much, the category, then the clue and its clock. Stacked in the card's
-   flow so nothing is pinned over anything else. */
+   much, the category, then the clue. The clock is in the top right corner,
+   as on every clue. */
 .dd-top {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  /* Clear of the clock in the top right corner, on both sides so it stays centred. */
+  padding: 0 64px;
 }
 
 .dd-top .daily-double-badge { margin-bottom: 0; }
@@ -450,11 +452,6 @@
   vertical-align: middle;
 }
 
-.dd-clock {
-  display: flex;
-  justify-content: center;
-  margin: 18px 0;
-}
 
 /* Round End Phase */
 .round-end-phase {
