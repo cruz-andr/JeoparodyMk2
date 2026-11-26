@@ -54,6 +54,18 @@ The Gemini key is read by the server only (see `server/.env.example`). It is
 never sent to the browser, so AI generation needs the backend running and an
 account signed in.
 
+Optional, for the production build (set them in Vercel):
+
+```env
+VITE_ADSENSE_CLIENT=ca-pub-...   # Google AdSense publisher id; also writes ads.txt and the verification tag
+VITE_ADSENSE_SLOT=...            # a responsive display unit; without it no ad is drawn
+VITE_ENABLE_HOST_MODE=false      # beta features, on under `npm run dev` (src/config/features.js)
+VITE_ENABLE_AI_BOARDS=false
+```
+
+Ads appear only between games (menu, results, Community Boards), never on a
+clue. Without `VITE_ADSENSE_CLIENT` there are no ads and no Google script.
+
 ### 3. Start the Application
 
 Every mode that asks the AI for a board, single player included, goes through
@@ -146,13 +158,13 @@ Frontend runs on http://localhost:5000
 
 ## Audio Files
 
-To add sound effects, place MP3 files in `public/audio/`:
-- `theme.mp3` - Background music
-- `daily-double.mp3` - Daily Double reveal
-- `correct.mp3` - Correct answer
-- `wrong.mp3` - Wrong answer
-- `timer-tick.mp3` - Timer countdown
-- `final-jeopardy.mp3` - Final Jeopardy theme
+Four short effects in `public/audio/`, all public domain (CC0):
+- `buzz.mp3` - ringing in ("UI Toast Notification" by Qvantor, Freesound #878254)
+- `correct.mp3` - a correct answer (Kenney Interface Sounds, `confirmation_001`)
+- `wrong.mp3` - a wrong answer (Kenney Interface Sounds, `error_008`)
+- `timeup.mp3` - a clock running out (Kenney Interface Sounds, `error_007`)
+
+There is no music: the show's theme and "Think!" are not ours to play.
 
 ## License
 
