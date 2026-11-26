@@ -28,6 +28,7 @@ import MultipleChoiceSelector from '../components/player/MultipleChoiceSelector'
 import { mockBoard, isTestModeEnabled } from '../data/mockQuestions';
 import { resumeView } from '../utils/resumeGame';
 import Lobby from '../components/game/Lobby';
+import { AI_BOARDS } from '../config/features';
 import '../components/studio/studio.css';
 import './GamePage.css';
 import '../components/common/SignatureCanvas.css';
@@ -54,7 +55,11 @@ export default function GamePage() {
   const sessionId = useUserStore((s) => s.sessionId);
   const updateStats = useUserStore((s) => s.updateStats);
   const addHighscore = useUserStore((s) => s.addHighscore);
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated);
   const currentPlayerId = sessionId || socketClient.getSocketId();
+  // The host dealing the room an episode, and what went wrong if it did.
+  const [pickingBoard, setPickingBoard] = useState(false);
+  const [boardError, setBoardError] = useState(null);
 
   // Held in a ref so toggling sound does not tear down and rebuild every
   // socket subscription in the effect below.
@@ -882,10 +887,12 @@ export default function GamePage() {
         // Check if we should go to round 2
         /* A community board is the one round its author wrote, and its own
            Final or none: no Double Jeopardy, and no stock clue in its name. */
-        if (currentRound === 1 && settings?.enableDoubleJeopardy && isHost && !roomBoard) {
+        /* An episode has its own Double Jeopardy round, which the server deals. */
+        const oneRound = Boolean(roomBoard) && !(roomBoard.rounds > 1);
+        if (currentRound === 1 && settings?.enableDoubleJeopardy && isHost && !oneRound) {
           // Host triggers round 2
           socketClient.emit('game:round-end', { roomCode, round: 1 });
-        } else if (currentRound === 2 || !settings?.enableDoubleJeopardy || roomBoard) {
+        } else if (currentRound === 2 || !settings?.enableDoubleJeopardy || oneRound) {
           // Game over - check for Final Jeopardy
           if (settings?.enableFinalJeopardy && isHost && (!roomBoard || roomBoard.hasFinal)) {
             socketClient.emit('game:start-final-jeopardy', {
@@ -972,6 +979,17 @@ export default function GamePage() {
   // Host deals the community board the room was lent. The server has it.
   const handleStartBoard = () => {
     socketClient.emit('game:start-board', { roomCode });
+  };
+
+  // Host deals the room a real episode: a day from the archive, or a random one.
+  const handlePickEpisode = (episode) => {
+    if (pickingBoard) return;
+    setPickingBoard(true);
+    setBoardError(null);
+    socketClient.setRoomEpisode(roomCode, episode)
+      .then(({ board }) => useRoomStore.getState().setBoard(board))
+      .catch((err) => setBoardError(err.message || 'Could not deal that episode.'))
+      .finally(() => setPickingBoard(false));
   };
 
   // Host puts the room back to questions written for it.
@@ -1127,6 +1145,16 @@ export default function GamePage() {
 
   // Host starts Double Jeopardy (Round 2)
   const handleStartRound2 = async () => {
+    /* An episode's second round is on the server already; it deals it. */
+    if (roomBoard) {
+      const playerIds = players.map((p) => p.id);
+      socketClient.emit('game:start-round-2', {
+        roomCode,
+        firstPickerId: playerIds[Math.floor(Math.random() * playerIds.length)],
+      });
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -1523,6 +1551,13 @@ export default function GamePage() {
           onSettingsChange={handleSettingsChange}
           board={roomBoard}
           onClearBoard={isHost ? handleClearBoard : null}
+          clearBoardLabel={AI_BOARDS ? undefined : 'Pick a different board'}
+          /* A private room picks a real episode; with AI boards on it may
+             still write its own questions instead. */
+          onPickEpisode={isHostMode ? null : handlePickEpisode}
+          pickingBoard={pickingBoard}
+          boardError={boardError}
+          isAuthenticated={isAuthenticated}
           onStart={isHostMode && questionsReady ? handleStartHostGame : roomBoard ? handleStartBoard : handleStartSetup}
           onToggleReady={handleToggleReady}
           onKick={isHost ? handleKickPlayer : null}
@@ -1530,11 +1565,13 @@ export default function GamePage() {
           isHostMode={isHostMode}
           startLabel={isHostMode
             ? (questionsReady ? 'Start the game' : 'Set up the game')
-            : roomBoard ? 'Start the game' : 'Set up the game'}
-          canStart={isHostMode ? isHost : allPlayersReady}
-          waitingFor={players.length < 2
-            ? 'Needs one more player'
-            : 'Waiting for everyone to say they are ready'}
+            : roomBoard ? 'Start the game' : AI_BOARDS ? 'Set up the game' : 'Start the game'}
+          canStart={isHostMode ? isHost : allPlayersReady && (Boolean(roomBoard) || AI_BOARDS)}
+          waitingFor={!isHostMode && !roomBoard && !AI_BOARDS
+            ? 'Pick a board to play'
+            : players.length < 2
+              ? 'Needs one more player'
+              : 'Waiting for everyone to say they are ready'}
         />
       )}
 

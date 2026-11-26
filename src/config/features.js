@@ -15,3 +15,10 @@ function flag(value) {
    tile and a community board's "Host it in a room" button. The server side
    stays as it is; nothing can reach it without the pages. */
 export const HOST_MODE = flag(import.meta.env.VITE_ENABLE_HOST_MODE);
+
+/* Boards written by a model (Gemini): the Single Player tile and its genre
+   setup, and a private room's "write questions for the room". Off, a room
+   plays a real episode or a community board, and solo play is the dailies,
+   their archive and a community board's "Play it solo", none of which need a
+   model. */
+export const AI_BOARDS = flag(import.meta.env.VITE_ENABLE_AI_BOARDS);

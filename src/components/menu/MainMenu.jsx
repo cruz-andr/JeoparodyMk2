@@ -6,7 +6,7 @@ import { getOrFetchDailyChallenge } from '../../services/api/jeopardyService';
 import { currentWeekBest, liveStreak, toDateString } from '../../stores/dailyLogic';
 import './MainMenu.css';
 import AppTabBar from '../common/AppTabBar';
-import { HOST_MODE } from '../../config/features';
+import { AI_BOARDS, HOST_MODE } from '../../config/features';
 import ArchiveRow from './ArchiveRow';
 
 /**
@@ -21,11 +21,12 @@ const CODE_ALPHABET = /[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g;
 const CATEGORIES = [
   { id: 'sixer', label: 'The Sixer', path: '/daily', daily: true },
   { id: 'multiplayer', label: 'Multi­player', path: '/multiplayer' },
-  { id: 'host', label: 'Host\nA Game', path: '/host', beta: true },
-  { id: 'single', label: 'Single\nPlayer', path: '/singleplayer' },
+  { id: 'host', label: 'Host\nA Game', path: '/host', shown: HOST_MODE },
+  // Single player's own boards are written by a model; see config/features.js.
+  { id: 'single', label: 'Single\nPlayer', path: '/singleplayer', shown: AI_BOARDS },
   { id: 'quickplay', label: 'Quickplay', path: '/quickplay' },
   { id: 'community', label: 'Community\nBoards', path: '/boards' },
-].filter((cat) => !cat.beta || HOST_MODE);
+].filter((cat) => cat.shown !== false);
 
 /* There is no Join A Room tile. The code field further down the page already
    goes straight to /join/CODE, so the tile was a second door to the same room

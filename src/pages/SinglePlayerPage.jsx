@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { AI_BOARDS } from '../config/features';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, useUserStore, useSettingsStore } from '../stores';
 import { useAudio } from '../hooks';
@@ -437,6 +438,11 @@ export default function SinglePlayerPage() {
      game itself keeps its own header below: a scoreboard has no business on a
      screen that has no score yet. */
   if (phase === 'setup' || phase === 'categoryEdit') {
+    /* Setup is where a model writes the board. Without that (see
+       config/features.js), playing alone is the dailies and their archive;
+       a community board handed over to "Play it solo" skips setup and still
+       plays here. */
+    if (!AI_BOARDS && !location.state?.board) return <Navigate to="/archive" replace />;
     /* Deliberately not .single-player-page: that class belongs to the game
        below it and paints a black ground over the studio's navy. */
     return (

@@ -8,6 +8,7 @@ import Studio, { Live, Btn, Tabs, CodeCells } from '../components/studio/Studio'
 import HouseRules from '../components/studio/HouseRules';
 import SignatureCanvas from '../components/common/SignatureCanvas';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { AI_BOARDS } from '../config/features';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import '../components/common/SignatureCanvas.css';
 import './MultiplayerPage.css';
@@ -168,7 +169,7 @@ export default function MultiplayerPage() {
               </p>
             ) : (
               <p className="st-note">
-                You open the room, read the code to the others, and pick the topic once
+                You open the room, read the code to the others, and pick {AI_BOARDS ? 'the topic' : 'a real episode to play'} once
                 everyone is in. Up to six can play.
               </p>
             )}

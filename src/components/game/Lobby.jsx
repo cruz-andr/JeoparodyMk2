@@ -1,5 +1,57 @@
+import { useState } from 'react';
 import { Plate, Roster, Btn, Ghost, Seg, Toggle, Rule, CodeCells, Clock } from '../studio/Studio';
 import { QUESTION_TIME_LIMITS } from '../../stores/settingsStore';
+import { toDateString } from '@shared/archiveWindow.js';
+import DayPicker from './DayPicker';
+
+/**
+ * The host's choice of board, when the room has none: a real episode, from a
+ * day in the archive (its first round is that day's Board) or at random. A
+ * community board comes from its own page, by "Play with friends".
+ */
+/* A die, drawn: five pips. Drawn rather than the character, which a phone
+   renders as an emoji. */
+function Die() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+      <rect x="3" y="3" width="18" height="18" rx="3.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      {[[8, 8], [16, 8], [12, 12], [8, 16], [16, 16]].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.6" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
+
+function BoardPicker({ onPick, picking, error, isAuthenticated }) {
+  const today = toDateString();
+  const [day, setDay] = useState(today);
+  // Which of the two is dealing, so "Dealing" shows on the one pressed.
+  const [asked, setAsked] = useState(null);
+  const pick = (episode) => { setAsked(episode === 'random' ? 'random' : 'day'); onPick(episode); };
+
+  return (
+    <div className="st-field lobby-board">
+      <span className="st-field-label">Pick the board</span>
+      <DayPicker today={today} value={day} onChange={setDay} isAuthenticated={isAuthenticated} disabled={picking} />
+      <div className="lobby-board-pick">
+        <Btn onClick={() => pick({ date: day })} disabled={picking}>
+          {picking && asked === 'day' ? 'Dealing…' : 'Play this day'}
+        </Btn>
+        <button
+          type="button"
+          className={`lobby-board-random${picking && asked === 'random' ? ' rolling' : ''}`}
+          onClick={() => pick('random')}
+          disabled={picking}
+          aria-label="A random episode"
+          title="A random episode"
+        >
+          <Die />
+        </button>
+      </div>
+      {error && <p className="st-error">{error}</p>}
+    </div>
+  );
+}
 
 /**
  * The room before the game: the code, and who is in it.
@@ -31,10 +83,19 @@ export default function Lobby({
   canStart,
   waitingFor,
   isHostMode = false,
-  // A community board lent to the room, and the host's way to take it back.
+  // The room's board, a community board or an episode, and the host's way to take it back.
   board = null,
   onClearBoard = null,
+  clearBoardLabel = 'Write questions for the room instead',
+  /* The host's way to choose an episode when there is no board yet, and how
+     that is going. Absent, the room writes its own questions. */
+  onPickEpisode = null,
+  pickingBoard = false,
+  boardError = null,
+  isAuthenticated = false,
 }) {
+  // An episode is two rounds; a community board is the one its author wrote.
+  const twoRounds = !board || board.rounds > 1;
   const quickplay = roomType === 'quickplay';
   const seats = quickplay ? 3 : Math.max(players.length, 2);
 
@@ -74,10 +135,16 @@ export default function Lobby({
                 <span className="st-hint">{board.categories.join(' \u00b7 ')}</span>
                 {onClearBoard && (
                   <button type="button" className="plain-btn quiet-action lobby-board-clear" onClick={onClearBoard}>
-                    Write questions for the room instead
+                    {clearBoardLabel}
                   </button>
                 )}
               </div>
+            )}
+            {!board && isHost && onPickEpisode && (
+              <BoardPicker onPick={onPickEpisode} picking={pickingBoard} error={boardError} isAuthenticated={isAuthenticated} />
+            )}
+            {!board && !isHost && onPickEpisode && (
+              <p className="st-note">The host is picking the board.</p>
             )}
             {canEditSettings ? (
               <div className="st-rules">
@@ -89,9 +156,10 @@ export default function Lobby({
                     options={QUESTION_TIME_LIMITS.map((o) => ({ value: o.value, label: o.value ? `${o.value / 1000}s` : 'Off' }))}
                   />
                 </Rule>
-                {/* A board is the one round its author wrote, and its own
-                    Final or none, so neither is the room's to add. */}
-                {!board && (
+                {/* A community board is the one round its author wrote, and
+                    its own Final or none, so neither is the room's to add.
+                    An episode has a second round, which the room may skip. */}
+                {twoRounds && (
                   <Rule name="Double Jeopardy" what="A second board at twice the money">
                     <Toggle
                       ariaLabel="Double Jeopardy"
@@ -101,7 +169,7 @@ export default function Lobby({
                   </Rule>
                 )}
                 {(!board || board.hasFinal) && (
-                  <Rule name="Final Jeopardy" what={board ? "The board's own last clue" : 'Wager it all on one last clue'}>
+                  <Rule name="Final Jeopardy" what={board?.kind === 'community' ? "The board's own last clue" : 'Wager it all on one last clue'}>
                     <Toggle
                       ariaLabel="Final Jeopardy"
                       on={Boolean(settings?.enableFinalJeopardy)}
@@ -112,7 +180,7 @@ export default function Lobby({
               </div>
             ) : (
               <p className="st-note">
-                The host sets the rules. {settings?.enableDoubleJeopardy && !board ? 'Two rounds' : 'One round'}
+                The host sets the rules. {settings?.enableDoubleJeopardy && twoRounds ? 'Two rounds' : 'One round'}
                 {settings?.enableFinalJeopardy && (!board || board.hasFinal) ? ', Final Jeopardy' : ''}
                 {settings?.questionTimeLimit ? `, ${settings.questionTimeLimit / 1000} second clock` : ', no clock'}.
               </p>

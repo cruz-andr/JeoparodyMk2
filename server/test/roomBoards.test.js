@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 
-import { findPlayableBoard, roomGrid, boardSummary, countRoomPlay } from '../services/roomBoards.js';
+import { findPlayableBoard, roomGrid, boardSummary, countRoomPlay, episodeRoomBoard, roomRound } from '../services/roomBoards.js';
 
 let passed = 0;
 const failures = [];
@@ -83,10 +83,23 @@ await test('the grid carries every clue, its category and its media', () => {
 
 await test('the lobby is told what is being played, and whether it has a Final', () => {
   assert.deepEqual(boardSummary(findPlayableBoard(db, 'public6')), {
-    slug: 'public6', title: 'Title public6',
-    categories: ['CAT 0', 'CAT 1', 'CAT 2', 'CAT 3', 'CAT 4', 'CAT 5'], hasFinal: true,
+    slug: 'public6', kind: 'community', title: 'Title public6',
+    categories: ['CAT 0', 'CAT 1', 'CAT 2', 'CAT 3', 'CAT 4', 'CAT 5'], rounds: 1, hasFinal: true,
   });
   assert.equal(boardSummary(null), null);
+});
+
+await test('an episode is two rounds and its Final, and its first round is what the lobby sees', () => {
+  const grid = (tag) => Array.from({ length: 6 }, (_, c) => [{ category: `${tag} ${c}`, points: 200, answer: 'a', question: 'q' }]);
+  const round = (tag) => ({ categories: grid(tag).map((col) => col[0].category), questions: grid(tag) });
+  const found = episodeRoomBoard({ round1: round('J'), round2: round('DJ'), final: { category: 'F', answer: 'c', question: 'r' } }, { title: 'An episode' });
+  assert.deepEqual(boardSummary(found), {
+    slug: null, kind: 'episode', title: 'An episode',
+    categories: ['J 0', 'J 1', 'J 2', 'J 3', 'J 4', 'J 5'], rounds: 2, hasFinal: true,
+  });
+  assert.equal(roomRound(found, 1).categories[0], 'DJ 0');
+  assert.equal(roomRound(found, 2), null);
+  assert.equal(roomRound(findPlayableBoard(db, 'public6'), 1), null, 'a community board is one round');
 });
 
 await test('a room playing it counts once', () => {
