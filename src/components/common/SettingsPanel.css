@@ -81,13 +81,6 @@
   margin: 0 0 var(--spacing-md) 0;
 }
 
-/* Presets Grid */
-.presets-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-sm);
-}
-
 .preset-btn {
   display: flex;
   flex-direction: column;
@@ -281,10 +274,6 @@
 
 /* Responsive */
 @media (max-width: 500px) {
-  .presets-grid {
-    grid-template-columns: 1fr;
-  }
-
   .radio-group {
     flex-direction: column;
   }
@@ -292,28 +281,6 @@
   .radio-label {
     width: 100%;
   }
-}
-
-/* Search, so a setting can be found by name rather than by hunting three
-   different screens for it. */
-.settings-search {
-  padding: 0 24px 4px;
-}
-
-.settings-search input {
-  width: 100%;
-  padding: 11px 14px;
-  font-size: 1rem;
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-md);
-}
-
-.settings-search input:focus {
-  outline: none;
-  border-color: var(--jeopardy-gold);
-  background: rgba(255, 255, 255, 0.13);
 }
 
 .setting-row + .setting-row {
@@ -324,11 +291,5 @@
   margin: 2px 0 10px;
   font-size: 0.82rem;
   line-height: 1.45;
-  color: var(--text-muted);
-}
-
-
-.settings-empty {
-  padding: 8px 24px 24px;
   color: var(--text-muted);
 }
