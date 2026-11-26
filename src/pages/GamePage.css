@@ -415,6 +415,47 @@
   margin-bottom: var(--spacing-md);
 }
 
+/* A Daily Double's card, top to bottom: the badge, whose wager and how
+   much, the category, then the clue. The clock is in the top right corner,
+   as on every clue. */
+.dd-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  /* Clear of the clock in the top right corner, on both sides so it stays centred. */
+  padding: 0 64px;
+}
+
+.dd-top .daily-double-badge { margin-bottom: 0; }
+
+/* Where the answer box is on the answering player's screen. */
+.dd-waiting { margin-top: 28px; }
+
+.dd-stake {
+  margin: 0 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+}
+
+.dd-stake b { color: var(--jeopardy-gold); font-size: 1.25rem; }
+.dd-stake .player-signature { height: 28px; }
+
+/* A name inside a sentence stays in the sentence. .player-name is a full
+   width block for the roster, which split "Waiting for Guest's answer" across
+   three lines with the name pushed to the left edge. */
+.dd-stake .player-name,
+.waiting-for-answer .player-name,
+.waiting-for-answer .player-signature {
+  display: inline-flex;
+  width: auto;
+  vertical-align: middle;
+}
+
+
 /* Round End Phase */
 .round-end-phase {
   display: flex;

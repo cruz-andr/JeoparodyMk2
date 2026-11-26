@@ -433,6 +433,9 @@ export function createGameActions({
         if (dailyDouble) armDailyDoubleTimeout(roomCode, sessionId, ms);
         else armAnswerTimeout(roomCode, sessionId);
         emitPlayer(roomCode, sessionId, 'game:answer-close', { ms });
+        /* A Daily Double's clock is on every screen in the room, so they are
+           all told it started again. Not why: that is the player's own. */
+        if (dailyDouble) emitRoom(roomCode, 'game:daily-double-clock', { ms });
         return { verdict };
       }
 
