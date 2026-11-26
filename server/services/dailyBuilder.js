@@ -66,6 +66,8 @@ export function buildBoard(roundClues, { values = ROW_VALUES } = {}) {
     question: clue.answer,
     points: values[i % BOARD_ROWS],
     revealed: false,
+    // What it showed on the night, for services/cluePictures.js to fill in.
+    ...(clue.media ? { sourceMedia: clue.media } : {}),
   }));
 
   return { categories, questions };
@@ -207,6 +209,7 @@ export function buildSixer(roundClues, seed = 0, rows = null) {
       // both formats. What it was actually worth on the night is kept beside it.
       value: row ? DOUBLE_ROW_VALUES[row - 1] : clue.value,
       airedValue: clue.value,
+      ...(clue.media ? { sourceMedia: clue.media } : {}),
     })),
   };
 }

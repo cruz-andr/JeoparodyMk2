@@ -20,6 +20,7 @@
 import { fetchGameById } from '../services/jarchiveScraper.js';
 import { buildBoard, DOUBLE_ROW_VALUES } from '../services/dailyBuilder.js';
 import { FALLBACK_GAME } from '../data/quickplayBoards.js';
+import { getCluePictures } from '../services/cluePictures.js';
 import {
   knows, guesses, buzzDelayMs, rebuzzDelayMs, answerDelayMs, skipDelayMs, answersCorrectly,
   pickCell, pickDelayMs, dailyDoubleWager, finalWager, wrongFinalAnswer, between,
@@ -85,7 +86,10 @@ const copyGame = (game) => JSON.parse(JSON.stringify(game));
  * the house board if that fails) or 'static' (the house board, always).
  * prepare() starts a fetch early so take() has something ready.
  */
-export function createBoardSource({ mode = 'archive', fetchGame = fetchGameById, random = Math.random, attempts = 3, log = () => {} } = {}) {
+export function createBoardSource({
+  mode = 'archive', fetchGame = fetchGameById, random = Math.random, attempts = 3, log = () => {},
+  pictures = getCluePictures(),
+} = {}) {
   let ready = null;
   let inFlight = null;
 
@@ -95,7 +99,11 @@ export function createBoardSource({ mode = 'archive', fetchGame = fetchGameById,
       const id = 1000 + Math.floor(random() * 8000);
       try {
         const game = gameFromEpisode(await fetchGame(id));
-        if (game) return game;
+        if (game) {
+          // Stand-in pictures for its picture clues (services/cluePictures.js).
+          await pictures.attach([...game.round1.questions.flat(), ...game.round2.questions.flat()]);
+          return game;
+        }
         log(`quickplay: episode ${id} is short a round`);
       } catch (err) {
         log(`quickplay: episode ${id}: ${err.message}`);

@@ -277,6 +277,13 @@ export async function initializeDatabase() {
       PRIMARY KEY (board_id, reporter_id)
     ) WITHOUT ROWID;
 
+    -- A picture clue's stand-in picture, decided once: see services/cluePictures.js
+    CREATE TABLE IF NOT EXISTS clue_pictures (
+      key TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    ) WITHOUT ROWID;
+
     -- How everyone did on the Sixer: see services/sixerResults.js
     ${SIXER_RESULTS_SQL}
 

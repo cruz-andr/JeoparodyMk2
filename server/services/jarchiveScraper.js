@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { buildDailyChallenge } from './dailyBuilder.js';
+import { getCluePictures } from './cluePictures.js';
 
 const JARCHIVE_BASE = 'https://www.j-archive.com';
 
@@ -53,6 +54,50 @@ function responseInToggle(mouseover) {
   return match ? cheerio.load(`<div>${match[1]}</div>`)('div').text().replace(/\\/g, '').trim() : '';
 }
 
+const MEDIA_KINDS = [
+  [/\.(jpe?g|png|gif|webp)$/i, 'image'],
+  [/\.(mp4|mov|wmv|m4v|webm)$/i, 'video'],
+  [/\.(mp3|wav|m4a|ogg)$/i, 'audio'],
+];
+
+/**
+ * A clue's text, and what it showed on the night.
+ *
+ * Picture, video and audio clues link their media inside the text ("Check
+ * out the 130-foot <a>Rain Vortex</a>..."). J-Archive no longer serves those
+ * files, but the link's words still say what the picture was of, which is
+ * what services/cluePictures.js finds a free picture from. The link is read
+ * as words with a space either side: reading the cell's text alone ran them
+ * into their neighbours ("the Faberge eggseen herewas made"). A Clue Crew
+ * stage direction ("(Sarah of the Clue Crew presents...)") is dropped: the
+ * clip it introduced is gone, and the clue reads whole without it.
+ */
+export function readClue($, $cell) {
+  const $copy = $cell.clone();
+  const links = [];
+  $copy.find('a').each((_, a) => {
+    const href = $(a).attr('href') || '';
+    const words = $(a).text().trim();
+    if (/\/media\//.test(href)) {
+      const kind = MEDIA_KINDS.find(([re]) => re.test(href))?.[1] ?? 'image';
+      links.push({ kind, words });
+    }
+    $(a).replaceWith(` ${words} `);
+  });
+  $copy.find('br').replaceWith(' ');
+  const text = $copy.text()
+    .replace(/^\s*\([^)]*clue crew[^)]*\)\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.;:!?'’)])/g, '$1')
+    .replace(/\(\s+/g, '(')
+    .trim();
+  if (!links.length) return { text, media: null };
+  return {
+    text,
+    media: { kind: links[0].kind, link: links.map((l) => l.words).filter(Boolean).join(' | ') },
+  };
+}
+
 // Parse the game page HTML to extract clues
 function parseGamePage(html, gameId) {
   const $ = cheerio.load(html);
@@ -81,7 +126,7 @@ function parseGamePage(html, gameId) {
     if (!clueId) return;
 
     // The clue element contains only the clue text (response is in separate _r element)
-    const clueText = $clueText.text().trim();
+    const { text: clueText, media } = readClue($, $clueText);
     if (!clueText) return;
 
     // Find the corresponding answer
@@ -122,6 +167,7 @@ function parseGamePage(html, gameId) {
         answer: cleanAnswer(answer),
         value,
         round: 'jeopardy',
+        ...(media ? { media } : {}),
       });
     }
   });
@@ -146,7 +192,7 @@ function parseGamePage(html, gameId) {
     if (!clueId) return;
 
     // The clue element contains only the clue text (response is in separate _r element)
-    const clueText = $clueText.text().trim();
+    const { text: clueText, media } = readClue($, $clueText);
     if (!clueText) return;
 
     const responseId = clueId + '_r';
@@ -180,6 +226,7 @@ function parseGamePage(html, gameId) {
         answer: cleanAnswer(answer),
         value,
         round: 'double_jeopardy',
+        ...(media ? { media } : {}),
       });
     }
   });
@@ -294,7 +341,7 @@ async function buildChallengeFor(fetchGame, dateString) {
  * Callers above this have already decided the day is one they are willing to
  * serve; this will happily build any date it is handed.
  */
-export async function getDailyChallenge({ fetchGame = fetchGameById, date } = {}) {
+export async function getDailyChallenge({ fetchGame = fetchGameById, date, pictures = getCluePictures() } = {}) {
   const dateString = date ?? getTodayDateString();
 
   if (dailyCache.has(dateString)) return dailyCache.get(dateString);
@@ -304,7 +351,10 @@ export async function getDailyChallenge({ fetchGame = fetchGameById, date } = {}
   if (dailyInFlight.has(dateString)) return dailyInFlight.get(dateString);
 
   const promise = buildChallengeFor(fetchGame, dateString)
-    .then((challenge) => {
+    .then(async (challenge) => {
+      // Stand-in pictures for its picture clues (services/cluePictures.js).
+      await pictures.attach(challenge.board.questions);
+      await pictures.attach(challenge.sixer.questions, { clueOf: (q) => q.clue, responseOf: (q) => q.answer });
       remember(dateString, challenge);
       return challenge;
     })
