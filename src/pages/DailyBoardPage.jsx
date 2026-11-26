@@ -380,7 +380,7 @@ export default function DailyBoardPage() {
         />
 
         <BoardWheel
-          categories={board.categories ?? []}
+          categories={run.categories ?? []}
           answers={answers}
           pointValues={POINT_VALUES}
           onSelect={handleSelect}
@@ -408,7 +408,7 @@ export default function DailyBoardPage() {
       </BoardHeader>
 
       <GameBoard
-        categories={board.categories ?? []}
+        categories={run.categories ?? []}
         questions={grid}
         pointValues={POINT_VALUES}
         onQuestionSelect={handleSelect}
