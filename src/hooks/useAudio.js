@@ -5,10 +5,14 @@ import { useSettingsStore } from '../stores';
 /* Only files that actually ship in public/audio. Referencing a missing file
    makes Howler log a load error on every page view. The show's music (its
    theme, "Think!" under Final Jeopardy, the Daily Double sting) is not ours to
-   play and is gone; what is left are two short effects for a verdict. */
+   play and is gone. What is left is four short effects, all public domain
+   (CC0): correct, wrong and time's up from Kenney's Interface Sounds, and the
+   buzz-in from Qvantor on Freesound (#878254). Levelled so none jumps out. */
 const AUDIO_FILES = {
   correct: '/audio/correct.mp3',
   wrong: '/audio/wrong.mp3',
+  buzz: '/audio/buzz.mp3',
+  timeUp: '/audio/timeup.mp3',
 };
 
 // The sound bank is a module singleton shared by every caller of useAudio.
@@ -63,6 +67,8 @@ export function useAudio() {
     stopAll,
     playCorrect: useCallback(() => playSound('correct'), [playSound]),
     playWrong: useCallback(() => playSound('wrong'), [playSound]),
+    playBuzz: useCallback(() => playSound('buzz'), [playSound]),
+    playTimeUp: useCallback(() => playSound('timeUp'), [playSound]),
   };
 }
 

@@ -483,9 +483,12 @@ export default function GamePage() {
         useRoomStore.getState().updatePlayerScore(playerId, newScore);
       }
 
-      // Everyone hears the outcome, the way the studio does.
+      // Everyone hears the outcome, the way the studio does; running out of
+      // time has its own sound rather than a wrong answer's.
       if (correct) {
         audioRef.current.playCorrect();
+      } else if (timeout) {
+        audioRef.current.playTimeUp();
       } else {
         audioRef.current.playWrong();
       }
@@ -598,6 +601,8 @@ export default function GamePage() {
     const unsubDDResult = subscribe('game:daily-double-result', ({ playerId, correct, newScore, nextPickerId, correctAnswer, said, wager, timeout }) => {
       if (correct) {
         audioRef.current.playCorrect();
+      } else if (timeout) {
+        audioRef.current.playTimeUp();
       } else {
         audioRef.current.playWrong();
       }
@@ -1291,6 +1296,7 @@ export default function GamePage() {
 
     const reactionTime = Date.now() - signalArrivedTime;
     socketClient.emit('game:buzz-in', { roomCode, reactionTime });
+    audioRef.current.playBuzz();
     setCanBuzz(false);
     setHasAlreadyBuzzed(true);
     hasAlreadyBuzzedRef.current = true;
@@ -1319,6 +1325,7 @@ export default function GamePage() {
 
   // Buzz timer expired - no one buzzed in time
   const handleBuzzTimeUp = useCallback(() => {
+    audioRef.current.playTimeUp();
     setCanBuzz(false);
     setBuzzTimedOut(true);  // Show timeout display with answer and Continue button
     // Server may also emit 'game:buzz-timeout-result' if it started its timer
