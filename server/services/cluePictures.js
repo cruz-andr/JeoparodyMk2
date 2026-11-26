@@ -45,15 +45,19 @@ Clue: ${String(clue ?? '').slice(0, 400)}
 The words in the clue that linked to the picture: ${String(link ?? '').slice(0, 120)}
 Correct response: ${String(response ?? '').slice(0, 120)}
 
-Decide what the picture showed:
-- If the clue asks the player to identify what is pictured ("This man", "she", "seen here", "this animal"), the picture showed the correct response itself.
-- Otherwise it showed the thing the linked words name or describe: a building, a painting, an object, a person mentioned in the clue.
+Step 1. What did the picture show?
+- "response": the clue points at the picture to ask what it is ("This man", "she", "this bird", "seen here", "this plant"). The picture showed the correct response itself, and recognising it is the clue. That is fine to show.
+- "other": the picture showed something else the clue names or describes (a building, a sculpture, an object, a person mentioned in the clue).
+
+Step 2. Pick the article about exactly that thing: a particular person, place, building, artwork, object, animal breed or plant. Never a broad topic standing in for one particular thing (not "Footwear" for one pair of shoes, not "Portrait" for one painting). If no article is about that particular thing, the article is null.
+
+Step 3. "spoils" is true only if:
+- the photo would probably show the correct response written out (a title on a book cover or poster, a sign, a label, a flag or logo spelling it), or
+- the picture was "other" but the article you picked is about the correct response itself, or something that names it.
+A photo of the correct response for a "response" clue does not spoil it.
 
 Reply with ONLY a JSON object, no other text:
-{"article": "<exact English Wikipedia article title>" or null, "spoils": true or false}
-
-"article" is null when no single article's main photo would show it.
-"spoils" is true when the photo would show or name the correct response although the clue is not asking the player to identify the picture.`;
+{"shows": "response" or "other", "article": "<exact English Wikipedia article title>" or null, "spoils": true or false}`;
 }
 
 /** The plan out of the model's reply, or null if it is not one. */
@@ -64,10 +68,37 @@ export function planFrom(reply) {
   try {
     const parsed = JSON.parse(match[0]);
     const article = typeof parsed.article === 'string' && parsed.article.trim() ? parsed.article.trim().slice(0, 200) : null;
-    return { article, spoils: parsed.spoils === true };
+    return { article, spoils: parsed.spoils === true, shows: parsed.shows === 'other' ? 'other' : 'response' };
   } catch {
     return null;
   }
+}
+
+/* The words that pointed at the picture to ask what it is: "This", "here". */
+const POINTING = /^(this|these|that|those|here|it|she|he|they|him|her|seen here|shown here)$/i;
+const wordsOf = (text) => String(text ?? '').toLowerCase().replace(/\([^)]*\)/g, ' ').match(/[a-z0-9]+/g) ?? [];
+const STOP = new Set(['the', 'a', 'an', 'of', 'and', 'in', 'on', 'for']);
+
+/** Whether an article is, near enough, about the correct response: "Inch" for
+    inch, "Tattoo" for tattooing, "Red" for red. */
+export function aboutTheResponse(article, response) {
+  const said = wordsOf(response).filter((w) => !STOP.has(w));
+  const title = wordsOf(article).filter((w) => !STOP.has(w));
+  return said.some((r) => title.some((t) => t === r || (t.length >= 4 && r.length >= 4 && (r.startsWith(t) || t.startsWith(r)))));
+}
+
+/**
+ * The model's pick, checked. It is told not to stand the correct response in
+ * for a picture of something else, and mostly does not; when it does anyway
+ * ("Inch" for the Le Pouce sculpture, "Tattoo" for Edison's needle pen), that
+ * is caught here rather than shown. A picture of the response is only kept
+ * where the clue pointed at the picture to ask what it is.
+ */
+export function keepPlan(plan, item) {
+  if (!plan?.article || plan.spoils) return false;
+  if (!aboutTheResponse(plan.article, item.response)) return true;
+  const pointed = String(item.link ?? '').split('|').some((w) => POINTING.test(w.trim()));
+  return pointed && plan.shows === 'response';
 }
 
 export async function askGroqForPicture(item, { apiKey, model = MODEL, timeoutMs = PLAN_MS, fetch: get = fetch }) {
@@ -198,7 +229,7 @@ export function createCluePictures({ plan = null, picture = wikipediaPicture, st
     if (!plan) return null;
     try {
       const decided = await plan(item);
-      const found = decided.article && !decided.spoils ? await picture(decided.article) : null;
+      const found = keepPlan(decided, item) ? await picture(decided.article) : null;
       store.set(key, found);
       return found;
     } catch (err) {

@@ -68,10 +68,13 @@ const MEDIA_KINDS = [
  * files, but the link's words still say what the picture was of, which is
  * what services/cluePictures.js finds a free picture from. The link is read
  * as words with a space either side: reading the cell's text alone ran them
- * into their neighbours ("the Faberge eggseen herewas made"). A Clue Crew
- * stage direction ("(Sarah of the Clue Crew presents...)") is dropped: the
- * clip it introduced is gone, and the clue reads whole without it.
+ * into their neighbours ("the Faberge eggseen herewas made"). A stage
+ * direction ("(Sarah of the Clue Crew presents...)", "(Travis Stork presents
+ * the clue.)") is dropped, and its link with it: the clip of the presenter
+ * is gone, a photo of them is not the clue, and the clue reads whole without.
  */
+const STAGE_DIRECTION = /^\s*\(([^)]*(?:clue crew|presents|gives the clue|delivers the clue|reports from|reads the clue)[^)]*)\)\s*/i;
+
 export function readClue($, $cell) {
   const $copy = $cell.clone();
   const links = [];
@@ -85,16 +88,19 @@ export function readClue($, $cell) {
     $(a).replaceWith(` ${words} `);
   });
   $copy.find('br').replaceWith(' ');
-  const text = $copy.text()
-    .replace(/^\s*\([^)]*clue crew[^)]*\)\s*/i, '')
-    .replace(/\s+/g, ' ')
+  const raw = $copy.text().replace(/\s+/g, ' ');
+  const stage = raw.match(STAGE_DIRECTION)?.[1] ?? '';
+  const text = raw
+    .replace(STAGE_DIRECTION, '')
     .replace(/\s+([,.;:!?'’)])/g, '$1')
     .replace(/\(\s+/g, '(')
     .trim();
-  if (!links.length) return { text, media: null };
+  // The presenter's own link went with the stage direction.
+  const kept = links.filter((l) => l.words && !(stage && stage.includes(l.words.replace(/[.\s]+$/, ''))));
+  if (!kept.length) return { text, media: null };
   return {
     text,
-    media: { kind: links[0].kind, link: links.map((l) => l.words).filter(Boolean).join(' | ') },
+    media: { kind: kept[0].kind, link: kept.map((l) => l.words).join(' | ') },
   };
 }
 

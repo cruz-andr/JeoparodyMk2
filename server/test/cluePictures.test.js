@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import * as cheerio from 'cheerio';
 import { readClue } from '../services/jarchiveScraper.js';
 import {
-  createCluePictures, planFrom, picturePrompt, wikipediaPicture, cluePictureStore, authorOf,
+  createCluePictures, planFrom, picturePrompt, wikipediaPicture, cluePictureStore, authorOf, keepPlan, aboutTheResponse,
 } from '../services/cluePictures.js';
 import { buildBoard } from '../services/dailyBuilder.js';
 
@@ -34,10 +34,16 @@ await test('a link run into its neighbours is read with spaces, and an apostroph
   assert.equal(cell('<a href="/media/x.jpg">Here</a>\'s a building').text, "Here's a building");
 });
 
-await test('a Clue Crew stage direction is dropped, and a clip is a video', () => {
-  const read = cell('(<a href="https://www.j-archive.com/media/2010-11-10_DJ_23.mp4">Jimmy of the Clue Crew shows a film.</a>) The speed needed to break free');
-  assert.equal(read.text, 'The speed needed to break free');
-  assert.equal(read.media.kind, 'video');
+await test('a stage direction is dropped with its link, and a clip is a video', () => {
+  const crew = cell('(<a href="https://www.j-archive.com/media/2010-11-10_DJ_23.mp4">Jimmy of the Clue Crew shows a film.</a>) The speed needed to break free');
+  assert.equal(crew.text, 'The speed needed to break free');
+  assert.equal(crew.media, null, 'the presenter is not the picture');
+  const host = cell('(<a href="/media/x.jpg">Travis Stork presents the clue.</a>) Athletes get these injuries');
+  assert.equal(host.text, 'Athletes get these injuries');
+  assert.equal(host.media, null);
+  const both = cell('(<a href="/media/k.jpg">Kelly of the Clue Crew presents from Edison Labs.</a>) Edison spoke into <a href="/media/k2.jpg">this</a> device');
+  assert.deepEqual(both.media, { kind: 'image', link: 'this' });
+  assert.equal(cell('Watch <a href="/media/a.mp4">this</a> clip').media.kind, 'video');
   assert.equal(cell('Song <a href="/media/a.mp3">here</a>').media.kind, 'audio');
 });
 
@@ -58,10 +64,28 @@ await test('the builder carries the marker to the question it makes', () => {
 // ------------------------------------------------------------ the model's plan
 
 await test('the plan is read from a reply, fences, thinking and all', () => {
-  assert.deepEqual(planFrom('<think>hm</think>```json\n{"article": "Jewel Changi Airport", "spoils": false}\n```'), { article: 'Jewel Changi Airport', spoils: false });
-  assert.deepEqual(planFrom('{"article": null, "spoils": false}'), { article: null, spoils: false });
+  assert.deepEqual(planFrom('<think>hm</think>```json\n{"shows": "other", "article": "Jewel Changi Airport", "spoils": false}\n```'), { article: 'Jewel Changi Airport', spoils: false, shows: 'other' });
+  assert.deepEqual(planFrom('{"article": null, "spoils": false}'), { article: null, spoils: false, shows: 'response' });
   assert.equal(planFrom('no idea'), null);
   assert.match(picturePrompt({ category: 'C', clue: 'x', link: 'Rain Vortex', response: 'Singapore' }), /Rain Vortex[\s\S]*Singapore/);
+});
+
+await test('a pick about the response is kept only where the clue pointed at the picture', () => {
+  const item = (link, response) => ({ link, response });
+  assert.equal(aboutTheResponse('Inch', 'inch'), true);
+  assert.equal(aboutTheResponse('Tattoo', 'tattooing'), true);
+  assert.equal(aboutTheResponse('Jewel Changi Airport', 'Singapore'), false);
+  // The picture was of something else, and the pick is the response: dropped.
+  assert.equal(keepPlan({ article: 'Inch', shows: 'other', spoils: false }, item('sculpture', 'inch')), false);
+  assert.equal(keepPlan({ article: 'Tattoo', shows: 'response', spoils: false }, item('needle pen', 'tattooing')), false);
+  assert.equal(keepPlan({ article: 'Red', shows: 'response', spoils: false }, item('Arizona teachers', 'red')), false);
+  // "This bird": the picture was the response, and recognising it is the clue.
+  assert.equal(keepPlan({ article: 'Pelican', shows: 'response', spoils: false }, item('This', 'pelican')), true);
+  assert.equal(keepPlan({ article: 'Pelican', shows: 'other', spoils: false }, item('This', 'pelican')), false);
+  // Something named in the clue, not the response: kept.
+  assert.equal(keepPlan({ article: 'Jewel Changi Airport', shows: 'other', spoils: false }, item('Rain Vortex', 'Singapore')), true);
+  assert.equal(keepPlan({ article: 'X', shows: 'other', spoils: true }, item('Rain Vortex', 'Singapore')), false);
+  assert.equal(keepPlan({ article: null, shows: 'other', spoils: false }, item('here', 'x')), false);
 });
 
 // ------------------------------------------------------------ the whole
@@ -72,7 +96,7 @@ const PIC = { url: 'https://upload.wikimedia.org/x.jpg', credit: { author: 'A. P
 await test('a picture clue gets the picture, with its credit, and loses the marker', async () => {
   const asked = [];
   const pictures = createCluePictures({
-    plan: async (item) => { asked.push(item); return { article: 'Jewel Changi Airport', spoils: false }; },
+    plan: async (item) => { asked.push(item); return { article: 'Jewel Changi Airport', spoils: false, shows: 'other' }; },
     picture: async (article) => (article === 'Jewel Changi Airport' ? PIC : null),
     store: memoryStore(),
   });
