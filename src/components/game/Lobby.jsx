@@ -26,7 +26,6 @@ function BoardPicker({ onPick, picking, error, isAuthenticated }) {
   return (
     <div className="st-field lobby-board">
       <span className="st-field-label">Pick the board</span>
-      <span className="st-hint">A real episode: its rounds and its Final, as aired.</span>
       <div className="lobby-board-pick">
         <select
           className="lobby-day"
@@ -49,9 +48,6 @@ function BoardPicker({ onPick, picking, error, isAuthenticated }) {
         {picking && asked === 'random' ? 'Dealing…' : 'A random episode'}
       </Ghost>
       {error && <p className="st-error">{error}</p>}
-      <span className="st-hint">
-        For a community board, open it from Community Boards and choose Play with friends.
-      </span>
     </div>
   );
 }
