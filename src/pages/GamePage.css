@@ -429,6 +429,9 @@
 
 .dd-top .daily-double-badge { margin-bottom: 0; }
 
+/* Where the answer box is on the answering player's screen. */
+.dd-waiting { margin-top: 28px; }
+
 .dd-stake {
   margin: 0 0 6px;
   display: inline-flex;

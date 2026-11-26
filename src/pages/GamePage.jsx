@@ -1830,7 +1830,7 @@ export default function GamePage() {
                 )}
 
                 {!isMyTurn && (
-                  <p className="waiting-for-answer">Waiting for {renderPlayerName(currentPicker)}'s answer...</p>
+                  <p className="waiting-for-answer dd-waiting">Waiting for {renderPlayerName(currentPicker)}'s answer...</p>
                 )}
               </div>
             </motion.div>
