@@ -41,7 +41,28 @@ const LENDABLE = {
 const boardPlays = [];
 const boards = { find: (slug) => LENDABLE[slug] ?? null, counted: (slug) => boardPlays.push(slug) };
 
-const { gameManager } = initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' }, boards });
+/* Episodes for rooms, without reaching J-Archive: a two-round game with a Final. */
+const episodeGrid = (tag, value) => Array.from({ length: 6 }, (_, c) => Array.from({ length: 5 }, (_, r) => ({
+  category: `${tag} ${c}`, points: (r + 1) * value, answer: `${tag} clue ${c}-${r}`, question: `${tag} response ${c}-${r}`, revealed: false,
+})));
+const episodeAsked = [];
+const episodes = {
+  forDate: async (date) => { episodeAsked.push(date); return episodeRoom(`The episode from ${date}`); },
+  random: async () => { episodeAsked.push('random'); return episodeRoom('A random real episode'); },
+};
+function episodeRoom(title) {
+  const round = (tag, value) => {
+    const questions = episodeGrid(tag, value);
+    return { categories: questions.map((col) => col[0].category), questions };
+  };
+  return {
+    slug: null, kind: 'episode', title,
+    rounds: [round('J', 200), round('DJ', 400)],
+    finalJeopardy: { category: 'AIRED FINAL', answer: 'final clue', question: 'final response' },
+  };
+}
+
+const { gameManager } = initializeSocketHandlers(ioServer, { env: { ...process.env, NODE_ENV: 'test' }, boards, episodes });
 
 const PORT = 34117;
 const URL = `http://localhost:${PORT}`;
@@ -763,7 +784,7 @@ async function run() {
     const told = once(guest, 'room:board-set');
     const ack = await emitAck(host, 'room:set-board', { roomCode, slug: 'disney' });
     assert.equal(ack.success, true);
-    const summary = { slug: 'disney', title: 'Disney 100 Jeopardy: Episode 40', categories: ['CAT 0', 'CAT 1', 'CAT 2', 'CAT 3', 'CAT 4'], hasFinal: true };
+    const summary = { slug: 'disney', kind: 'community', title: 'Disney 100 Jeopardy: Episode 40', categories: ['CAT 0', 'CAT 1', 'CAT 2', 'CAT 3', 'CAT 4'], rounds: 1, hasFinal: true };
     assert.deepEqual(ack.board, summary);
     assert.deepEqual((await told).board, summary);
 
@@ -832,6 +853,54 @@ async function run() {
     const started = once(guest, 'game:final-jeopardy-started');
     host.emit('game:start-final-jeopardy', { roomCode, finalJeopardy: { category: 'SOMETHING ELSE', answer: 'x', question: 'y' } });
     assert.equal((await started).category, 'NO-SHAVE NOVEMBER');
+  });
+
+  await test('a room plays a real episode: a day from the archive or a random one, both rounds, its own Final', async (open) => {
+    const { host, guest, roomCode, hostId, guestId } = await openRoom();
+    open.push(host, guest);
+
+    // A day outside what a signed-out host may open is refused, and nothing is fetched.
+    const asked = episodeAsked.length;
+    const locked = await emitAck(host, 'room:set-board', { roomCode, episode: { date: '1999-01-01' } });
+    assert.equal(locked.success, false);
+    assert.equal(episodeAsked.length, asked);
+    assert.equal((await emitAck(guest, 'room:set-board', { roomCode, episode: 'random' })).success, false, 'a guest cannot');
+
+    const today = new Date().toISOString().slice(0, 10);
+    const told = once(guest, 'room:board-set');
+    const ack = await emitAck(host, 'room:set-board', { roomCode, episode: { date: today } });
+    assert.equal(ack.success, true);
+    assert.deepEqual(episodeAsked.at(-1), today);
+    assert.equal(ack.board.kind, 'episode');
+    assert.equal(ack.board.rounds, 2);
+    assert.equal(ack.board.hasFinal, true);
+    assert.deepEqual((await told).board, ack.board);
+
+    const random = await emitAck(host, 'room:set-board', { roomCode, episode: 'random' });
+    assert.equal(random.board.title, 'A random real episode');
+
+    const before = boardPlays.length;
+    const ready = once(guest, 'game:questions-ready');
+    host.emit('game:start-board', { roomCode });
+    assert.equal((await ready).categories[0], 'J 0');
+    assert.equal(boardPlays.length, before, 'an episode is not a community board to count');
+
+    // Round one cleared: Double Jeopardy is the episode's own, whatever the page sends.
+    const ended = once(guest, 'game:round-ended');
+    host.emit('game:round-end', { roomCode, round: 1 });
+    await ended;
+    const second = once(guest, 'game:round-2-started');
+    host.emit('game:start-round-2', { roomCode, categories: ['MADE UP'], questions: [], firstPickerId: hostId });
+    const round2 = await second;
+    assert.equal(round2.categories[0], 'DJ 0');
+    assert.equal(round2.questions[0][0].points, 400);
+
+    const room = gameManager.rooms.get(roomCode);
+    room.players.get(hostId).score = 500;
+    room.players.get(guestId).score = 500;
+    const started = once(guest, 'game:final-jeopardy-started');
+    host.emit('game:start-final-jeopardy', { roomCode, finalJeopardy: { category: 'SOMETHING ELSE', answer: 'x', question: 'y' } });
+    assert.equal((await started).category, 'AIRED FINAL');
   });
 
   await test('a board without a Final ends the game rather than inventing one', async (open) => {

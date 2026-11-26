@@ -60,13 +60,39 @@ export function roomGrid(board) {
   return { categories, questions };
 }
 
+/**
+ * A real episode as a room's board: both its rounds and its Final, as
+ * quickplay plays it. `game` is what gameFromEpisode (socket/quickplay.js)
+ * makes of a scraped episode. No slug: nothing in the boards table to count.
+ */
+export function episodeRoomBoard(game, { title }) {
+  return {
+    slug: null,
+    kind: 'episode',
+    title,
+    rounds: [game.round1, game.round2].filter(Boolean),
+    finalJeopardy: game.final ?? null,
+  };
+}
+
+/**
+ * Round `i` of a room's board, in the grid shape, or null when it has none.
+ * A community board is the one round its author wrote; an episode has two.
+ */
+export function roomRound(found, i) {
+  if (found?.rounds) return found.rounds[i] ?? null;
+  return found?.board && i === 0 ? roomGrid(found.board) : null;
+}
+
 /** What the lobby shows of it: enough to know what is about to be played. */
 export function boardSummary(found) {
   if (!found) return null;
   return {
     slug: found.slug,
+    kind: found.kind ?? 'community',
     title: found.title,
-    categories: found.board.categories.map((c) => c.name),
+    categories: found.rounds ? found.rounds[0].categories : found.board.categories.map((c) => c.name),
+    rounds: found.rounds ? found.rounds.length : 1,
     hasFinal: Boolean(found.finalJeopardy),
   };
 }

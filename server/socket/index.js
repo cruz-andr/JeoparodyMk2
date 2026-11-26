@@ -4,7 +4,9 @@ import { recordRoomGame } from '../services/gameHistory.js';
 import { GameStateManager, playerBoard } from './GameStateManager.js';
 import { createGameActions, buzzWindowMs } from './actions.js';
 import { createBoardSource, createQuickplayDirector } from './quickplay.js';
-import { roomBoards, roomGrid } from '../services/roomBoards.js';
+import { roomBoards, roomRound } from '../services/roomBoards.js';
+import { createEpisodeBoards } from '../services/episodeBoards.js';
+import { canPlayDate, isValidDateString } from '../shared/archiveWindow.js';
 import { createSessionClaims } from './sessionClaims.js';
 import { createWatchRooms } from './watchRooms.js';
 import { info as logInfo, error as logError } from '../utils/log.js';
@@ -33,8 +35,10 @@ export function quickplayOptions(env = process.env) {
   };
 }
 
-export function initializeSocketHandlers(io, { env = process.env, boards = roomBoards } = {}) {
+export function initializeSocketHandlers(io, { env = process.env, boards = roomBoards, episodes = null } = {}) {
   const knobs = quickplayOptions(env);
+  /* Real episodes for private rooms: a day from the archive, or a random one. */
+  const episodeBoards = episodes ?? createEpisodeBoards({ mode: knobs.boardMode, log: (m) => logInfo({ msg: m }) });
   const gameManager = new GameStateManager({
     fillWithBots: knobs.fillWithBots,
     ...(knobs.botFillAfterMs ? { botFillAfterMs: knobs.botFillAfterMs } : {}),
@@ -433,20 +437,43 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
       io.to(roomCode).emit('game:setup-started');
     });
 
-    /* A community board for a private room, chosen in the lobby. The server
-       reads it rather than taking a grid from the host's page, so somebody
-       else's clues reach the room as they wrote them. Null puts the room back
-       to questions written for it. */
-    on('room:set-board', ({ roomCode, slug }, callback = () => {}) => {
-      const room = gameManager.rooms.get(roomCode);
-      if (!room || room.type !== 'multiplayer' || !isRoomController(roomCode, socket.sessionId)) {
-        return callback({ success: false, error: 'Only the host of a private room can choose its board.' });
-      }
-      if (room.status !== 'waiting') {
-        return callback({ success: false, error: 'The game has already started.' });
-      }
+    /* A board for a private room, chosen in the lobby: a community board by
+       its slug, or a real episode, `episode` being 'random' or { date } for a
+       day from the archive. The server reads or scrapes it rather than taking
+       a grid from the host's page, so the clues reach the room as they were
+       written or aired. Sent with neither, the room goes back to questions
+       written for it. */
+    on('room:set-board', async ({ roomCode, slug, episode }, callback = () => {}) => {
+      const allowed = () => {
+        const room = gameManager.rooms.get(roomCode);
+        if (!room || room.type !== 'multiplayer' || !isRoomController(roomCode, socket.sessionId)) {
+          return 'Only the host of a private room can choose its board.';
+        }
+        return room.status === 'waiting' ? null : 'The game has already started.';
+      };
+      const refused = allowed();
+      if (refused) return callback({ success: false, error: refused });
+
       let found = null;
-      if (slug) {
+      if (episode) {
+        const date = episode === 'random' ? null : episode?.date;
+        if (date !== null) {
+          /* The same gate as the archive page: today and the free days for
+             anybody, the rest of the window for an account. */
+          if (!isValidDateString(date) || !canPlayDate({ date, format: 'board', isAuthenticated: Boolean(socket.userId) })) {
+            return callback({ success: false, error: 'That day is not open. Sign in to play the whole archive.' });
+          }
+        }
+        try {
+          found = date ? await episodeBoards.forDate(date) : await episodeBoards.random();
+        } catch (err) {
+          logError('Could not deal an episode to a room', { roomCode, date, error: err.message });
+          return callback({ success: false, error: 'The archive could not be reached. Try again in a moment.' });
+        }
+        // The host may have left, or started, while the episode was fetched.
+        const late = allowed();
+        if (late) return callback({ success: false, error: late });
+      } else if (slug) {
         try {
           found = boards.find(slug);
         } catch (err) {
@@ -459,14 +486,15 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
       socket.to(roomCode).emit('room:board-set', { board });
     });
 
-    // The room's board, dealt: its clues, one round, its own Final at the end.
+    // The room's board, dealt: its first round now, the rest as it is cleared.
     on('game:start-board', ({ roomCode }) => {
       const room = gameManager.rooms.get(roomCode);
       if (!room?.board || room.status !== 'waiting' || !isRoomController(roomCode, socket.sessionId)) return;
-      const { categories, questions } = roomGrid(room.board.board);
+      const { categories, questions } = roomRound(room.board, 0);
       actions.setQuestions(roomCode, {
         questions, categories, firstPickerId: gameManager.getRandomPlayer(room), dailyDoubles: null,
       });
+      if (!room.board.slug) return; // an episode: nothing in the boards table to count
       try {
         boards.counted(room.board.slug);
       } catch (err) {
@@ -561,8 +589,9 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
     // Round 1 ended - transition to Double Jeopardy
     on('game:round-end', ({ roomCode, round }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
-      // A community board is the one round its author wrote.
-      if (gameManager.rooms.get(roomCode)?.board) return;
+      // A community board is the one round its author wrote; an episode has two.
+      const lent = gameManager.rooms.get(roomCode)?.board;
+      if (lent && !roomRound(lent, 1)) return;
       console.log(`Round ${round} ended for room ${roomCode}`);
       actions.roundEnd(roomCode, round);
     });
@@ -570,7 +599,15 @@ export function initializeSocketHandlers(io, { env = process.env, boards = roomB
     // Start Round 2 (Double Jeopardy)
     on('game:start-round-2', ({ roomCode, questions, categories, firstPickerId, dailyDoubles }) => {
       if (!isRoomController(roomCode, socket.sessionId)) return;
-      if (gameManager.rooms.get(roomCode)?.board) return;
+      /* A room playing an episode gets the episode's own second round,
+         whatever the page sent. */
+      const lent = gameManager.rooms.get(roomCode)?.board;
+      if (lent) {
+        const second = roomRound(lent, 1);
+        if (!second) return;
+        actions.startRound2(roomCode, { ...second, firstPickerId, dailyDoubles: null });
+        return;
+      }
       console.log(`Starting Round 2 for room ${roomCode}`);
       actions.startRound2(roomCode, { questions, categories, firstPickerId, dailyDoubles });
     });

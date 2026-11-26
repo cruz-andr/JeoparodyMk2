@@ -196,8 +196,17 @@ class SocketClient {
 
   /** Lend the room a community board by its slug, or null to take it back. */
   setRoomBoard(roomCode, slug) {
+    return this.chooseRoomBoard(roomCode, { slug });
+  }
+
+  /** Deal the room a real episode: 'random', or { date } for a day from the archive. */
+  setRoomEpisode(roomCode, episode) {
+    return this.chooseRoomBoard(roomCode, { episode });
+  }
+
+  chooseRoomBoard(roomCode, choice) {
     return new Promise((resolve, reject) => {
-      this.emit('room:set-board', { roomCode, slug }, (response) => {
+      this.emit('room:set-board', { roomCode, ...choice }, (response) => {
         if (response.success) {
           resolve(response);
         } else {

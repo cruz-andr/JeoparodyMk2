@@ -1044,6 +1044,28 @@
 
 .lobby-board-clear { margin-top: 8px; }
 
+/* The host's pick: a day from the archive beside its button, a random one under. */
+.lobby-board-pick {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+select.lobby-day {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  background: var(--recess);
+  border: 1px solid var(--hair-strong);
+  border-radius: 0;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.lobby-board-random { margin: 8px 0; align-self: flex-start; }
+
 .lobby-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .lobby-out { display: flex; justify-content: center; }

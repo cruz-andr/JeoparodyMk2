@@ -1,5 +1,60 @@
+import { useMemo, useState } from 'react';
 import { Plate, Roster, Btn, Ghost, Seg, Toggle, Rule, CodeCells, Clock } from '../studio/Studio';
 import { QUESTION_TIME_LIMITS } from '../../stores/settingsStore';
+import { ARCHIVE_DAYS, canPlayDate, shiftDate, toDateString } from '@shared/archiveWindow.js';
+
+const dayLabel = (date, today) => (date === today
+  ? 'Today'
+  : new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }));
+
+/**
+ * The host's choice of board, when the room has none: a real episode, from a
+ * day in the archive (its first round is that day's Board) or at random. A
+ * community board comes from its own page, by "Play with friends".
+ */
+function BoardPicker({ onPick, picking, error, isAuthenticated }) {
+  const today = toDateString();
+  const days = useMemo(() => Array.from({ length: ARCHIVE_DAYS }, (_, i) => {
+    const date = shiftDate(today, -i);
+    return { date, open: canPlayDate({ date, format: 'board', today, isAuthenticated }) };
+  }), [today, isAuthenticated]);
+  const [day, setDay] = useState(today);
+  // Which of the two is dealing, so "Dealing" shows on the one pressed.
+  const [asked, setAsked] = useState(null);
+  const pick = (episode) => { setAsked(episode === 'random' ? 'random' : 'day'); onPick(episode); };
+
+  return (
+    <div className="st-field lobby-board">
+      <span className="st-field-label">Pick the board</span>
+      <span className="st-hint">A real episode: its rounds and its Final, as aired.</span>
+      <div className="lobby-board-pick">
+        <select
+          className="lobby-day"
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+          aria-label="A day from the archive"
+          disabled={picking}
+        >
+          {days.map(({ date, open }) => (
+            <option key={date} value={date} disabled={!open}>
+              {dayLabel(date, today)}{open ? '' : ' (sign in)'}
+            </option>
+          ))}
+        </select>
+        <Btn onClick={() => pick({ date: day })} disabled={picking}>
+          {picking && asked === 'day' ? 'Dealing…' : 'Play this day'}
+        </Btn>
+      </div>
+      <Ghost onClick={() => !picking && pick('random')} className="lobby-board-random">
+        {picking && asked === 'random' ? 'Dealing…' : 'A random episode'}
+      </Ghost>
+      {error && <p className="st-error">{error}</p>}
+      <span className="st-hint">
+        For a community board, open it from Community Boards and choose Play with friends.
+      </span>
+    </div>
+  );
+}
 
 /**
  * The room before the game: the code, and who is in it.
@@ -31,10 +86,19 @@ export default function Lobby({
   canStart,
   waitingFor,
   isHostMode = false,
-  // A community board lent to the room, and the host's way to take it back.
+  // The room's board, a community board or an episode, and the host's way to take it back.
   board = null,
   onClearBoard = null,
+  clearBoardLabel = 'Write questions for the room instead',
+  /* The host's way to choose an episode when there is no board yet, and how
+     that is going. Absent, the room writes its own questions. */
+  onPickEpisode = null,
+  pickingBoard = false,
+  boardError = null,
+  isAuthenticated = false,
 }) {
+  // An episode is two rounds; a community board is the one its author wrote.
+  const twoRounds = !board || board.rounds > 1;
   const quickplay = roomType === 'quickplay';
   const seats = quickplay ? 3 : Math.max(players.length, 2);
 
@@ -74,10 +138,16 @@ export default function Lobby({
                 <span className="st-hint">{board.categories.join(' \u00b7 ')}</span>
                 {onClearBoard && (
                   <button type="button" className="plain-btn quiet-action lobby-board-clear" onClick={onClearBoard}>
-                    Write questions for the room instead
+                    {clearBoardLabel}
                   </button>
                 )}
               </div>
+            )}
+            {!board && isHost && onPickEpisode && (
+              <BoardPicker onPick={onPickEpisode} picking={pickingBoard} error={boardError} isAuthenticated={isAuthenticated} />
+            )}
+            {!board && !isHost && onPickEpisode && (
+              <p className="st-note">The host is picking the board.</p>
             )}
             {canEditSettings ? (
               <div className="st-rules">
@@ -89,9 +159,10 @@ export default function Lobby({
                     options={QUESTION_TIME_LIMITS.map((o) => ({ value: o.value, label: o.value ? `${o.value / 1000}s` : 'Off' }))}
                   />
                 </Rule>
-                {/* A board is the one round its author wrote, and its own
-                    Final or none, so neither is the room's to add. */}
-                {!board && (
+                {/* A community board is the one round its author wrote, and
+                    its own Final or none, so neither is the room's to add.
+                    An episode has a second round, which the room may skip. */}
+                {twoRounds && (
                   <Rule name="Double Jeopardy" what="A second board at twice the money">
                     <Toggle
                       ariaLabel="Double Jeopardy"
@@ -101,7 +172,7 @@ export default function Lobby({
                   </Rule>
                 )}
                 {(!board || board.hasFinal) && (
-                  <Rule name="Final Jeopardy" what={board ? "The board's own last clue" : 'Wager it all on one last clue'}>
+                  <Rule name="Final Jeopardy" what={board?.kind === 'community' ? "The board's own last clue" : 'Wager it all on one last clue'}>
                     <Toggle
                       ariaLabel="Final Jeopardy"
                       on={Boolean(settings?.enableFinalJeopardy)}
@@ -112,7 +183,7 @@ export default function Lobby({
               </div>
             ) : (
               <p className="st-note">
-                The host sets the rules. {settings?.enableDoubleJeopardy && !board ? 'Two rounds' : 'One round'}
+                The host sets the rules. {settings?.enableDoubleJeopardy && twoRounds ? 'Two rounds' : 'One round'}
                 {settings?.enableFinalJeopardy && (!board || board.hasFinal) ? ', Final Jeopardy' : ''}
                 {settings?.questionTimeLimit ? `, ${settings.questionTimeLimit / 1000} second clock` : ', no clock'}.
               </p>
