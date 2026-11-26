@@ -44,13 +44,14 @@ export default function QuestionModal({
      the verdict replaces it (see revealBeat.js). */
   awaiting = false,
 }) {
+  /* The clue clock, or none when it is set to Off. There was also a "Show the
+     timer" switch, but hiding the clock turned it off too, so it was the same
+     choice twice and has gone. */
   const questionTimeLimit = useSettingsStore((s) => s.questionTimeLimit);
-  // Settings offers a Show timer switch that nothing was reading.
-  const showTimerSetting = useSettingsStore((s) => s.showTimer);
   /* No per clue countdown in typed mode. The board that uses it is timed as a
      whole, the way a crossword is, so a second clock ticking on each clue
      would be measuring the same thing twice and rushing the typing besides. */
-  const hasTimer = questionTimeLimit !== null && showTimerSetting && (!typed || timed);
+  const hasTimer = questionTimeLimit !== null && (!typed || timed);
 
   /* Time ran out before the player answered. As on the show, a clue nobody
      answered moves the score neither way, and a Daily Double not answered in

@@ -67,7 +67,7 @@ export default function SinglePlayerPage() {
   } = useGameStore();
 
   const { updateStats, addHighscore, token, isGuest } = useUserStore();
-  const { playCorrect, playWrong } = useAudio();
+  const { playCorrect, playWrong, playTimeUp } = useAudio();
   const { enableDoubleJeopardy, enableDailyDouble, enableFinalJeopardy, difficulty } =
     useSettingsStore();
 
@@ -240,10 +240,8 @@ export default function SinglePlayerPage() {
   // Out of time: nothing either way, except a Daily Double's wager.
   const timeUpTyped = () => {
     if (typedResult || judging.current) return;
-    if (dailyDoubleWager > 0) {
-      playWrong();
-      markIncorrect();
-    }
+    playTimeUp();
+    if (dailyDoubleWager > 0) markIncorrect();
     setTypedNote(null);
     setTypedResult({ correct: false, timedOut: true, playerAnswer: '' });
   };

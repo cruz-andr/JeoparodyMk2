@@ -27,9 +27,8 @@ const settings = {
   enableFinalJeopardy: false,
   // personal, not a room rule
   soundEnabled: false,
-  musicEnabled: false,
   volume: 0.1,
-  showTimer: false,
+  highContrast: true,
   difficulty: 'hard',
 };
 
@@ -58,7 +57,7 @@ test('turning a round off is carried, not lost to a default', () => {
 
 test('personal preferences stay with the player', () => {
   const rules = roomRulesFromSettings(settings);
-  for (const key of ['soundEnabled', 'musicEnabled', 'volume', 'showTimer', 'difficulty']) {
+  for (const key of ['soundEnabled', 'volume', 'highContrast', 'difficulty']) {
     assert.equal(key in rules, false, `${key} is not a room rule`);
   }
 });

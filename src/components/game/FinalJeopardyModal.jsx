@@ -29,24 +29,11 @@ export default function FinalJeopardyModal({
   const grading = useRef(false);
   const [awaiting, setAwaiting] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
-  const { playFinalJeopardy, stopFinalJeopardy, playCorrect, playWrong } = useAudio();
+  const { playCorrect, playWrong } = useAudio();
 
   // $0 up to the score. It used to invent a $1,000 limit for a score of $0;
   // a player at $0 is no longer offered Final Jeopardy at all.
   const maxWager = finalWagerLimit(currentScore);
-
-  // The think music runs while the answer is being written, and stops the
-  // moment the answer is locked in — as it does on the show.
-  useEffect(() => {
-    if (phase === 'answer') {
-      playFinalJeopardy();
-    } else {
-      stopFinalJeopardy();
-    }
-  }, [phase, playFinalJeopardy, stopFinalJeopardy]);
-
-  // Never leave the music running if the modal unmounts mid-answer.
-  useEffect(() => stopFinalJeopardy, [stopFinalJeopardy]);
 
   // Handle category reveal (auto-advance after 3 seconds)
   useEffect(() => {

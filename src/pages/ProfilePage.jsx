@@ -9,6 +9,7 @@ import Icon from '../components/common/Icon';
 import './ProfilePage.css';
 import AppTabBar from '../components/common/AppTabBar';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { openSettings } from '../components/common/settingsOverlayStore';
 
 /**
  * Your profile: what you have done, then what is yours.
@@ -145,14 +146,14 @@ export default function ProfilePage() {
         </section>
 
         <nav className="profile-rows">
-          <Link className="plain-btn profile-row" to="/settings">
+          <button type="button" className="plain-btn profile-row" onClick={openSettings}>
             <span className="profile-row-icon"><Icon name="settings" size={20} /></span>
             <span className="profile-row-main">
               <span className="profile-row-name">Settings</span>
-              <span className="profile-row-note">Timers, sound, text size, colours</span>
+              <span className="profile-row-note">Sound, text size, colours</span>
             </span>
             <span className="profile-row-go">&rsaquo;</span>
-          </Link>
+          </button>
 
           <Link className="plain-btn profile-row" to="/boards/mine">
             <span className="profile-row-icon"><Icon name="layout-grid" size={20} /></span>

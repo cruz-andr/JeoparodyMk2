@@ -1,0 +1,76 @@
+/* Settings over the page: a dimmed page behind, a card in front. On a phone
+   the card rises from the bottom, where a thumb is. */
+.settings-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 4, 16, 0.72);
+}
+
+.settings-sheet {
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #05081c;
+  color: var(--text-primary);
+  border: 1px solid rgba(242, 236, 224, 0.16);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  outline: none;
+}
+
+.settings-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #05081c;
+  border-bottom: 1px solid rgba(242, 236, 224, 0.14);
+}
+
+.settings-sheet-head h2 {
+  margin: 0;
+  font-family: var(--font-board);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.25rem;
+  color: #fff;
+}
+
+.settings-sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-right: -10px;
+  color: rgba(242, 236, 224, 0.7);
+}
+
+.settings-sheet-close:hover { color: #fff; }
+
+/* Sized here: a shared button style otherwise squeezes the icon to nothing. */
+.settings-sheet-close svg { width: 20px; height: 20px; flex: none; }
+
+.settings-sheet .settings-content { padding-bottom: 8px; }
+
+@media (max-width: 560px) {
+  .settings-scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .settings-sheet {
+    max-width: none;
+    max-height: 88dvh;
+    border-width: 1px 0 0;
+  }
+}

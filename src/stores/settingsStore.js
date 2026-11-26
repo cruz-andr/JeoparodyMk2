@@ -17,12 +17,9 @@ const initialState = {
 
   // Audio Settings
   soundEnabled: true,
-  musicEnabled: true,
   volume: 0.7,
 
   // Display and access
-  showTimer: true,
-  showScore: true,
   // Red and green squares are unreadable to the most common colour blindness,
   // and the results grid is the part of the game that gets shared.
   highContrast: false,
@@ -156,19 +153,7 @@ export const useSettingsStore = create(
         soundEnabled: !state.soundEnabled
       })),
 
-      toggleMusic: () => set(state => ({
-        musicEnabled: !state.musicEnabled
-      })),
-
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
-
-      toggleTimer: () => set(state => ({
-        showTimer: !state.showTimer
-      })),
-
-      toggleScore: () => set(state => ({
-        showScore: !state.showScore
-      })),
 
       setDifficulty: (difficulty) => set({ difficulty }),
 

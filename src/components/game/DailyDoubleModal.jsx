@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useAudio } from '../../hooks';
 import { dailyDoubleLimit, clampDailyDoubleWager, wagerEntry } from '../../utils/wagers';
 import './DailyDoubleModal.css';
 
@@ -15,17 +14,6 @@ export default function DailyDoubleModal({
   const [entry, setEntry] = useState('5');
   const wager = clampDailyDoubleWager(entry, maxWager);
   const [showWagerInput, setShowWagerInput] = useState(false);
-  const { playDailyDouble } = useAudio();
-  const stingPlayed = useRef(false);
-
-  // The sting fires once, with the reveal — not again if the player happens to
-  // toggle sound while deciding their wager.
-  useEffect(() => {
-    if (stingPlayed.current) return;
-    stingPlayed.current = true;
-    playDailyDouble();
-  }, [playDailyDouble]);
-
   /* Kept as typed. Clamping each keystroke to $5..max turned the first digit
      of "300" into 5, and the box ended up reading 500. */
   const handleWagerChange = (e) => {

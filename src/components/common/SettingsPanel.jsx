@@ -1,32 +1,18 @@
-import { useMemo, useState } from 'react';
 import { useSettingsStore } from '../../stores';
-import { QUESTION_TIME_LIMITS, ANSWER_TIME_LIMITS } from '../../stores/settingsStore';
 import './SettingsPanel.css';
 
 /**
- * Every setting, without deciding where it is shown.
+ * The player's own settings: how the game sounds and how it reads.
  *
- * This was a modal. Settings now live inside the profile as a page, and a guest
- * still reaches them directly, so the list cannot assume a container.
- *
- *
- * There were three separate settings surfaces with overlapping and different
- * subsets, which is how five settings ended up being collected and then read by
- * nothing at all. One list, declared as data, means a setting cannot be added
- * to the screen without also being wired to something.
- *
- * Which of these travel to a room you create is decided by
- * roomRulesFromSettings, and said out loud on the screen where you make one.
- * It was marked here with a "shared" chip, which told you something you could
- * not act on and never said shared with whom.
+ * It used to hold every setting there was, a search box to find them, and
+ * four presets. Most did nothing any more: a music switch for music the site
+ * no longer plays, a difficulty that only AI-written boards read, an "after
+ * buzzing in" clock the rooms overrule with their own, a "show the timer"
+ * switch that turned the clock off rather than hiding it, and a "show score"
+ * that nothing read. The round rules and the clue clock belong to a game, not
+ * to a person, so they are set where a game is made (the Multiplayer screen's
+ * house rules, and the lobby) and the daily games keep their own.
  */
-
-const DIFFICULTIES = [
-  { value: 'easy', label: 'Easy', hint: 'Recognisable people, places and events' },
-  { value: 'medium', label: 'Medium', hint: 'Harder than a pub quiz' },
-  { value: 'hard', label: 'Hard', hint: 'Precise dates and less obvious works' },
-  { value: 'mixed', label: 'Mixed', hint: 'Scales with the point values' },
-];
 
 const TEXT_SCALES = [
   { value: 'normal', label: 'Normal' },
@@ -40,197 +26,78 @@ const MOTION_CHOICES = [
   { value: 'off', label: 'Full motion' },
 ];
 
-const PRESETS = [
-  { id: 'casual', label: 'Casual', description: 'No time pressure, simpler rules' },
-  { id: 'standard', label: 'Standard', description: 'Classic Jeopardy experience' },
-  { id: 'challenging', label: 'Challenging', description: 'Fast timer, hard questions' },
-  { id: 'speed', label: 'Speed Round', description: '10s timer, no Final Jeopardy' },
-];
+function Toggle({ label, checked, onChange }) {
+  return (
+    <label className="toggle-label">
+      <span>{label}</span>
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      <span className="toggle-switch" />
+    </label>
+  );
+}
 
-/**
- * Every setting, without deciding where it is shown.
- *
- * It was only ever a modal. Settings now live inside the profile as a page, and
- * a guest still reaches them directly, so the list itself cannot assume a
- * container. Both surfaces render this.
- */
+function Radios({ name, label, options, value, onChange }) {
+  return (
+    <div className="settings-group">
+      <label>{label}</label>
+      <div className="radio-group">
+        {options.map((o) => (
+          <label className="radio-label" key={String(o.value)}>
+            <input type="radio" name={name} checked={value === o.value} onChange={() => onChange(o.value)} />
+            <span>{o.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPanel() {
   const s = useSettingsStore();
-  const [query, setQuery] = useState('');
-
-  const groups = useMemo(() => {
-    const toggle = (id, label, keywords, checked, onChange, hint) => ({
-      id, label, keywords, hint,
-      control: (
-        <label className="toggle-label" key={id}>
-          <span>{label}</span>
-          <input type="checkbox" checked={checked} onChange={onChange} />
-          <span className="toggle-switch" />
-        </label>
-      ),
-    });
-    const radios = (id, label, keywords, options, value, onChange, hint) => ({
-      id, label, keywords, hint,
-      control: (
-        <div className="settings-group" key={id}>
-          <label>{label}</label>
-          <div className="radio-group">
-            {options.map((o) => (
-              <label className="radio-label" key={String(o.value)} title={o.hint ?? ''}>
-                <input
-                  type="radio"
-                  name={id}
-                  checked={value === o.value}
-                  onChange={() => onChange(o.value)}
-                />
-                <span>{o.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ),
-    });
-
-    return [
-      {
-        id: 'rounds', title: 'Rounds',
-        items: [
-          toggle('dj', 'Double Jeopardy', 'round two second double',
-            s.enableDoubleJeopardy, s.toggleDoubleJeopardy),
-          toggle('dd', 'Daily Double', 'wager bet daily double',
-            s.enableDailyDouble, s.toggleDailyDouble),
-          toggle('fj', 'Final Jeopardy', 'final last wager',
-            s.enableFinalJeopardy, s.toggleFinalJeopardy),
-        ],
-      },
-      {
-        id: 'questions', title: 'Questions',
-        items: [
-          radios('difficulty', 'Difficulty', 'hard easy medium mixed level clues questions',
-            DIFFICULTIES, s.difficulty, s.setDifficulty,
-            'Applies to generated games. The dailies come from real archived shows.'),
-        ],
-      },
-      {
-        id: 'timing', title: 'Timing',
-        items: [
-          radios('questionTimeLimit', 'Time to answer', 'timer clock seconds time limit',
-            QUESTION_TIME_LIMITS, s.questionTimeLimit, s.setQuestionTimeLimit),
-          radios('answerTimeLimit', 'Time to answer after buzzing in',
-            'buzz buzzer answer window seconds multiplayer',
-            ANSWER_TIME_LIMITS, s.answerTimeLimit, s.setAnswerTimeLimit,
-            'Multiplayer only: how long you have once you have buzzed in.'),
-          toggle('showTimer', 'Show the timer', 'timer clock countdown hide',
-            s.showTimer, s.toggleTimer),
-        ],
-      },
-      {
-        id: 'sound', title: 'Sound',
-        items: [
-          toggle('sound', 'Sound effects', 'sound audio effects mute',
-            s.soundEnabled, s.toggleSound),
-          toggle('music', 'Music', 'music theme audio mute',
-            s.musicEnabled, s.toggleMusic),
-          {
-            id: 'volume', label: 'Volume', keywords: 'volume loud quiet audio',
-            control: (
-              <div className="settings-group" key="volume">
-                <label>Volume: {Math.round(s.volume * 100)}%</label>
-                <input
-                  type="range" min="0" max="1" step="0.05" value={s.volume}
-                  onChange={(e) => s.setVolume(parseFloat(e.target.value))}
-                />
-              </div>
-            ),
-          },
-        ],
-      },
-      {
-        id: 'access', title: 'Display and access',
-        items: [
-          toggle('highContrast', 'Colourblind friendly results',
-            'colour color blind contrast accessibility red green share grid',
-            s.highContrast, s.toggleHighContrast,
-            'Swaps the red and green squares for orange and blue, in the results and in what you share.'),
-          radios('textScale', 'Text size', 'text size large bigger font accessibility read',
-            TEXT_SCALES, s.textScale, s.setTextScale),
-          radios('reduceMotion', 'Motion', 'motion animation reduce accessibility spin wheel',
-            MOTION_CHOICES, s.reduceMotion, s.setReduceMotion),
-        ],
-      },
-    ];
-  }, [s]);
-
-  const needle = query.trim().toLowerCase();
-  const shown = needle
-    ? groups
-        .map((g) => ({
-          ...g,
-          items: g.items.filter(
-            (i) =>
-              i.label.toLowerCase().includes(needle) ||
-              (i.keywords ?? '').includes(needle) ||
-              g.title.toLowerCase().includes(needle)
-          ),
-        }))
-        .filter((g) => g.items.length)
-    : groups;
 
   return (
-    <>
-      <div className="settings-search">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search settings"
-          aria-label="Search settings"
-          autoComplete="off"
-        />
-      </div>
-
-      <div className="settings-content">
-        {!needle && (
-          <section className="settings-section">
-            <h3>Quick Presets</h3>
-            <div className="presets-grid">
-              {PRESETS.map((p) => (
-                <button key={p.id} className="preset-btn" onClick={() => s.loadPreset(p.id)}>
-                  <span className="preset-label">{p.label}</span>
-                  <span className="preset-description">{p.description}</span>
-                </button>
-              ))}
+    <div className="settings-content">
+      <section className="settings-section">
+        <h3>Sound</h3>
+        <div className="toggle-group">
+          <div className="setting-row">
+            <Toggle label="Sound effects" checked={s.soundEnabled} onChange={s.toggleSound} />
+          </div>
+          <div className="setting-row">
+            <div className="settings-group">
+              <label htmlFor="settings-volume">Volume: {Math.round(s.volume * 100)}%</label>
+              <input
+                id="settings-volume"
+                type="range" min="0" max="1" step="0.05" value={s.volume}
+                disabled={!s.soundEnabled}
+                onChange={(e) => s.setVolume(parseFloat(e.target.value))}
+              />
             </div>
-          </section>
-        )}
+          </div>
+        </div>
+      </section>
 
-        {shown.map((g) => (
-          <section className="settings-section" key={g.id}>
-            <h3>{g.title}</h3>
-            <div className="toggle-group">
-              {g.items.map((i) => (
-                <div className="setting-row" key={i.id}>
-                  {i.control}
-                  {i.hint && <p className="setting-hint">{i.hint}</p>}
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+      <section className="settings-section">
+        <h3>Display and access</h3>
+        <div className="toggle-group">
+          <div className="setting-row">
+            <Toggle label="Colourblind friendly results" checked={s.highContrast} onChange={s.toggleHighContrast} />
+          </div>
+          <div className="setting-row">
+            <Radios name="textScale" label="Text size" options={TEXT_SCALES} value={s.textScale} onChange={s.setTextScale} />
+          </div>
+          <div className="setting-row">
+            <Radios name="reduceMotion" label="Motion" options={MOTION_CHOICES} value={s.reduceMotion} onChange={s.setReduceMotion} />
+          </div>
+        </div>
+      </section>
 
-        {needle && !shown.length && (
-          <p className="settings-empty">Nothing matches &ldquo;{query}&rdquo;.</p>
-        )}
-
-        {!needle && (
-          <section className="settings-section">
-            <button className="preset-btn" onClick={s.resetToDefaults}>
-              <span className="preset-label">Reset to defaults</span>
-              <span className="preset-description">Puts every setting back</span>
-            </button>
-          </section>
-        )}
-      </div>
-    </>
+      <section className="settings-section">
+        <button className="preset-btn" onClick={s.resetToDefaults}>
+          <span className="preset-label">Reset to defaults</span>
+          <span className="preset-description">Puts every setting back</span>
+        </button>
+      </section>
+    </div>
   );
 }

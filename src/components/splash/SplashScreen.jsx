@@ -1,17 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useAudio } from '../../hooks';
-import { useSettingsStore } from '../../stores';
 import logo from '../../assets/images/JeoparodyTitle.png';
 import './SplashScreen.css';
 
 export default function SplashScreen() {
   const navigate = useNavigate();
   const [_isReady, setIsReady] = useState(false);
-  const { playTheme, fadeOutTheme } = useAudio();
-  const { musicEnabled } = useSettingsStore();
-  const hasPlayedTheme = useRef(false);
 
   // A ref, not state: the auto-advance timer below captured `isReady` as it was
   // at mount, so clicking through first did not stop it from firing again.
@@ -21,22 +16,15 @@ export default function SplashScreen() {
     if (isLeaving.current) return;
     isLeaving.current = true;
     setIsReady(true);
-    fadeOutTheme(400);
     setTimeout(() => navigate('/menu'), 400);
-  }, [fadeOutTheme, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     const timer = setTimeout(handleContinue, 2000);
     return () => clearTimeout(timer);
   }, [handleContinue]);
 
-  const handleInteraction = () => {
-    if (musicEnabled && !hasPlayedTheme.current) {
-      playTheme();
-      hasPlayedTheme.current = true;
-    }
-    handleContinue();
-  };
+  const handleInteraction = () => handleContinue();
 
   return (
     <motion.div

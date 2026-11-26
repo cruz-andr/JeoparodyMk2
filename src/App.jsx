@@ -10,6 +10,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
    around it here would be inert, and Vite says so on every build. */
 import RouteErrorPage from './pages/RouteErrorPage';
 import NotFoundPage from './pages/NotFoundPage';
+import SettingsOverlay from './components/common/SettingsOverlay';
 import { HOST_MODE } from './config/features';
 import './styles/globals.css';
 
@@ -117,6 +118,7 @@ function Root() {
     <>
       <ScrollRestoration />
       <Outlet />
+      <SettingsOverlay />
     </>
   );
 }

@@ -8,6 +8,7 @@ import './MainMenu.css';
 import AppTabBar from '../common/AppTabBar';
 import { AI_BOARDS, HOST_MODE } from '../../config/features';
 import ArchiveRow from './ArchiveRow';
+import { openSettings } from '../common/settingsOverlayStore';
 
 /**
  * The board is the menu: six category headers are the six ways to play, and
@@ -183,7 +184,7 @@ export default function MainMenu() {
                         profile: it is where you change an email or delete the
                         thing, not somewhere you jump to from a header. */}
                     <button role="menuitem" onClick={() => navigate('/profile')}>Profile</button>
-                    <button role="menuitem" onClick={() => navigate('/settings')}>Settings</button>
+                    <button role="menuitem" onClick={() => { setShowIdentity(false); openSettings(); }}>Settings</button>
                     <div className="menu-identity-sep" />
                     <button role="menuitem" className="quiet" onClick={() => { logout(); setShowIdentity(false); }}>
                       Sign out
@@ -198,7 +199,7 @@ export default function MainMenu() {
                     <div className="menu-identity-sep" />
                     {/* A guest has settings but no profile, so the way in cannot
                         be through one. They keep a direct route. */}
-                    <button role="menuitem" onClick={() => navigate('/settings')}>Settings</button>
+                    <button role="menuitem" onClick={() => { setShowIdentity(false); openSettings(); }}>Settings</button>
                     <button role="menuitem" className="quiet" onClick={() => setShowIdentity(false)}>
                       Keep playing as a guest
                     </button>
