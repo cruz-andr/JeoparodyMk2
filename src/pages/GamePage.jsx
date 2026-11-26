@@ -120,6 +120,8 @@ export default function GamePage() {
   const [answerClose, setAnswerClose] = useState(0); // close verdicts this turn
   const [saidNote, setSaidNote] = useState(null); // { playerId, said, correct, timeout, points }
   const [ddTimerKey, setDdTimerKey] = useState(0);
+  // The Daily Double clock's length once it has restarted; null is the first go.
+  const [ddClockMs, setDdClockMs] = useState(null);
   // A clip is playing, and the buzzer opens when it has.
   const [buzzWaiting, setBuzzWaiting] = useState(false);
   const hasAlreadyBuzzedRef = useRef(false);
@@ -582,6 +584,14 @@ export default function GamePage() {
       /* Who it belongs to. In a hosted room the host names them, so this is the
          only way the screens learn whose wager is riding on the clue. */
       if (playerId) setDailyDoubleOwnerId(playerId);
+      setDdClockMs(null);
+    });
+
+    /* The Daily Double's clock started again (a close spelling gets a fresh
+       go), on every screen in the room, so they all show the same time left. */
+    const unsubDDClock = subscribe('game:daily-double-clock', ({ ms }) => {
+      setDdClockMs(ms);
+      setDdTimerKey((k) => k + 1);
     });
 
     // Daily Double result - update scores and reset
@@ -855,6 +865,7 @@ export default function GamePage() {
       unsubAllContinued();
       unsubAnswerRevealed();
       unsubDDWagerConfirmed();
+      unsubDDClock();
       unsubDDResult();
       unsubRoundEnd();
       unsubRound2Start();
@@ -1754,8 +1765,16 @@ export default function GamePage() {
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', damping: 15 }}
                 >
-                  <h2 className="daily-double-badge">DAILY DOUBLE!</h2>
-                  <p className="waiting-for-answer">{renderPlayerName(currentPicker)} is making their wager...</p>
+                  <div className="dd-top">
+                    <h2 className="daily-double-badge">DAILY DOUBLE!</h2>
+                    <div className="question-header">
+                      <span className="question-category">{currentQuestion.category}</span>
+                    </div>
+                  </div>
+                  <p className="dd-stake">
+                    {renderPlayerName(currentPicker)} is placing a wager. Their score:{' '}
+                    <b>${(currentPicker?.score || 0).toLocaleString()}</b>
+                  </p>
                 </motion.div>
               </div>
             )
@@ -1768,21 +1787,33 @@ export default function GamePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
+              {/* The same screen for the whole room: whose wager and how much,
+                  the category, the clue, and the time left. Only the answer
+                  box is the player's own. */}
               <div className="mp-question-content">
-                <div className="daily-double-badge">DAILY DOUBLE - ${dailyDoubleWager.toLocaleString()}</div>
-                <div className="question-header">
-                  <span className="question-category">{currentQuestion.category}</span>
+                <div className="dd-top">
+                  <div className="daily-double-badge">DAILY DOUBLE</div>
+                  <p className="dd-stake">
+                    {isMyTurn ? 'You' : renderPlayerName(currentPicker)} wagered{' '}
+                    <b>${dailyDoubleWager.toLocaleString()}</b>
+                  </p>
+                  <div className="question-header">
+                    <span className="question-category">{currentQuestion.category}</span>
+                  </div>
                 </div>
                 <ClueScreen clue={currentQuestion} text={currentQuestion.answer} />
 
-                {/* The same clock the server runs: reading, then typing. */}
-                {isMyTurn && settings?.answerTimeLimit && (
-                  <div className="question-timer answer-timer">
+                {/* The same clock the server runs: reading, then typing, and
+                    a fresh go after a close spelling. In the card's flow, under
+                    the clue, rather than pinned to a corner over the header. */}
+                {settings?.answerTimeLimit && (
+                  <div className="dd-clock">
                     <Timer
                       key={`dd-${ddTimerKey}`}
-                      duration={answerClose
-                        ? answerWindowFor(roomType, settings.answerTimeLimit)
-                        : DAILY_DOUBLE_READ_MS + answerWindowFor(roomType, settings.answerTimeLimit)}
+                      duration={ddClockMs
+                        ?? (answerClose
+                          ? answerWindowFor(roomType, settings.answerTimeLimit)
+                          : DAILY_DOUBLE_READ_MS + answerWindowFor(roomType, settings.answerTimeLimit))}
                       autoStart={true}
                       size="small"
                     />
