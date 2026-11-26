@@ -67,6 +67,7 @@ export function gameFromEpisode(episode) {
   if (!first || !second) return null;
   return {
     source: `j-archive:${episode.gameId}`,
+    airDate: episode.airDate ?? null,
     round1: { categories: first.categories, questions: toGrid(first) },
     round2: { categories: second.categories, questions: toGrid(second) },
     final: episode.final

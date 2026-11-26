@@ -9,6 +9,7 @@
  *                  board when the archive cannot be reached.
  */
 import { fetchGameById, getDailyChallenge } from './jarchiveScraper.js';
+import { toDateString } from '../shared/archiveWindow.js';
 import { buildBoard, DOUBLE_ROW_VALUES } from './dailyBuilder.js';
 import { createBoardSource, toGrid } from '../socket/quickplay.js';
 import { episodeRoomBoard } from './roomBoards.js';
@@ -31,9 +32,22 @@ function gameFromDay(episode) {
   };
 }
 
-const dayName = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
-  weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
-});
+/* What a room's board is called. A day from the archive is named for the day
+   picked, the way the archive names it ("Today's Board", "Thu, Nov 26"), not
+   for when its episode aired, which would read as the date it was picked. A
+   random episode has no day picked, so it goes by its air date instead:
+   "March 5, 2019 Board". */
+const pickedDayTitle = (date, today = toDateString()) => (date === today
+  ? "Today's Board"
+  : new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  }));
+
+const airedTitle = (airDate) => (airDate
+  ? `${new Date(`${airDate}T12:00:00Z`).toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+  })} Board`
+  : 'A random Board');
 
 export function createEpisodeBoards({ fetchGame = fetchGameById, mode = 'archive', random = Math.random, log = () => {} } = {}) {
   const source = createBoardSource({ mode, fetchGame, random, log });
@@ -43,13 +57,13 @@ export function createEpisodeBoards({ fetchGame = fetchGameById, mode = 'archive
       const { gameId } = await getDailyChallenge({ date, fetchGame });
       const game = gameFromDay(await fetchGame(gameId));
       if (!game) throw new Error(`episode ${gameId} has no Jeopardy round`);
-      return episodeRoomBoard(game, { title: `The episode from ${dayName(date)}` });
+      return episodeRoomBoard(game, { title: pickedDayTitle(date) });
     },
 
     async random() {
       const game = await source.take();
       const real = String(game.source ?? '').startsWith('j-archive:');
-      return episodeRoomBoard(game, { title: real ? 'A random real episode' : 'The house board' });
+      return episodeRoomBoard(game, { title: real ? airedTitle(game.airDate) : 'The house board' });
     },
   };
 }

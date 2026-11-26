@@ -196,8 +196,12 @@ function parseGamePage(html, gameId) {
     final = { category: fjCategory, clue: fjClue, answer: fjAnswer };
   }
 
+  /* When it aired, from the page's title: "Show #7842, aired 2018-10-16". */
+  const airDate = $('title').text().match(/aired (\d{4}-\d{2}-\d{2})/)?.[1] ?? null;
+
   return {
     gameId,
+    airDate,
     categories: [...categories, ...djCategories],
     clues,
     final,
