@@ -381,3 +381,16 @@ input:focus, textarea:focus, select:focus {
   outline: 2px solid var(--jeopardy-gold-light);
   outline-offset: 2px;
 }
+
+/* The page as written for search engines and AI assistants (seo/build.js):
+   on screen only until the app replaces it, a moment after load. */
+.seo-shell {
+  max-width: 640px;
+  margin: 15vh auto 0;
+  padding: 0 24px;
+  color: var(--text-secondary, #b8b3a8);
+  font-family: var(--font-body, system-ui, sans-serif);
+  line-height: 1.6;
+}
+.seo-shell h1 { color: var(--jeopardy-gold, #d69f4c); }
+.seo-shell a { color: inherit; }

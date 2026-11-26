@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { writeSeo } from './seo/build.js'
 
 /* ads.txt, which AdSense checks at the root of the site before it pays out,
    written from the same publisher id the ads use (src/config/ads.js). No id,
@@ -28,9 +29,26 @@ function adsTxt() {
   };
 }
 
+/* A real page per public address, robots.txt, sitemap.xml and llms.txt, for
+   search engines and AI assistants (seo/). Production builds only. */
+function seo() {
+  let outDir = 'dist';
+  let isBuild = false;
+  return {
+    name: 'seo',
+    configResolved(config) { outDir = config.build.outDir; isBuild = config.command === 'build'; },
+    async closeBundle() {
+      if (!isBuild) return;
+      const api = String(process.env.VITE_SOCKET_URL ?? '').trim().replace(/\/$/, '');
+      const done = await writeSeo(outDir, { api: /^https:/.test(api) ? api : null });
+      console.log(`seo: ${done.pages} pages (${done.boards} community boards), sitemap.xml, robots.txt, llms.txt`);
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), adsTxt()],
+  plugins: [react(), adsTxt(), seo()],
   resolve: {
     alias: {
       /* The board format is shared with the API and has to live under server/,
