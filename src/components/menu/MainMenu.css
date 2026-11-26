@@ -741,3 +741,14 @@
   .menu-stat,
   .menu-divider { display: none; }
 }
+
+/* The fan-game notice at the foot of the menu: there, readable, quiet. */
+.menu-notice {
+  max-width: 640px;
+  margin: 8px auto 0;
+  padding: 0 16px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(242, 236, 224, 0.45);
+}

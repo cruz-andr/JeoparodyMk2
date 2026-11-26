@@ -19,6 +19,7 @@ import { boardGridRows, decodeAnswers,
   formatDuration,
 } from '../../stores/dailyLogic';
 import './DailyResults.css';
+import AdSlot from '../common/AdSlot';
 
 // Clues per run, used to turn a running total into an accuracy percentage.
 const CLUES_PER_RUN = { board: 30, sixer: 6 };
@@ -332,6 +333,8 @@ export default function DailyResults({
             : `${format === 'board' ? 'Next board' : 'Next six'} at ${nextRollover()}`}
         </p>
       </div>
+
+      <AdSlot />
     </motion.div>
   );
 }

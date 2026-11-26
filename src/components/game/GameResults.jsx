@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import './GameResults.css';
+import AdSlot from '../common/AdSlot';
 
 export default function GameResults({
   score,
@@ -97,6 +98,8 @@ export default function GameResults({
           Back to Menu
         </button>
       </motion.div>
+
+      <AdSlot />
     </motion.div>
   );
 }
