@@ -9,6 +9,7 @@ import AppTabBar from '../common/AppTabBar';
 import { AI_BOARDS, HOST_MODE } from '../../config/features';
 import ArchiveRow from './ArchiveRow';
 import { openSettings } from '../common/settingsOverlayStore';
+import AdSlot from '../common/AdSlot';
 
 /**
  * The board is the menu: six category headers are the six ways to play, and
@@ -337,6 +338,14 @@ export default function MainMenu() {
 
       {/* The days just gone, and the way into the rest of them. */}
       <ArchiveRow />
+
+      <AdSlot />
+
+      {/* Said where everyone sees it: this is a fan game. */}
+      <p className="menu-notice">
+        Jeoparody is a fan-made game. It is not affiliated with or endorsed by
+        Jeopardy Productions, Sony Pictures Television or Disney.
+      </p>
 
       <AppTabBar />
     </div>

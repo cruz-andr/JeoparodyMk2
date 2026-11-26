@@ -1,0 +1,19 @@
+/* An ad between games: labelled, set apart, and holding its height while it
+   loads so nothing below it jumps. */
+.ad-slot {
+  width: 100%;
+  max-width: 728px;
+  margin: 24px auto;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ad-slot-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(242, 236, 224, 0.4);
+  text-align: center;
+}

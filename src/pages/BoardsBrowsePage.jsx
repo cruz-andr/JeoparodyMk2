@@ -7,6 +7,7 @@ import { Card, Rail } from '../components/boards/Shelf';
 import { usePageTitle } from '../hooks/usePageTitle';
 import '../components/boards/BoardsChrome.css';
 import './BoardsBrowsePage.css';
+import AdSlot from '../components/common/AdSlot';
 
 const CLUE_TOTAL = 30;
 
@@ -217,6 +218,8 @@ export default function BoardsBrowsePage() {
             </section>
           ))
         )}
+
+        <AdSlot />
 
         <p className="bb-foot">
           Boards here are written by players.{' '}

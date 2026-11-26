@@ -10,7 +10,7 @@ import './PrivacyPage.css';
  * server/config/database.js gains a column, or a store starts keeping
  * something new in the browser, this page is part of that change.
  */
-const UPDATED = '30 August 2026';
+const UPDATED = '26 November 2026';
 const CONTACT = 'acruz24100@gmail.com';
 
 export default function PrivacyPage() {
@@ -57,16 +57,29 @@ export default function PrivacyPage() {
         <h2>What we do not do</h2>
         <ul>
           <li>We do not sell or rent your data to anyone.</li>
-          <li>We do not share it with advertisers, and there is no advertising in the game.</li>
-          <li>We do not run third-party analytics or tracking pixels.</li>
+          <li>We do not give advertisers your account details, your answers or your scores.</li>
+          <li>We do not run third-party analytics.</li>
           <li>We do not use your data to train anything.</li>
         </ul>
+
+        <h2>Advertising</h2>
+        <p>
+          The menu, the results screens and Community Boards show ads from Google AdSense,
+          never a clue or a game in progress. Google and its partners use cookies to show
+          and measure those ads, and may personalise them to you. In the EEA, the UK and
+          Switzerland you are asked first, and you can say no. You can also turn off
+          personalised ads at{' '}
+          <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer">adssettings.google.com</a>,
+          and read how Google uses data at{' '}
+          <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">policies.google.com/technologies/partner-sites</a>.
+        </p>
 
         <h2>Cookies and local storage</h2>
         <p>
           One cookie holds a session identifier so that a dropped connection can rejoin the
           game you were in. Your browser also stores your settings, your daily progress and,
-          when signed in, a sign-in token. None of it is used to follow you anywhere else.
+          when signed in, a sign-in token. None of ours is used to follow you anywhere else;
+          the ad cookies above are Google's.
         </p>
 
         <h2>Where it is kept</h2>
