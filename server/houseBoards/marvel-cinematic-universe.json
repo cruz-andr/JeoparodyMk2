@@ -1,8 +1,9 @@
 {
   "title": "Marvel Cinematic Universe: Assemble",
-  "description": "Thirty clues on the Marvel movies: the Avengers, their villains, the Infinity Stones, and the actors behind the masks.",
+  "description": "Thirty clues on the Marvel movies: the Avengers, their villains, the Infinity Stones, and the actors behind the masks. Cover: Stan Lee at Comic-Con, photo by Gage Skidmore, CC BY-SA 3.0, via Wikimedia Commons.",
   "topic": "film-tv",
   "featured": true,
+  "cover": "marvel-cinematic-universe.jpg",
   "board": {
     "version": 1,
     "categories": [

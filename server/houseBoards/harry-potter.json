@@ -1,8 +1,9 @@
 {
   "title": "Harry Potter: The Wizarding World",
-  "description": "Thirty clues on the Harry Potter books and films: Hogwarts houses, spells, creatures, Quidditch and the cast.",
+  "description": "Thirty clues on the Harry Potter books and films: Hogwarts houses, spells, creatures, Quidditch and the cast. Cover: the Hogwarts Express at York, by Dashwortley, public domain, via Wikimedia Commons.",
   "topic": "film-tv",
   "featured": true,
+  "cover": "harry-potter.jpg",
   "board": {
     "version": 1,
     "categories": [

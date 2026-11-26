@@ -1,8 +1,9 @@
 {
   "title": "Star Wars: A Galaxy Far, Far Away",
-  "description": "Thirty clues on Star Wars: Jedi and Sith, planets, droids and ships, famous lines, and the people who made it.",
+  "description": "Thirty clues on Star Wars: Jedi and Sith, planets, droids and ships, famous lines, and the people who made it. Cover: the Millennium Falcon at Galaxy's Edge, photo by U+1F360, CC BY-SA 4.0, via Wikimedia Commons.",
   "topic": "film-tv",
   "featured": true,
+  "cover": "star-wars.jpg",
   "board": {
     "version": 1,
     "categories": [

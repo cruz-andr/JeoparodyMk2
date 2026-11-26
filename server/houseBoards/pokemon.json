@@ -1,8 +1,9 @@
 {
   "title": "Pokémon: Gotta Answer 'Em All",
-  "description": "Thirty clues on Pokémon: starters, types, legendaries, trainers, the games and the numbers every trainer knows.",
+  "description": "Thirty clues on Pokémon: starters, types, legendaries, trainers, the games and the numbers every trainer knows. Cover: a Pikachu parade, photo by Yoshikazu Takada, CC BY 2.0, via Wikimedia Commons.",
   "topic": "games",
   "featured": true,
+  "cover": "pokemon.jpg",
   "board": {
     "version": 1,
     "categories": [

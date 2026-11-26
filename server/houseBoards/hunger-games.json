@@ -1,8 +1,9 @@
 {
   "title": "The Hunger Games: Welcome to Panem",
-  "description": "Thirty clues on The Hunger Games books and films: the districts, the tributes, the Capitol and the cast.",
+  "description": "Thirty clues on The Hunger Games books and films: the districts, the tributes, the Capitol and the cast. Cover: a northern mockingbird, photo by Rhododendrites, CC BY-SA 4.0, via Wikimedia Commons.",
   "topic": "film-tv",
   "featured": true,
+  "cover": "hunger-games.jpg",
   "board": {
     "version": 1,
     "categories": [

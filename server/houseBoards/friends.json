@@ -1,8 +1,9 @@
 {
   "title": "Friends: The One with the Trivia",
-  "description": "Thirty clues on Friends: the six friends, the cast, catchphrases, places, pets and props, and the episodes you know by heart.",
+  "description": "Thirty clues on Friends: the six friends, the cast, catchphrases, places, pets and props, and the episodes you know by heart. Cover: the Central Perk couch from the show's set, by Stuart1000, public domain, via Wikimedia Commons.",
   "topic": "film-tv",
   "featured": true,
+  "cover": "friends.jpg",
   "board": {
     "version": 1,
     "categories": [
